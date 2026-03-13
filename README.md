@@ -28,6 +28,7 @@ The system is designed to be **modular, scalable, and deployable on a VPS using 
 
 This project follows a **monorepo architecture** using **pnpm workspaces**.
 
+```
 pureastra/
 │
 ├ apps/
@@ -51,6 +52,7 @@ pureastra/
 ├ tsconfig.base.json
 ├ .env.example
 └ README.md
+```
 
 ---
 
@@ -82,6 +84,7 @@ Responsibilities:
 
 Backend structure:
 
+```
 src/
 ├ config/
 ├ modules/
@@ -99,6 +102,7 @@ src/
 ├ app.ts
 ├ routes.ts
 └ server.ts
+```
 
 ---
 
@@ -118,6 +122,7 @@ Responsibilities:
 
 Structure:
 
+```
 src/
 ├ components/
 ├ pages/
@@ -126,6 +131,7 @@ src/
 ├ store/
 ├ utils/
 └ types/
+```
 
 ---
 
