@@ -12,15 +12,146 @@ datasource db {
   provider = "postgresql"
 }
 
+//
+// ========================================================
+// AUTH MODELS
+// ========================================================
+// Handles login, sessions, OAuth, verification, reset
+//
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(CUSTOMER)
-  createdAt DateTime @default(now())
+  id       BigInt @id @default(autoincrement())
+  publicId String @unique @default(uuid()) @map("public_id") @db.Uuid
+
+  email String  @unique
+  phone String?
+
+  name      String?
+  firstName String? @map("first_name")
+  lastName  String? @map("last_name")
+
+  image String?
+
+  isActive Boolean @default(true) @map("is_active")
+
+  emailVerified Boolean @default(false) @map("email_verified")
+  phoneVerified Boolean @default(false) @map("phone_verified")
+
+  roleId BigInt? @map("role_id")
+  role   Role?   @relation(fields: [roleId], references: [id])
+
+  sessions Session[]
+  accounts Account[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
 }
 
-enum Role {
-  ADMIN
-  CUSTOMER
+model Session {
+  id BigInt @id @default(autoincrement())
+
+  userId BigInt @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token String @unique
+
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  expiresAt  DateTime  @map("expires_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("sessions")
+}
+
+model Account {
+  id BigInt @id @default(autoincrement())
+
+  userId BigInt @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider          String
+  providerAccountId String @map("provider_account_id")
+
+  password String?
+
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  idToken               String?   @map("id_token")
+  scope                 String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Verification {
+  id BigInt @id @default(autoincrement())
+
+  identifier String
+  value      String @unique
+
+  expiresAt DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("verifications")
+}
+
+//
+// ========================================================
+// RBAC MODELS
+// ========================================================
+// Handles roles and permissions
+//
+
+model Role {
+  id   BigInt @id @default(autoincrement())
+  name String @unique
+
+  users       User[]
+  permissions RolePermission[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id   BigInt @id @default(autoincrement())
+  name String @unique
+
+  roles RolePermission[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id BigInt @id @default(autoincrement())
+
+  roleId BigInt @map("role_id")
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  permissionId BigInt     @map("permission_id")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
 }
