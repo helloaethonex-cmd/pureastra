@@ -1,1 +1,4 @@
-// Write all types here
+declare module "*.css";
+declare module "swiper/css";
+declare module "swiper/css/*";
+declare module "@fortawesome/*";

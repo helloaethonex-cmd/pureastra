@@ -1,9 +1,33 @@
+import Navbar from "@/components/Navbar";
+import Hero from "@/components/Hero";
+import BestProducts from "@/components/BestProducts";
+import ShopConcern from "@/components/ShopConcern";
+import ConcernSlider from "@/components/ConcernSlider";
+import ConcernStrip from "@/components/ConcernStrip";
+import GlowRoutine from "@/components/GlowRoutine";
+import CategorySection from "@/components/CategorySection";
+import AboutPureAstra from "@/components/AboutPureAstra";
+import Transformation from "@/components/Transformation";
+import VideoBanner from "@/components/VideoBanner";
+import Testimonial from "@/components/Testimonial";
+import Footer from "@/components/Footer";
+
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        HELLO!
-      </main>
-    </div>
+    <>
+      <Navbar />
+      <Hero />
+      <BestProducts />
+      <ShopConcern />
+      <ConcernSlider />
+      <ConcernStrip />
+      <GlowRoutine />
+      <CategorySection />
+      <AboutPureAstra />
+      <Transformation />
+      <VideoBanner />
+      <Testimonial />
+      <Footer />
+    </>
   );
 }
