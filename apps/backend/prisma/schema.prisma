@@ -43,8 +43,10 @@ model User {
   sessions Session[]
   accounts Account[]
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  carts     Cart[]
+  addresses Address[]
 
   @@map("users")
 }
@@ -215,9 +217,11 @@ model ProductVariant {
   product Product        @relation(fields: [productId], references: [id])
   images  ProductImage[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  deletedAt             DateTime?
+  cartItems             CartItem[]
+  inventoryReservations InventoryReservation[]
 
   @@map("product_variants")
 }
@@ -253,4 +257,86 @@ model ProductImage {
   updatedAt DateTime @updatedAt
 
   @@map("product_images")
+}
+
+model Cart {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt?
+  sessionId   String?
+  status      Int // 0: ACTIVE, 1: CHECKED_OUT, 2: ABANDONED
+  abandonedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id])
+  items CartItem[]
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model CartItem {
+  id               BigInt   @id @default(autoincrement())
+  cartId           BigInt
+  productVariantId BigInt
+  quantity         Int
+  priceSnapshot    Decimal? @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart           Cart           @relation(fields: [cartId], references: [id])
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@index([cartId])
+  @@index([productVariantId])
+}
+
+model InventoryReservation {
+  id               BigInt  @id @default(autoincrement())
+  productVariantId BigInt
+  orderId          BigInt?
+  cartId           BigInt?
+
+  quantity Int
+  status   Int // 0: ACTIVE, 1: CONFIRMED, 2: RELEASED, 3: EXPIRED
+
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@index([productVariantId])
+  @@index([cartId])
+}
+
+model Address {
+  id     BigInt @id @default(autoincrement())
+  userId BigInt
+
+  addressType String? @db.VarChar(20)
+
+  fullName String @db.VarChar(100)
+  phone    String @db.VarChar(20)
+
+  line1 String  @db.VarChar(255)
+  line2 String? @db.VarChar(255)
+
+  city  String @db.VarChar(100)
+  state String @db.VarChar(100)
+
+  postalCode String @db.VarChar(20)
+  country    String @default("INDIA") @db.VarChar(50)
+
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
