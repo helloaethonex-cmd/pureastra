@@ -25,7 +25,7 @@ export default function Transformation() {
         Visible Transformation with Pureastra
       </h2>
 
-      <Swiper
+      {/* <Swiper
         slidesPerView={3}
         centeredSlides={true}
         spaceBetween={40}
@@ -35,33 +35,68 @@ export default function Transformation() {
           prevEl: ".trans-prev",
         }}
         modules={[Navigation]}
+      > */}
+      <Swiper
+        slidesPerView={3}
+        centeredSlides={true}
+        spaceBetween={20}
+        loop={true}
+        navigation={{
+          nextEl: ".trans-next",
+          prevEl: ".trans-prev",
+        }}
+        modules={[Navigation]}
+        breakpoints={{
+          320: { slidesPerView: 1.2 },
+          768: { slidesPerView: 2 },
+          1024: { slidesPerView: 3 },
+        }}
       >
         {data.map((item, index) => (
           <SwiperSlide key={index}>
-            <div className="flex items-center justify-center gap-5 relative">
+            <div className="flex items-center justify-center gap-2 relative">
               {/* BEFORE CARD */}
-              <div className="w-[260px] bg-[#FAF3E2] rounded-[20px] p-[10px_10px_16px] shadow-[0_8px_20px_rgba(0,0,0,0.08)]">
+              <div className="w-[284px] h-[368px] bg-[#FAF3E2] rounded-[29px] overflow-hidden border border-black shadow-[0_8px_20px_rgba(0,0,0,0.08)] flex flex-col transition-transform duration-300 hover:-translate-y-1">
+
+                {/* IMAGE */}
                 <img
                   src={item.before}
                   alt="before"
-                  className="w-full h-[300px] object-cover rounded-[16px]"
+                  className="w-full h-[313px] object-cover"
                 />
-                <p className="mt-2 text-sm text-[#5e2b15]">Dull Skin</p>
+
+                {/* BOTTOM LABEL */}
+                <div className="h-[55px] flex items-center justify-center bg-[#FAF3E2]">
+                  <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+                    Dull Skin
+                  </p>
+                </div>
+
               </div>
 
+              
               {/* CENTER ARROW */}
-              <div className="w-9 h-9 bg-[#E9E2D8] rounded-full border-2 border-[#d0c6b8] flex items-center justify-center z-[2]">
-                <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
+              <div className="absolute left-1/2 -translate-x-1/2 z-10">
+                <div className="w-[114px] h-[59px] bg-[#FAF3E2] rounded-[40px] border border-black flex items-center justify-center shadow-md">
+                  <FontAwesomeIcon icon={faArrowRight} className="text-lg" />
+                </div>
               </div>
 
               {/* AFTER CARD */}
-              <div className="w-[260px] bg-[#FAF3E2] rounded-[20px] p-[10px_10px_16px] shadow-[0_8px_20px_rgba(0,0,0,0.08)]">
+              <div className="w-[284px] h-[368px] bg-[#FAF3E2] rounded-[29px] overflow-hidden border border-black shadow-[0_8px_20px_rgba(0,0,0,0.08)] flex flex-col transition-transform duration-300 hover:-translate-y-1">
+
                 <img
                   src={item.after}
                   alt="after"
-                  className="w-full h-[300px] object-cover rounded-[16px]"
+                  className="w-full h-[313px] object-cover"
                 />
-                <p className="mt-2 text-sm text-[#819744]">Radiant Skin</p>
+
+                <div className="h-[55px] flex items-center justify-center bg-[#FAF3E2]">
+                  <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+                    Radiant Skin
+                  </p>
+                </div>
+
               </div>
             </div>
           </SwiperSlide>

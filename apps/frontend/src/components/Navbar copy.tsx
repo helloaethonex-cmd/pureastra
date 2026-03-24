@@ -1,36 +1,22 @@
-"use client";
-
 import Image from "next/image";
-import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
 import {
   faCartShopping,
   faMagnifyingGlass,
-  faHouse,
-  faFaceSmile,
-  faSpa,
-  faWind,
-  faBox,
-  faTags,
-  faPercent,
-  faCircleInfo,
-  faBlog,
 } from "@fortawesome/free-solid-svg-icons";
-
 import { faHeart, faUser } from "@fortawesome/free-regular-svg-icons";
 
 export default function Navbar() {
   const menuItems = [
-    { name: "Home", path: "/", icon: faHouse },
-    { name: "Face", path: "/category/face-care", icon: faFaceSmile },
-    { name: "Body", path: "/category/body-care", icon: faSpa },
-    { name: "Hair", path: "/category/hair-care", icon: faWind },
-    { name: "Miniz", path: "/category/mini-products", icon: faBox },
-    { name: "Combo", path: "/category/combos", icon: faTags },
-    { name: "Offer", path: "/offers", icon: faPercent },
-    { name: "About", path: "/about", icon: faCircleInfo },
-    { name: "Blog", path: "/blogs", icon: faBlog },
+    "Home",
+    "Face",
+    "Body",
+    "Hair",
+    "Miniz",
+    "Combo",
+    "Offer",
+    "About",
+    "Blog",
   ];
 
   return (
@@ -38,8 +24,7 @@ export default function Navbar() {
       {/* TOP BAR */}
       <div className="border-b border-gray-200 py-2 px-3 bg-white">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between">
-          
-          {/* SEARCH */}
+          {/* LEFT - Search */}
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -52,8 +37,8 @@ export default function Navbar() {
             />
           </div>
 
-          {/* LOGO */}
-          <Link href="/" className="flex justify-center items-center">
+          {/* CENTER - Logo */}
+          <div className="flex justify-center items-center">
             <Image
               src="/img/pureastra.png"
               alt="Pureastra Logo"
@@ -62,9 +47,9 @@ export default function Navbar() {
               height={60}
               priority
             />
-          </Link>
+          </div>
 
-          {/* RIGHT ICONS */}
+          {/* RIGHT - Icons */}
           <div className="flex gap-5 text-lg [&>svg]:text-[#5E2B15] [&>svg]:cursor-pointer [&>svg]:transition-transform [&>svg:hover]:scale-110">
             <FontAwesomeIcon icon={faHeart} />
             <FontAwesomeIcon icon={faUser} />
@@ -74,31 +59,16 @@ export default function Navbar() {
       </div>
 
       {/* MENU BAR */}
-      <div className="border-b border-gray-200 py-2 bg-white">
+      <div className="border-b border-gray-200 py-2">
         <div className="max-w-[1200px] mx-auto flex justify-center flex-wrap gap-[30px]">
-
           {menuItems.map((item, index) => (
-            <Link
+            <span
               key={index}
-              href={item.path}
-              className="group flex items-center gap-2 text-[#5E2B16] font-medium text-lg font-['Poppins',sans-serif] transition-all duration-300 hover:text-[#819744] hover:-translate-y-[2px]"
+              className="cursor-pointer text-[#5E2B16] font-medium text-xl font-['Poppins',sans-serif] transition-all duration-200 hover:text-[#5E2B15] hover:border-b-2 hover:border-[#819744]"
             >
-              {/* ICON */}
-              <FontAwesomeIcon
-                icon={item.icon}
-                className="text-sm transition-transform duration-300 group-hover:scale-110"
-              />
-
-              {/* TEXT */}
-              <span className="relative">
-                {item.name}
-
-                {/* ANIMATED UNDERLINE */}
-                <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-[#819744] transition-all duration-300 group-hover:w-full"></span>
-              </span>
-            </Link>
+              {item}
+            </span>
           ))}
-
         </div>
       </div>
     </>

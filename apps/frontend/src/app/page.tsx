@@ -1,3 +1,4 @@
+import AuthModal from "@/components/AuthModal";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import BestProducts from "@/components/BestProducts";
@@ -15,7 +16,8 @@ import Footer from "@/components/Footer";
 export default function Home() {
   return (
     <>
-      <Navbar />
+    <AuthModal />
+      {/* <Navbar /> */}
       <Hero />
       <BestProducts />
       <ShopConcern />
@@ -27,7 +29,7 @@ export default function Home() {
       <Transformation />
       <VideoBanner />
       <Testimonial />
-      <Footer />
+      {/* <Footer /> */}
     </>
   );
 }
