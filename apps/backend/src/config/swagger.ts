@@ -8,7 +8,8 @@ export const swaggerSpec = swaggerJSDoc({
     info: {
       title: "Pureastra API",
       version: "1.0.0",
-      description: "API documentation for Pureastra backend",
+      description:
+        "API documentation for Pureastra backend. Auth reference: /api/auth/reference",
     },
     servers: [
       {
@@ -17,6 +18,7 @@ export const swaggerSpec = swaggerJSDoc({
       },
     ],
     tags: [
+      { name: "Auth", description: "Authentication and account recovery" },
       { name: "Users", description: "User profile & me endpoints" },
       { name: "Products", description: "Product catalogue management" },
       { name: "Categories", description: "Product category tree management" },

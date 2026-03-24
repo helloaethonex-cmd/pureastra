@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+const envBoolean = z.preprocess((value) => {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return value;
+}, z.boolean());
+
 export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
@@ -7,6 +23,17 @@ export const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(5000),
 
   DATABASE_URL: z.url(),
+  DIRECT_URL: z.url().optional(),
+
+  REDIS_HOST: z.string().min(1),
+  REDIS_PORT: z.coerce.number().int().positive(),
+  REDIS_USERNAME: z.string().min(1).optional(),
+  REDIS_PASSWORD: z.string().min(1).optional(),
+  REDIS_DB: z.coerce.number().int().nonnegative().default(0),
+  REDIS_TLS: envBoolean.default(false),
+
+  EMAIL_QUEUE_NAME: z.string().min(1).default("email"),
+  EMAIL_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
 
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),

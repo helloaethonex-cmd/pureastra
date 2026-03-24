@@ -9,8 +9,6 @@ import { trustedOrigins } from "./config/env";
 
 const app = express();
 
-app.all("/api/auth/*splat", toNodeHandler(auth));
-
 app.use(
   cors({
     origin: trustedOrigins,
@@ -19,6 +17,12 @@ app.use(
 );
 
 app.use(express.json());
+
+app.all("/api/auth/*splat", toNodeHandler(auth));
+
+app.get("/docs/auth", (_req, res) => {
+  return res.redirect("/api/auth/reference");
+});
 
 app.use(
   "/docs",

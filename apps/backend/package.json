@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --project tsconfig.json --respawn src/server.ts",
+    "worker:email": "ts-node-dev --project tsconfig.json --respawn src/jobs/email/email.worker.ts",
+    "dev:all": "concurrently \"pnpm run dev\" \"pnpm run worker:email\"",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "start:worker": "node dist/jobs/email/email.worker.js"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +23,7 @@
     "@types/pg": "^8.18.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
+    "concurrently": "^9.2.1",
     "dotenv": "^17.3.1",
     "prisma": "^7.5.0",
     "swagger-jsdoc": "^6.2.8",
@@ -30,8 +34,10 @@
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "better-auth": "^1.5.5",
+    "bullmq": "^5.71.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "ioredis": "^5.10.1",
     "nodemailer": "^8.0.3",
     "pg": "^8.20.0",
     "swagger-ui-express": "^5.0.1",

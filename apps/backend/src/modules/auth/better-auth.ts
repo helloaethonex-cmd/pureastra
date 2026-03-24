@@ -1,11 +1,12 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { openAPI } from "better-auth/plugins";
 import { prisma } from "../../lib/prisma";
 import { env, trustedOrigins } from "../../config/env";
-import { sendMail } from "../../lib/mailer/mailer";
+import { enqueueEmail } from "../../jobs/email/email.queue";
 
 type EmailCallbackPayload = {
-  user: { email: string };
+  user: { email?: string | null };
   url: string;
 };
 
@@ -33,6 +34,10 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     async sendVerificationEmail({ user, url }: EmailCallbackPayload) {
+      if (!user.email) {
+        return;
+      }
+
       const verificationUrl = new URL(url);
       verificationUrl.searchParams.set(
         "callbackURL",
@@ -40,11 +45,15 @@ export const auth = betterAuth({
       );
       const verificationLink = verificationUrl.toString();
 
-      await sendMail({
+      await enqueueEmail({
         to: user.email,
         subject: "Verify your email",
         text: `Verify your email: ${verificationLink}`,
         html: `<p>Verify your email by clicking this link:</p><p><a href="${verificationLink}">${verificationLink}</a></p>`,
+        meta: {
+          template: "verify-email",
+          source: "better-auth",
+        },
       });
     },
   },
@@ -57,6 +66,10 @@ export const auth = betterAuth({
     revokeSessionsOnPasswordReset: true,
 
     async sendResetPassword({ user, url }: EmailCallbackPayload) {
+      if (!user.email) {
+        return;
+      }
+
       const resetUrl = new URL(url);
       resetUrl.searchParams.set(
         "callbackURL",
@@ -64,11 +77,15 @@ export const auth = betterAuth({
       );
       const resetLink = resetUrl.toString();
 
-      await sendMail({
+      await enqueueEmail({
         to: user.email,
         subject: "Reset your password",
         text: `Reset your password: ${resetLink}`,
         html: `<p>Reset your password using this link:</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+        meta: {
+          template: "reset-password",
+          source: "better-auth",
+        },
       });
     },
   },
@@ -79,6 +96,8 @@ export const auth = betterAuth({
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
   },
+
+  plugins: [openAPI()],
 
   databaseHooks: {
     user: {
