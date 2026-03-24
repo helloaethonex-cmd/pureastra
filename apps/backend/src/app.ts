@@ -5,12 +5,19 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/better-auth";
+import { trustedOrigins } from "./config/env";
 
 const app = express();
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
-app.use(cors());
+app.use(
+  cors({
+    origin: trustedOrigins,
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
 
 app.use(
