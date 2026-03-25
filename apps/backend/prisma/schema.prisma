@@ -43,10 +43,12 @@ model User {
   sessions Session[]
   accounts Account[]
 
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   carts     Cart[]
   addresses Address[]
+  orders    Order[]
 
   @@map("users")
 }
@@ -223,6 +225,7 @@ model ProductVariant {
   deletedAt             DateTime?              @map("deleted_at")
   cartItems             CartItem[]
   inventoryReservations InventoryReservation[]
+  orderItems            OrderItem[]
 
   @@map("product_variants")
 }
@@ -314,11 +317,12 @@ model InventoryReservation {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
-  // order          Order?          @relation(fields: [orderId], references: [id])
+  order          Order?         @relation(fields: [orderId], references: [id])
   cart           Cart?          @relation(fields: [cartId], references: [id])
 
   @@index([productVariantId])
   @@index([cartId])
+  @@index([orderId])
   @@map("inventory_reservations")
 }
 
@@ -349,4 +353,122 @@ model Address {
 
   @@index([userId])
   @@map("addresses")
+}
+
+model Order {
+  id BigInt @id @default(autoincrement())
+
+  userId BigInt @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  orderNumber String @unique @map("order_number")
+
+  // 🔥 ADDRESS SNAPSHOT
+  shippingName       String  @map("shipping_name")
+  shippingPhone      String  @map("shipping_phone")
+  shippingLine1      String  @map("shipping_line1")
+  shippingLine2      String? @map("shipping_line2")
+  shippingCity       String  @map("shipping_city")
+  shippingState      String  @map("shipping_state")
+  shippingPostalCode String  @map("shipping_postal_code")
+  shippingCountry    String  @default("INDIA") @map("shipping_country")
+
+  productTotal   Decimal @map("product_total") @db.Decimal(10, 2)
+  shippingAmount Decimal @map("shipping_amount") @db.Decimal(10, 2)
+  taxAmount      Decimal @map("tax_amount") @db.Decimal(10, 2)
+
+  discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(10, 2)
+
+  totalPaid Decimal @map("total_paid") @db.Decimal(10, 2)
+
+  orderStatus   Int @default(0) @map("order_status")
+  paymentStatus Int @default(0) @map("payment_status")
+
+  placedAt DateTime? @map("placed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items                 OrderItem[]
+  payments              Payment[]
+  statusHistory         OrderStatusHistory[]
+  inventoryReservations InventoryReservation[]
+
+  @@index([userId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id BigInt @id @default(autoincrement())
+
+  orderId BigInt @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productVariantId BigInt         @map("product_variant_id")
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  quantity Int
+
+  // 🔥 SNAPSHOT
+  productName String  @map("product_name")
+  variantName String? @map("variant_name")
+  sku         String?
+
+  priceAtPurchase     Decimal @map("price_at_purchase") @db.Decimal(10, 2)
+  costPriceAtPurchase Decimal @map("cost_price_at_purchase") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id BigInt @id @default(autoincrement())
+
+  orderId BigInt @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  oldStatus Int @map("old_status")
+  newStatus Int @map("new_status")
+
+  changedBy BigInt? @map("changed_by")
+  note      String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+model Payment {
+  id BigInt @id @default(autoincrement())
+
+  orderId BigInt @map("order_id")
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  currency String @default("INR") @db.VarChar(10)
+
+  paymentMethod   String? @map("payment_method") @db.VarChar(30)
+  paymentProvider String  @map("payment_provider") @db.VarChar(50)
+
+  paymentIntentId String? @map("payment_intent_id") @db.VarChar(255)
+
+  gatewayTransactionId String? @unique @map("gateway_transaction_id") @db.VarChar(255)
+
+  amount     Decimal  @db.Decimal(10, 2)
+  gatewayFee Decimal? @map("gateway_fee") @db.Decimal(10, 2)
+
+  paymentStatus Int @default(0) @map("payment_status")
+  // 0 PENDING, 1 SUCCESS, 2 FAILED, 3 REFUNDED
+
+  paidAt DateTime? @map("paid_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@index([paymentStatus])
+  @@map("payments")
 }
