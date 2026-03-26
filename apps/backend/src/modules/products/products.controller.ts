@@ -38,9 +38,9 @@ import {
 /** Express 5 typing: params values are always strings at runtime */
 const param = (req: Request, key: string): string => req.params[key] as string;
 
-const handleError = (res: Response, err: any) => {
+const handleError = (req: Request, res: Response, err: any) => {
   if (err?.status) return res.status(err.status).json({ error: err.message });
-  console.error(err);
+  req.log.error({ err }, "Products controller error");
   return res.status(500).json({ error: "Internal server error" });
 };
 
@@ -53,7 +53,7 @@ export const listProducts = async (req: Request, res: Response) => {
     const result = await getAllProducts(query);
     res.status(200).json(result);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -63,7 +63,7 @@ export const getProductSlug = async (req: Request, res: Response) => {
     const product = await getProductBySlug(param(req, "slug"));
     res.status(200).json(product);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -73,7 +73,7 @@ export const getProduct = async (req: Request, res: Response) => {
     const product = await getProductById(param(req, "id"));
     res.status(200).json(product);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -84,7 +84,7 @@ export const createProduct = async (req: Request, res: Response) => {
     const product = await createNewProduct(data);
     res.status(201).json(product);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -95,7 +95,7 @@ export const updateProduct = async (req: Request, res: Response) => {
     const product = await updateExistingProduct(param(req, "id"), data);
     res.status(200).json(product);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -105,7 +105,7 @@ export const removeProduct = async (req: Request, res: Response) => {
     await deleteProduct(param(req, "id"));
     res.status(200).json({ message: "Product deleted successfully" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -124,7 +124,7 @@ export const assignProductCategories = async (req: Request, res: Response) => {
     );
     res.status(200).json(result);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -134,7 +134,7 @@ export const removeProductCategory = async (req: Request, res: Response) => {
     await removeCategoryFromProduct(param(req, "id"), param(req, "categoryId"));
     res.status(200).json({ message: "Category removed from product" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -146,7 +146,7 @@ export const getVariant = async (req: Request, res: Response) => {
     const variant = await getVariantById(param(req, "variantId"));
     res.status(200).json(variant);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -157,7 +157,7 @@ export const addVariant = async (req: Request, res: Response) => {
     const variant = await addVariantToProduct(param(req, "id"), data);
     res.status(201).json(variant);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -168,7 +168,7 @@ export const updateVariant = async (req: Request, res: Response) => {
     const variant = await updateProductVariant(param(req, "variantId"), data);
     res.status(200).json(variant);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -178,7 +178,7 @@ export const removeVariant = async (req: Request, res: Response) => {
     await deleteProductVariant(param(req, "variantId"));
     res.status(200).json({ message: "Variant deleted successfully" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -189,7 +189,7 @@ export const updateStock = async (req: Request, res: Response) => {
     const variant = await adjustStock(param(req, "variantId"), data);
     res.status(200).json(variant);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -202,7 +202,7 @@ export const addImage = async (req: Request, res: Response) => {
     const image = await addImageToProduct(param(req, "id"), data);
     res.status(201).json(image);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -212,7 +212,7 @@ export const removeImage = async (req: Request, res: Response) => {
     await removeProductImage(param(req, "imageId"));
     res.status(200).json({ message: "Image deleted successfully" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -224,7 +224,7 @@ export const listCategories = async (req: Request, res: Response) => {
     const categories = await getAllCategories();
     res.status(200).json(categories);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -234,7 +234,7 @@ export const getCategory = async (req: Request, res: Response) => {
     const category = await getCategoryById(param(req, "id"));
     res.status(200).json(category);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -245,7 +245,7 @@ export const createCategory = async (req: Request, res: Response) => {
     const category = await createNewCategory(data);
     res.status(201).json(category);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -256,7 +256,7 @@ export const updateCategory = async (req: Request, res: Response) => {
     const category = await updateExistingCategory(param(req, "id"), data);
     res.status(200).json(category);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -266,6 +266,6 @@ export const removeCategory = async (req: Request, res: Response) => {
     await deleteCategory(param(req, "id"));
     res.status(200).json({ message: "Category deleted successfully" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };

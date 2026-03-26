@@ -321,6 +321,7 @@ model InventoryReservation {
   cart           Cart?          @relation(fields: [cartId], references: [id])
 
   @@index([productVariantId])
+  @@index([status, expiresAt])
   @@index([cartId])
   @@index([orderId])
   @@map("inventory_reservations")
@@ -353,6 +354,17 @@ model Address {
 
   @@index([userId])
   @@map("addresses")
+}
+
+model OrderNumberSequence {
+  year Int @id
+
+  lastValue Int @default(0) @map("last_value")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("order_number_sequences")
 }
 
 model Order {
@@ -430,7 +442,7 @@ model OrderStatusHistory {
   orderId BigInt @map("order_id")
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  oldStatus Int @map("old_status")
+  oldStatus Int? @map("old_status")
   newStatus Int @map("new_status")
 
   changedBy BigInt? @map("changed_by")
@@ -454,6 +466,9 @@ model Payment {
   paymentProvider String  @map("payment_provider") @db.VarChar(50)
 
   paymentIntentId String? @map("payment_intent_id") @db.VarChar(255)
+  idempotencyKey  String? @map("idempotency_key") @db.VarChar(100)
+  providerEventId String? @map("provider_event_id") @db.VarChar(255)
+  failureReason   String? @map("failure_reason")
 
   gatewayTransactionId String? @unique @map("gateway_transaction_id") @db.VarChar(255)
 
@@ -470,5 +485,7 @@ model Payment {
 
   @@index([orderId])
   @@index([paymentStatus])
+  @@index([providerEventId])
+  @@unique([orderId, idempotencyKey])
   @@map("payments")
 }

@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "ts-node-dev --project tsconfig.json --respawn src/server.ts",
     "worker:email": "ts-node-dev --project tsconfig.json --respawn src/jobs/email/email.worker.ts",
-    "dev:all": "concurrently \"pnpm run dev\" \"pnpm run worker:email\"",
+    "worker:orders": "ts-node-dev --project tsconfig.json --respawn src/jobs/orders/inventory-reservation.worker.ts",
+    "dev:all": "concurrently \"pnpm run dev\" \"pnpm run worker:email\" \"pnpm run worker:orders\"",
     "build": "tsc",
     "start": "node dist/server.js",
-    "start:worker": "node dist/jobs/email/email.worker.js"
+    "start:worker": "node dist/jobs/email/email.worker.js",
+    "start:worker:orders": "node dist/jobs/orders/inventory-reservation.worker.js"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +27,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "concurrently": "^9.2.1",
     "dotenv": "^17.3.1",
+    "pino-pretty": "^13.1.3",
     "prisma": "^7.5.0",
     "swagger-jsdoc": "^6.2.8",
     "ts-node-dev": "^2.0.0",
@@ -40,6 +43,8 @@
     "ioredis": "^5.10.1",
     "nodemailer": "^8.0.3",
     "pg": "^8.20.0",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"

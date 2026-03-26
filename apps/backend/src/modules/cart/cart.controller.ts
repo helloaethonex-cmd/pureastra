@@ -13,9 +13,9 @@ import { addCartItemSchema, updateCartItemSchema, mergeCartSchema } from "./cart
 
 const param = (req: Request, key: string): string => req.params[key] as string;
 
-const handleError = (res: Response, err: any) => {
+const handleError = (req: Request, res: Response, err: any) => {
   if (err?.status) return res.status(err.status).json({ error: err.message });
-  console.error(err);
+  req.log.error({ err }, "Cart controller error");
   return res.status(500).json({ error: "Internal server error" });
 };
 
@@ -36,7 +36,7 @@ export const getCart = async (req: Request, res: Response) => {
     const cart = await getOrCreateCart(userId, sessionId);
     res.status(200).json(cart);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -50,7 +50,7 @@ export const addItem = async (req: Request, res: Response) => {
     const item = await addItemToCart(userId, sessionId, data);
     res.status(201).json(item);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -61,7 +61,7 @@ export const patchItem = async (req: Request, res: Response) => {
     const item = await updateItem(param(req, "itemId"), data);
     res.status(200).json(item);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -71,7 +71,7 @@ export const deleteItem = async (req: Request, res: Response) => {
     await removeItem(param(req, "itemId"));
     res.status(200).json({ message: "Item removed from cart" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -82,7 +82,7 @@ export const emptyCart = async (req: Request, res: Response) => {
     await clearCart(userId, sessionId);
     res.status(200).json({ message: "Cart cleared" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -96,6 +96,6 @@ export const mergeGuestCart = async (req: Request, res: Response) => {
     const cart = await mergeCart(userId, data);
     res.status(200).json(cart);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };

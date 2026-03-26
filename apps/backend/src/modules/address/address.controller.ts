@@ -13,9 +13,9 @@ import { createAddressSchema, updateAddressSchema } from "./address.types";
 
 const param = (req: Request, key: string): string => req.params[key] as string;
 
-const handleError = (res: Response, err: any) => {
+const handleError = (req: Request, res: Response, err: any) => {
   if (err?.status) return res.status(err.status).json({ error: err.message });
-  console.error(err);
+  req.log.error({ err }, "Address controller error");
   return res.status(500).json({ error: "Internal server error" });
 };
 
@@ -28,7 +28,7 @@ export const listAddresses = async (req: Request, res: Response) => {
     const addresses = await getUserAddresses(userId);
     res.status(200).json(addresses);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -39,7 +39,7 @@ export const getAddress = async (req: Request, res: Response) => {
     const address = await getUserAddress(param(req, "id"), userId);
     res.status(200).json(address);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -51,7 +51,7 @@ export const createAddress = async (req: Request, res: Response) => {
     const address = await createUserAddress(userId, data);
     res.status(201).json(address);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -63,7 +63,7 @@ export const updateAddress = async (req: Request, res: Response) => {
     const address = await updateUserAddress(param(req, "id"), userId, data);
     res.status(200).json(address);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -74,7 +74,7 @@ export const deleteAddress = async (req: Request, res: Response) => {
     await deleteUserAddress(param(req, "id"), userId);
     res.status(200).json({ message: "Address deleted successfully" });
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };
 
@@ -85,6 +85,6 @@ export const setDefaultAddress = async (req: Request, res: Response) => {
     const address = await makeDefaultAddress(param(req, "id"), userId);
     res.status(200).json(address);
   } catch (err) {
-    handleError(res, err);
+    handleError(req, res, err);
   }
 };

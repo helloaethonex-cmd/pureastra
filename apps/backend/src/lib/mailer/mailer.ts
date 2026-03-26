@@ -1,4 +1,5 @@
 import { env } from "../../config/env";
+import { logger } from "../logger";
 import { mailTransporter } from "./transport";
 
 export type SendMailInput = {
@@ -18,11 +19,11 @@ export async function sendMail(input: SendMailInput): Promise<void> {
       text: input.text,
     });
   } catch (error) {
-    console.error("Email send failed", {
+    logger.error({
       to: input.to,
       subject: input.subject,
-      error: error instanceof Error ? error.message : "unknown",
-    });
+      err: error,
+    }, "Email send failed");
     throw new Error("MAIL_SEND_FAILED");
   }
 }
