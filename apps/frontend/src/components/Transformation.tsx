@@ -24,18 +24,6 @@ export default function Transformation() {
       <h2 className="text-[28px] font-['Marko_One',serif] text-[#9E6E5B] mb-[40px]">
         Visible Transformation with Pureastra
       </h2>
-
-      {/* <Swiper
-        slidesPerView={3}
-        centeredSlides={true}
-        spaceBetween={40}
-        loop={true}
-        navigation={{
-          nextEl: ".trans-next",
-          prevEl: ".trans-prev",
-        }}
-        modules={[Navigation]}
-      > */}
       <Swiper
         slidesPerView={3}
         centeredSlides={true}
