@@ -6,6 +6,7 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 // import components
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Providers from "@/components/Providers";
 
 config.autoAddCss = false;
 
@@ -36,11 +37,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-         <Navbar />
-
-        {children}
-
-         <Footer />
+        <Providers>
+          <Navbar />
+          {children}
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

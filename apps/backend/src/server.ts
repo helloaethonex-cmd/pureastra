@@ -7,7 +7,7 @@ import app from "./app";
 import { prisma } from "./lib/prisma";
 import { env } from "./config/env";
 
-const PORT = env.PORT || 5000;
+const PORT = env.PORT || 5050;
 
 app.listen(PORT, async () => {
   console.log(`🚀 Server is running on port ${PORT}`);

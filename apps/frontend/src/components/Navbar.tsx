@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -20,7 +21,17 @@ import {
 
 import { faHeart, faUser } from "@fortawesome/free-regular-svg-icons";
 
+import { useAuthStore } from "@/store/auth.store";
+import { useSignOut } from "@/hooks/useAuth";
+import AuthModal from "@/components/AuthModal";
+
 export default function Navbar() {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const { user } = useAuthStore();
+  const signOut = useSignOut();
+
   const menuItems = [
     { name: "Home", path: "/", icon: faHouse },
     { name: "Face", path: "/category/face-care", icon: faFaceSmile },
@@ -33,12 +44,20 @@ export default function Navbar() {
     { name: "Blog", path: "/blogs", icon: faBlog },
   ];
 
+  function handleUserIconClick() {
+    if (user) {
+      setIsUserMenuOpen((prev) => !prev);
+    } else {
+      setIsAuthModalOpen(true);
+    }
+  }
+
   return (
     <>
       {/* TOP BAR */}
       <div className="border-b border-gray-200 py-2 px-3 bg-white">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between">
-          
+
           {/* SEARCH */}
           <div className="flex items-center gap-2">
             <input
@@ -65,9 +84,46 @@ export default function Navbar() {
           </Link>
 
           {/* RIGHT ICONS */}
-          <div className="flex gap-5 text-lg [&>svg]:text-[#5E2B15] [&>svg]:cursor-pointer [&>svg]:transition-transform [&>svg:hover]:scale-110">
+          <div className="flex gap-5 text-lg [&>svg]:text-[#5E2B15] [&>svg]:cursor-pointer [&>svg]:transition-transform [&>svg:hover]:scale-110 items-center">
             <FontAwesomeIcon icon={faHeart} />
-            <FontAwesomeIcon icon={faUser} />
+
+            {/* USER ICON + DROPDOWN */}
+            <div className="relative">
+              <FontAwesomeIcon
+                icon={faUser}
+                onClick={handleUserIconClick}
+                className="text-[#5E2B15] cursor-pointer transition-transform hover:scale-110"
+                title={user ? user.name : "Login / Sign Up"}
+              />
+
+              {/* LOGGED-IN DROPDOWN */}
+              {user && isUserMenuOpen && (
+                <div
+                  className="absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
+                  onMouseLeave={() => setIsUserMenuOpen(false)}
+                >
+                  <p className="px-4 py-1 text-xs text-gray-400 truncate">{user.email}</p>
+                  <hr className="my-1 border-gray-100" />
+                  <Link
+                    href="/account"
+                    className="block px-4 py-2 text-sm text-[#5E2B16] hover:bg-[#FAF3E2] transition"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    My Account
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      signOut.mutate();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                  >
+                    {signOut.isPending ? "Signing out..." : "Sign Out"}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <FontAwesomeIcon icon={faCartShopping} />
           </div>
         </div>
@@ -101,6 +157,12 @@ export default function Navbar() {
 
         </div>
       </div>
+
+      {/* AUTH MODAL */}
+      <AuthModal
+        open={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </>
   );
 }
