@@ -12,6 +12,7 @@ export default defineConfig({
     seed: "ts-node prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Prisma CLI / Migrate should use a direct DB connection (not pooler)
+    url: process.env["DIRECT_URL"],
   },
 });

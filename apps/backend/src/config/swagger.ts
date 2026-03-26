@@ -1,5 +1,6 @@
 import swaggerJSDoc from "swagger-jsdoc";
 import path from "path";
+import { env } from "./env";
 
 export const swaggerSpec = swaggerJSDoc({
   definition: {
@@ -7,20 +8,24 @@ export const swaggerSpec = swaggerJSDoc({
     info: {
       title: "Pureastra API",
       version: "1.0.0",
-      description: "API documentation for Pureastra backend",
+      description:
+        "API documentation for Pureastra backend. Auth reference: /api/auth/reference",
     },
     servers: [
       {
-        url: `http://localhost:${process.env.PORT}`,
+        url: `http://localhost:${env.PORT}`,
         description: "Local development server",
       },
     ],
     tags: [
+      { name: "Auth", description: "Authentication and account recovery" },
       { name: "Users", description: "User profile & me endpoints" },
       { name: "Products", description: "Product catalogue management" },
       { name: "Categories", description: "Product category tree management" },
       { name: "Variants", description: "Product variant & stock management" },
       { name: "Images", description: "Product image management" },
+      { name: "Cart", description: "Shopping cart — supports both authenticated users and guests" },
+      { name: "Addresses", description: "User saved address book" },
     ],
     components: {
       securitySchemes: {
@@ -353,6 +358,153 @@ export const swaggerSpec = swaggerJSDoc({
               description:
                 "Category IDs to assign (upsert — safe to call multiple times)",
             },
+          },
+        },
+        // ── Cart ─────────────────────────────────────────────────────────────
+        CartItem: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "12" },
+            cartId: { type: "string", example: "3" },
+            productVariantId: { type: "string", example: "5" },
+            quantity: { type: "integer", example: 2 },
+            priceSnapshot: {
+              type: "number",
+              format: "decimal",
+              nullable: true,
+              example: 1299.99,
+              description: "Price captured at the time the item was added",
+            },
+            productVariant: {
+              allOf: [{ $ref: "#/components/schemas/ProductVariant" }],
+              description: "Populated variant with nested product summary",
+            },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        Cart: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "3" },
+            userId: { type: "string", nullable: true, example: "1" },
+            sessionId: { type: "string", nullable: true, example: "guest-abc-123" },
+            status: {
+              type: "integer",
+              enum: [0, 1, 2],
+              example: 0,
+              description: "0 = ACTIVE, 1 = CHECKED_OUT, 2 = ABANDONED",
+            },
+            abandonedAt: { type: "string", format: "date-time", nullable: true },
+            items: {
+              type: "array",
+              items: { $ref: "#/components/schemas/CartItem" },
+            },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        AddCartItemBody: {
+          type: "object",
+          required: ["productVariantId", "quantity"],
+          properties: {
+            productVariantId: {
+              type: "string",
+              example: "5",
+              description: "ID of the product variant to add",
+            },
+            quantity: {
+              type: "integer",
+              minimum: 1,
+              example: 2,
+            },
+          },
+        },
+        UpdateCartItemBody: {
+          type: "object",
+          required: ["quantity"],
+          properties: {
+            quantity: {
+              type: "integer",
+              minimum: 1,
+              example: 3,
+              description: "New absolute quantity for this cart item",
+            },
+          },
+        },
+        MergeCartBody: {
+          type: "object",
+          required: ["sessionId"],
+          properties: {
+            sessionId: {
+              type: "string",
+              example: "guest-abc-123",
+              description: "Guest session ID whose cart should be merged into the user cart",
+            },
+          },
+        },
+        // ── Address ──────────────────────────────────────────────────────────
+        Address: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "3" },
+            userId: { type: "string", example: "1" },
+            addressType: {
+              type: "string",
+              enum: ["SHIPPING", "BILLING", "BOTH"],
+              nullable: true,
+              example: "SHIPPING",
+            },
+            fullName: { type: "string", example: "Aarav Shah" },
+            phone: { type: "string", example: "+919876543210" },
+            line1: { type: "string", example: "42, MG Road" },
+            line2: { type: "string", nullable: true, example: "Bandra West" },
+            city: { type: "string", example: "Mumbai" },
+            state: { type: "string", example: "Maharashtra" },
+            postalCode: { type: "string", example: "400050" },
+            country: { type: "string", example: "INDIA" },
+            isDefault: { type: "boolean", example: true },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        CreateAddressBody: {
+          type: "object",
+          required: ["fullName", "phone", "line1", "city", "state", "postalCode"],
+          properties: {
+            addressType: {
+              type: "string",
+              enum: ["SHIPPING", "BILLING", "BOTH"],
+              example: "SHIPPING",
+            },
+            fullName: { type: "string", maxLength: 100, example: "Aarav Shah" },
+            phone: { type: "string", maxLength: 20, example: "+919876543210" },
+            line1: { type: "string", maxLength: 255, example: "42, MG Road" },
+            line2: { type: "string", maxLength: 255, example: "Bandra West" },
+            city: { type: "string", maxLength: 100, example: "Mumbai" },
+            state: { type: "string", maxLength: 100, example: "Maharashtra" },
+            postalCode: { type: "string", maxLength: 20, example: "400050" },
+            country: { type: "string", maxLength: 50, default: "INDIA", example: "INDIA" },
+            isDefault: { type: "boolean", default: false, example: true },
+          },
+        },
+        UpdateAddressBody: {
+          type: "object",
+          properties: {
+            addressType: {
+              type: "string",
+              enum: ["SHIPPING", "BILLING", "BOTH"],
+              example: "BILLING",
+            },
+            fullName: { type: "string", maxLength: 100, example: "Aarav Shah" },
+            phone: { type: "string", maxLength: 20, example: "+919999999999" },
+            line1: { type: "string", maxLength: 255, example: "10, Park Street" },
+            line2: { type: "string", maxLength: 255, example: "Floor 2" },
+            city: { type: "string", maxLength: 100, example: "Bengaluru" },
+            state: { type: "string", maxLength: 100, example: "Karnataka" },
+            postalCode: { type: "string", maxLength: 20, example: "560001" },
+            country: { type: "string", maxLength: 50, example: "INDIA" },
+            isDefault: { type: "boolean", example: false },
           },
         },
         // ── Error ─────────────────────────────────────────────────────────────
