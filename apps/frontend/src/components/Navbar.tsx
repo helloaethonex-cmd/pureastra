@@ -39,9 +39,9 @@ export default function Navbar() {
     { name: "Hair", path: "/category/hair-care", icon: faWind },
     { name: "Miniz", path: "/category/mini-products", icon: faBox },
     { name: "Combo", path: "/category/combos", icon: faTags },
-    { name: "Offer", path: "/offers", icon: faPercent },
-    { name: "About", path: "/about", icon: faCircleInfo },
-    { name: "Blog", path: "/blogs", icon: faBlog },
+    { name: "Offer", path: "/category/offers", icon: faPercent },
+    { name: "About", path: "/category/about", icon: faCircleInfo },
+    { name: "Blog", path: "/category/blogs", icon: faBlog },
   ];
 
   function handleUserIconClick() {
