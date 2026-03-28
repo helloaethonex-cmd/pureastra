@@ -24,7 +24,11 @@ export const findActiveCartByUserId = (tx: TxClient, userId: bigint) => {
   });
 };
 
-export const findAddressByIdForUser = (tx: TxClient, addressId: bigint, userId: bigint) => {
+export const findAddressByIdForUser = (
+  tx: TxClient,
+  addressId: bigint,
+  userId: bigint,
+) => {
   return tx.address.findFirst({
     where: { id: addressId, userId },
   });
@@ -39,10 +43,7 @@ export const incrementOrderNumberSequence = (tx: TxClient, year: number) => {
   });
 };
 
-export const createOrder = (
-  tx: TxClient,
-  data: Prisma.OrderCreateInput,
-) => {
+export const createOrder = (tx: TxClient, data: Prisma.OrderCreateInput) => {
   return tx.order.create({
     data,
     include: orderCreateInclude,
@@ -98,6 +99,73 @@ export const findOrderById = (tx: TxClient, orderId: bigint) => {
   });
 };
 
+export const findOrderByOrderNumber = (tx: TxClient, orderNumber: string) => {
+  return tx.order.findUnique({
+    where: { orderNumber },
+    include: {
+      items: {
+        include: {
+          productVariant: true,
+        },
+      },
+      statusHistory: true,
+    },
+  });
+};
+
+export const updateOrderStatus = (
+  tx: TxClient,
+  orderId: bigint,
+  newStatus: number,
+) => {
+  return tx.order.update({
+    where: { id: orderId },
+    data: { orderStatus: newStatus },
+  });
+};
+
+export const decrementVariantStockQuantity = (
+  tx: TxClient,
+  productVariantId: bigint,
+  quantity: number,
+) => {
+  return tx.productVariant.updateMany({
+    where: {
+      id: productVariantId,
+      stockQuantity: { gte: quantity },
+    },
+    data: {
+      stockQuantity: { decrement: quantity },
+    },
+  });
+};
+
+export const findInventoryReservationsByOrderId = (
+  tx: TxClient,
+  orderId: bigint,
+) => {
+  return tx.inventoryReservation.findMany({
+    where: { orderId },
+    select: {
+      id: true,
+      productVariantId: true,
+      quantity: true,
+      status: true,
+    },
+  });
+};
+
+export const updateInventoryReservationStatus = (
+  tx: TxClient,
+  reservationId: bigint,
+  newStatus: number,
+) => {
+  return tx.inventoryReservation.update({
+    where: { id: reservationId },
+    data: { status: newStatus },
+  });
+};
+
 export const findExpiredReservationsBatch = (
   tx: TxClient,
   activeStatus: number,
@@ -125,7 +193,9 @@ export const expireReservationsAndReturnRows = (
   activeStatus: number,
   expiredStatus: number,
 ) => {
-  return tx.$queryRaw<Array<{ product_variant_id: bigint; quantity: number }>>(Prisma.sql`
+  return tx.$queryRaw<
+    Array<{ product_variant_id: bigint; quantity: number }>
+  >(Prisma.sql`
     UPDATE "inventory_reservations"
     SET "status" = ${expiredStatus},
         "updated_at" = NOW()
@@ -151,3 +221,125 @@ export const decrementVariantStockReservedSafe = (
   });
 };
 
+export type AdminListOrdersFilters = {
+  orderStatus?: number;
+  paymentStatus?: number;
+  search?: string;
+};
+
+export type AdminListOrdersPagination = {
+  page: number;
+  limit: number;
+  sortOrder: "asc" | "desc";
+};
+
+export const findOrdersForAdmin = async (
+  tx: TxClient,
+  filters: AdminListOrdersFilters,
+  pagination: AdminListOrdersPagination,
+) => {
+  const where: Record<string, unknown> = {};
+
+  if (filters.orderStatus !== undefined) {
+    where.orderStatus = filters.orderStatus;
+  }
+
+  if (filters.paymentStatus !== undefined) {
+    where.paymentStatus = filters.paymentStatus;
+  }
+
+  if (filters.search) {
+    where.orderNumber = { contains: filters.search, mode: "insensitive" };
+  }
+
+  const skip = (pagination.page - 1) * pagination.limit;
+
+  const [orders, total] = await Promise.all([
+    tx.order.findMany({
+      where,
+      select: {
+        id: true,
+        orderNumber: true,
+        userId: true,
+        orderStatus: true,
+        paymentStatus: true,
+        totalPaid: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: pagination.sortOrder },
+      skip,
+      take: pagination.limit,
+    }),
+    tx.order.count({ where }),
+  ]);
+
+  return { orders, total };
+};
+
+export const findOrdersByUserId = async (
+  tx: TxClient,
+  userId: bigint,
+  pagination: { page: number; limit: number },
+) => {
+  const skip = (pagination.page - 1) * pagination.limit;
+
+  const [orders, total] = await Promise.all([
+    tx.order.findMany({
+      where: { userId },
+      select: {
+        orderNumber: true,
+        totalPaid: true,
+        orderStatus: true,
+        paymentStatus: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: pagination.limit,
+    }),
+    tx.order.count({ where: { userId } }),
+  ]);
+
+  return { orders, total };
+};
+
+export const findOrderByOrderNumberForUser = (
+  tx: TxClient,
+  orderNumber: string,
+  userId: bigint,
+) => {
+  return tx.order.findFirst({
+    where: { orderNumber, userId },
+    include: {
+      items: {
+        select: {
+          id: true,
+          productName: true,
+          variantName: true,
+          sku: true,
+          quantity: true,
+          priceAtPurchase: true,
+        },
+      },
+      payments: {
+        select: {
+          id: true,
+          amount: true,
+          paymentStatus: true,
+          paymentMethod: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      statusHistory: {
+        select: {
+          oldStatus: true,
+          newStatus: true,
+          note: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+};

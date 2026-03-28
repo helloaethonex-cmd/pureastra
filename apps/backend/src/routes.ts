@@ -8,12 +8,16 @@ import ordersRoute from "./modules/orders/orders.route";
 import paymentsRoute from "./modules/payments/payments.route";
 import uploadRoute from "./modules/upload/upload.route";
 
+// Admin routes
+import ordersAdminRoute from "./modules/orders/orders.admin.route";
+
 const router = Router();
 
 router.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+// Customer routes
 router.use("/users", usersRoute);
 router.use("/products", productsRoute);
 router.use("/cart", cartRoute);
@@ -22,5 +26,8 @@ router.use("/auth", authRoute);
 router.use("/orders", ordersRoute);
 router.use("/", paymentsRoute);
 router.use("/upload", uploadRoute);
+
+// Admin routes
+router.use("/admin/orders", ordersAdminRoute);
 
 export default router;
