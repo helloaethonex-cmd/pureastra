@@ -65,11 +65,45 @@ export default function Navbar() {
           </Link>
 
           {/* RIGHT ICONS */}
-          <div className="flex gap-5 text-lg [&>svg]:text-[#5E2B15] [&>svg]:cursor-pointer [&>svg]:transition-transform [&>svg:hover]:scale-110">
+          {/* <div className="flex gap-5 text-lg [&>svg]:text-[#5E2B15] [&>svg]:cursor-pointer [&>svg]:transition-transform [&>svg:hover]:scale-110">
             <FontAwesomeIcon icon={faHeart} />
             <FontAwesomeIcon icon={faUser} />
             <FontAwesomeIcon icon={faCartShopping} />
-          </div>
+          </div> */}
+          <div className="flex items-center gap-3">
+
+              {/* Wishlist */}
+              <Link href="/wishlist">
+                <button className="relative w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition">
+                  <FontAwesomeIcon icon={faHeart} />
+
+                  {/* Badge (optional) */}
+                  <span className="absolute -top-1 -right-1 bg-[#819744] text-white text-[10px] px-1.5 py-[1px] rounded-full">
+                    2
+                  </span>
+                </button>
+              </Link>
+
+              {/* User */}
+              <Link href="/profile">
+                <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md">
+                  <FontAwesomeIcon icon={faUser} />
+                </button>
+              </Link>
+
+              {/* Cart */}
+              <Link href="/cart">
+                <button className="relative w-10 h-10 flex items-center justify-center rounded-full bg-[#819744] text-white hover:bg-[#6f8438] hover:scale-105 transition shadow-sm hover:shadow-md">
+                  <FontAwesomeIcon icon={faCartShopping} />
+
+                  {/* Cart Count */}
+                  <span className="absolute -top-1 -right-1 bg-[#8B543E] text-white text-[10px] px-1.5 py-[1px] rounded-full">
+                    3
+                  </span>
+                </button>
+              </Link>
+
+            </div>
         </div>
       </div>
 
