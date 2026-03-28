@@ -6,8 +6,11 @@ import { swaggerSpec } from "./config/swagger";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/better-auth";
 import { trustedOrigins } from "./config/env";
+import { requestLogger } from "./middlewares/request-logger";
+import { globalErrorHandler, notFoundHandler } from "./middlewares/error-handler";
 
 const app = express();
+app.disable("x-powered-by");
 
 app.use(
   cors({
@@ -17,6 +20,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(requestLogger);
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
@@ -34,5 +38,7 @@ app.use(
 );
 
 app.use("/api/v1/", routes);
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 export default app;

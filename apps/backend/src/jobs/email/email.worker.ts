@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { QueueEvents, Worker } from "bullmq";
 import { env } from "../../config/env";
+import { logger } from "../../lib/logger";
 import { sendMail } from "../../lib/mailer/mailer";
 import { redisConnectionOptions } from "../../lib/redis/connection";
 import { EmailJobPayload } from "./email.types";
@@ -23,30 +24,30 @@ const queueEvents = new QueueEvents(env.EMAIL_QUEUE_NAME, {
 });
 
 worker.on("completed", (job) => {
-  console.log("Email job completed", {
+  logger.info({
     queue: env.EMAIL_QUEUE_NAME,
     jobId: job.id,
-  });
+  }, "Email job completed");
 });
 
 worker.on("failed", (job, error) => {
-  console.error("Email job failed", {
+  logger.error({
     queue: env.EMAIL_QUEUE_NAME,
     jobId: job?.id,
     attemptsMade: job?.attemptsMade,
-    error: error.message,
-  });
+    err: error,
+  }, "Email job failed");
 });
 
 queueEvents.on("stalled", ({ jobId }) => {
-  console.error("Email job stalled", {
+  logger.error({
     queue: env.EMAIL_QUEUE_NAME,
     jobId,
-  });
+  }, "Email job stalled");
 });
 
 async function shutdown(signal: string) {
-  console.log("Shutting down email worker", { signal });
+  logger.info({ signal }, "Shutting down email worker");
 
   await worker.close();
   await queueEvents.close();
@@ -62,7 +63,7 @@ process.on("SIGTERM", () => {
   void shutdown("SIGTERM");
 });
 
-console.log("Email worker started", {
+logger.info({
   queue: env.EMAIL_QUEUE_NAME,
   concurrency: env.EMAIL_WORKER_CONCURRENCY,
-});
+}, "Email worker started");

@@ -1,4 +1,10 @@
 import { z } from "zod";
+import pino from "pino";
+
+const bootstrapLogger = pino({
+  level: process.env.LOG_LEVEL ?? "info",
+  timestamp: pino.stdTimeFunctions.isoTime,
+});
 
 const envBoolean = z.preprocess((value) => {
   if (typeof value === "string") {
@@ -25,8 +31,9 @@ export const envSchema = z.object({
   DATABASE_URL: z.url(),
   DIRECT_URL: z.url().optional(),
 
-  REDIS_HOST: z.string().min(1),
-  REDIS_PORT: z.coerce.number().int().positive(),
+  REDIS_URL: z.url().optional(),
+  REDIS_HOST: z.string().min(1).optional(),
+  REDIS_PORT: z.coerce.number().int().positive().optional(),
   REDIS_USERNAME: z.string().min(1).optional(),
   REDIS_PASSWORD: z.string().min(1).optional(),
   REDIS_DB: z.coerce.number().int().nonnegative().default(0),
@@ -34,6 +41,12 @@ export const envSchema = z.object({
 
   EMAIL_QUEUE_NAME: z.string().min(1).default("email"),
   EMAIL_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
+  ORDER_RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+  ORDER_RESERVATION_RELEASE_BATCH_SIZE: z.coerce.number().int().positive().default(100),
+  ORDER_RESERVATION_RELEASE_MAX_BATCHES: z.coerce.number().int().positive().default(50),
+  ORDER_RESERVATION_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
+  ORDER_RESERVATION_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  PAYMENT_WEBHOOK_SECRET: z.string().min(16),
 
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),
@@ -50,12 +63,23 @@ export const envSchema = z.object({
   SMTP_USER: z.string().min(1),
   SMTP_PASS: z.string().min(1),
   SMTP_FROM: z.string().min(1),
+}).superRefine((value, ctx) => {
+  if (!value.REDIS_URL && (!value.REDIS_HOST || !value.REDIS_PORT)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Provide REDIS_URL or both REDIS_HOST and REDIS_PORT",
+      path: ["REDIS_URL"],
+    });
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error("Invalid environment variables:", z.flattenError(parsed.error));
+  bootstrapLogger.error(
+    { validation: z.flattenError(parsed.error) },
+    "Invalid environment variables",
+  );
   throw new Error("Environment validation failed");
 }
 

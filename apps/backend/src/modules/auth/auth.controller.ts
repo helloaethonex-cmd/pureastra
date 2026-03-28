@@ -28,10 +28,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
       redirectTo,
     });
   } catch (error) {
-    console.error("Forgot password request failed", {
+    req.log.error({
       email: parsedBody.data.email,
-      error: error instanceof Error ? error.message : String(error),
-    });
+      err: error,
+    }, "Forgot password request failed");
   }
 
   return res.status(200).json(FORGOT_PASSWORD_RESPONSE);

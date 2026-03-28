@@ -1,4 +1,10 @@
 import { prisma } from "../src/lib/prisma";
+import pino from "pino";
+
+const logger = pino({
+    level: process.env.LOG_LEVEL ?? "info",
+    timestamp: pino.stdTimeFunctions.isoTime,
+});
 
 async function main() {
     await prisma.role.createMany({
@@ -9,9 +15,11 @@ async function main() {
         skipDuplicates: true
     });
 
-    console.log("Roles seeded");
+    logger.info("Roles seeded");
 }
 
 main()
-    .catch(console.error)
+    .catch((error) => {
+        logger.error({ err: error }, "Seed failed");
+    })
     .finally(() => prisma.$disconnect());
