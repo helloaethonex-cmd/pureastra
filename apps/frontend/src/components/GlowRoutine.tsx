@@ -1,5 +1,7 @@
 "use client";
 
+import { motion } from "framer-motion";
+
 export default function GlowRoutine() {
   const steps = [
     {
@@ -36,54 +38,73 @@ export default function GlowRoutine() {
       </h2>
 
       <div className="relative w-full before:absolute before:top-0 before:bottom-0 before:left-1/2 before:w-[6px] before:-translate-x-1/2 before:rounded-[10px] before:bg-[linear-gradient(to_bottom,#819743_0%,#B0900F_51%,#5E2B16_100%)] before:bg-[length:100%_200%] before:content-[''] before:animate-[flow_4s_linear_infinite] max-md:before:left-[20px] max-md:before:translate-x-0">
+        
         {steps.map((step, index) => {
           const isLeft = index % 2 === 0;
 
           return (
-            <div key={index} className="mb-[50px] grid grid-cols-[1fr_60px_1fr] items-center max-md:mb-10 max-md:grid-cols-1">
-              {/* LEFT SIDE */}
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 80 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{
+                duration: 0.6,
+                delay: index * 0.2,
+                ease: "easeOut",
+              }}
+              className="mb-[50px] grid grid-cols-[1fr_60px_1fr] items-center max-md:mb-10 max-md:grid-cols-1"
+            >
+              {/* LEFT */}
               <div className="px-5 max-md:pl-10 max-md:pr-0">
                 {isLeft ? (
-                  <img
+                  <motion.img
                     src={step.img}
                     alt={step.title}
-                    className="w-full rounded-md transition-transform duration-300 hover:scale-105"
+                    whileHover={{ scale: 1.05 }}
+                    className="w-full rounded-md"
                   />
                 ) : (
                   <div>
-                    <h4 className="text-[#3B7509] font-semibold mb-2 font-['Poppins',sans-serif]">
+                    <h4 className="text-[#3B7509] font-semibold mb-2">
                       {step.title}
                     </h4>
-                    <p className="text-sm text-[#3B7509] font-['Poppins',sans-serif]">
+                    <p className="text-sm text-[#3B7509]">
                       {step.desc}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* CENTER DOT */}
-              <div className="z-[2] m-auto h-5 w-5 rounded-full border-4 border-[#B0900F] bg-white max-md:hidden" />
+              {/* DOT */}
+              <motion.div
+                initial={{ scale: 0 }}
+                whileInView={{ scale: 1 }}
+                transition={{ delay: index * 0.2 }}
+                className="z-[2] m-auto h-5 w-5 rounded-full border-4 border-[#B0900F] bg-white max-md:hidden"
+              />
 
-              {/* RIGHT SIDE */}
+              {/* RIGHT */}
               <div className="px-5 max-md:pl-10 max-md:pr-0">
                 {isLeft ? (
                   <div>
-                    <h4 className="text-[#3B7509] font-semibold mb-2 font-['Poppins',sans-serif]">
+                    <h4 className="text-[#3B7509] font-semibold mb-2">
                       {step.title}
                     </h4>
-                    <p className="text-sm text-[#3B7509] font-['Poppins',sans-serif]">
+                    <p className="text-sm text-[#3B7509]">
                       {step.desc}
                     </p>
                   </div>
                 ) : (
-                  <img
+                  <motion.img
                     src={step.img}
                     alt={step.title}
-                    className="w-full rounded-md transition-transform duration-300 hover:scale-105"
+                    whileHover={{ scale: 1.05 }}
+                    className="w-full rounded-md"
                   />
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

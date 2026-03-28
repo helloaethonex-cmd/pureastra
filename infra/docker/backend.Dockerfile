@@ -9,6 +9,6 @@ COPY ../../apps/backend .
 
 RUN npm run build
 
-EXPOSE 5000
+EXPOSE 5050
 
 CMD ["node", "dist/server.js"]

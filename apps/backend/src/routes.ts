@@ -6,6 +6,7 @@ import addressRoute from "./modules/address/address.route";
 import authRoute from "./modules/auth/auth.route";
 import ordersRoute from "./modules/orders/orders.route";
 import paymentsRoute from "./modules/payments/payments.route";
+import uploadRoute from "./modules/upload/upload.route";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use("/addresses", addressRoute);
 router.use("/auth", authRoute);
 router.use("/orders", ordersRoute);
 router.use("/", paymentsRoute);
+router.use("/upload", uploadRoute);
 
 export default router;

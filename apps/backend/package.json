@@ -34,13 +34,17 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1018.0",
+    "@aws-sdk/s3-request-presigner": "^3.1018.0",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
+    "@types/multer": "^2.1.0",
     "better-auth": "^1.5.5",
     "bullmq": "^5.71.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "ioredis": "^5.10.1",
+    "multer": "^2.1.1",
     "nodemailer": "^8.0.3",
     "pg": "^8.20.0",
     "pino": "^10.3.1",

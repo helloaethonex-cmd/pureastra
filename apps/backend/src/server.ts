@@ -9,7 +9,7 @@ import { prisma } from "./lib/prisma";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
 
-const PORT = env.PORT || 5000;
+const PORT = env.PORT || 5050;
 let server: Server | null = null;
 let isShuttingDown = false;
 

@@ -13,7 +13,7 @@ export default function AboutPureAstra() {
           </h2>
 
           <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal text-[#555]">
-            PureAstra was created with a clear purpose — to develop skincare
+            <strong>PureAstra</strong> was created with a clear purpose to develop skincare
             that is gentle, transparent, and thoughtfully formulated.
           </p>
 
@@ -35,34 +35,11 @@ export default function AboutPureAstra() {
           </p>
 
           <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal">
-            At PureAstra, every formula has a story — a process of research,
+            At PureAstra, every formula has a story a process of research,
             testing, and continuous improvement to create skincare that people
             can trust.
           </p>
 
-          {/* Founder Note */}
-          <div className="mt-[30px]">
-            <h4 className="text-[18px] mb-[10px] font-semibold">
-              Founder&apos;s Note
-            </h4>
-
-            <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal">
-              Hello, I&apos;m <strong>Gauri Babu</strong>, the founder of PureAstra.
-            </p>
-
-            <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal">
-              PureAstra began as a personal journey of learning about skincare
-              ingredients and understanding how formulations interact with the
-              skin. My goal was to create skincare that feels gentle, honest,
-              and accessible.
-            </p>
-
-            <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal">
-              As PureAstra grows, I hope to contribute to meaningful causes,
-              including supporting cancer patients through charitable
-              initiatives funded by a portion of our profits.
-            </p>
-          </div>
         </div>
 
         {/* RIGHT IMAGE */}
@@ -70,8 +47,8 @@ export default function AboutPureAstra() {
           {/* Background circle */}
           <div className="absolute w-[420px] h-[420px] rounded-full top-0 z-0" />
           <img
-            src="/img/founder.png"
-            alt="Founder"
+            src="/img/why.png"
+            alt="Why PureAstra"
             className="relative z-[2] w-full max-w-[380px] object-cover mt-[40px] transition-transform duration-300 hover:scale-105"
           />
         </div>

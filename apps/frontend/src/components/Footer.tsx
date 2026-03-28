@@ -13,6 +13,7 @@ import {
   faXTwitter,
   faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -54,42 +55,111 @@ export default function Footer() {
           <div>
             <h4 className="mb-3.75 text-lg">Top Categories</h4>
             <ul className="list-none p-0 space-y-2 text-sm text-[#f1f1f1] [&>li]:cursor-pointer">
-              <li>Face Care</li>
-              <li>Hair Care</li>
-              <li>Body Care</li>
-              <li>Combos</li>
-              <li>Mini Products</li>
+
+              <li>
+                <Link href="/category/face-care">Face Care</Link>
+              </li>
+
+              <li>
+                <Link href="/category/hair-care">Hair Care</Link>
+              </li>
+
+              <li>
+                <Link href="/category/body-care">Body Care</Link>
+              </li>
+
+              <li>
+                <Link href="/category/combos">Combos</Link>
+              </li>
+
+              <li>
+                <Link href="/category/mini-products">Mini Products</Link>
+              </li>
+
             </ul>
           </div>
 
           <div>
             <h4 className="mb-3.75 text-lg">Policies</h4>
             <ul className="list-none p-0 space-y-2 text-sm text-[#f1f1f1] [&>li]:cursor-pointer">
-              <li>Privacy Policy</li>
-              <li>Terms &amp; Conditions</li>
-              <li>Shipping &amp; Cancellation</li>
-              <li>Returns &amp; Refund</li>
+              
+              <li>
+                <Link href="/privacy-policy" className="cursor-pointer">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="cursor-pointer">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/shipping" className="cursor-pointer">
+                  Shipping &amp; Cancellation
+                </Link>
+              </li>
+              <li>
+                <Link href="/returns" className="cursor-pointer">
+                  Returns &amp; Refund
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="mb-3.75 text-lg">Best Sellers</h4>
             <ul className="list-none p-0 space-y-2 text-sm text-[#f1f1f1] [&>li]:cursor-pointer">
-              <li>Vitamin C Face Wash</li>
-              <li>Brightening Serum</li>
-              <li>Hair Growth Oil</li>
-              <li>Face Mask</li>
+              <li>
+                <Link href="/product/vitamin-c-face-wash" className="cursor-pointer">
+                  Vitamin C Face Wash
+                </Link>
+              </li>
+              <li>
+                <Link href="/product/brightening-serum" className="cursor-pointer">
+                  Brightening Serum
+                </Link>
+              </li>
+              <li>
+                <Link href="/product/hair-growth-oil" className="cursor-pointer">
+                  Hair Growth Oil
+                </Link>
+              </li>
+              <li>
+                <Link href="/product/face-mask" className="cursor-pointer">
+                  Face Mask
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="mb-3.75 text-lg">Info</h4>
             <ul className="list-none p-0 space-y-2 text-sm text-[#f1f1f1] [&>li]:cursor-pointer">
-              <li>About Us</li>
-              <li>Contact Us</li>
-              <li>Track Order</li>
-              <li>Blogs</li>
-              <li>Careers</li>
+              <li>
+                <Link href="/about" className="cursor-pointer">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="cursor-pointer">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/track-order" className="cursor-pointer">
+                  Track Order
+                </Link>
+              </li>
+              <li>
+                <Link href="/blogs" className="cursor-pointer">
+                  Blogs
+                </Link>
+              </li>
+              <li>
+                <Link href="/careers" className="cursor-pointer">
+                  Careers
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
