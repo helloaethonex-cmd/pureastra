@@ -19,13 +19,27 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { motion , AnimatePresence} from "framer-motion";
+import type { Product } from "@/services/api";
 
-
-export default function ProductClient({ product }: any) {
+export default function ProductClient({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [tab, setTab] = useState("desc");
-   const [activeIndex, setActiveIndex] = useState<number | null>(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(0);
+  const [activeVariantId, setActiveVariantId] = useState<string | null>(
+    product.variants[0]?.id ?? null
+  );
+
+  // Map API images to array of URLs (sorted by position)
+  const images = [...product.images]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((img) => img.imageUrl);
+
+  // Fallback image if none
+  const displayImages = images.length > 0 ? images : ["/img/facewash.png"];
+
+  const activeVariant = product.variants.find((v) => v.id === activeVariantId);
+
 
   const products = [
     {
@@ -110,7 +124,7 @@ export default function ProductClient({ product }: any) {
             className="w-full h-[500px] flex items-center justify-center"
           >
               <Image
-              src={product.images[activeImg]}
+              src={displayImages[activeImg]}
               alt={product.name}
               width={665}
               height={646}
@@ -121,7 +135,7 @@ export default function ProductClient({ product }: any) {
           {/* THUMBNAILS */}
           <div className="flex gap-4 mt-4">
 
-            {product.images.map((img: string, i: number) => (
+            {displayImages.map((img: string, i: number) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -184,29 +198,36 @@ export default function ProductClient({ product }: any) {
         </motion.p>
 
         {/* SIZE */}
-        <div className="mb-5 flex items-center gap-4">
+        {product.variants.length > 0 && (
+          <div className="mb-5 flex items-center gap-4">
 
-          {/* HEADING */}
-          <p className="font-['Roboto_Flex'] font-semibold text-[20px] text-black">
-            Size :
-          </p>
+            {/* HEADING */}
+            <p className="font-['Roboto_Flex'] font-semibold text-[20px] text-black">
+              Size :
+            </p>
 
-          {/* BUTTONS */}
-          <div className="flex items-center gap-3">
-
-            {/* 50 ml */}
-            <button className="px-4 py-1.5 text-[12px] rounded-full bg-[#EBF1DC] text-[#5E2B16] shadow-sm">
-              50 ml
-            </button>
-
-            {/* 100 ml */}
-            <button className="px-4 py-1.5 text-[12px] rounded-full bg-[#819744] text-white shadow-sm">
-              100 ml
-            </button>
+            {/* BUTTONS */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {product.variants.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setActiveVariantId(v.id)}
+                  className={`px-4 py-1.5 text-[12px] rounded-full shadow-sm transition ${
+                    activeVariantId === v.id
+                      ? "bg-[#819744] text-white"
+                      : "bg-[#EBF1DC] text-[#5E2B16] hover:bg-[#d9e0c5]"
+                  }`}
+                >
+                  {v.variantName ?? v.sku ?? `Variant ${v.id}`}
+                  {activeVariant?.price != null && activeVariantId === v.id && (
+                    <span className="ml-1 opacity-80">· ₹{activeVariant.price}</span>
+                  )}
+                </button>
+              ))}
+            </div>
 
           </div>
-
-        </div>
+        )}
 
         {/* BEST SUITED */}
         <p className="mb-6 text-[15px]">
@@ -291,13 +312,8 @@ export default function ProductClient({ product }: any) {
           <div className="text-sm text-gray-600 leading-6 space-y-3">
             {tab === "desc" ? (
               <>
-              {/* <p>{product.desc}</p> */}
-
               <p>
-                  Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C,
-                  natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle,
-                  toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula
-                  cleanses effectively while keeping your skin balanced, refreshed, and nourished.
+                  {product.description ?? "No description available for this product."}
               </p>
               </>
               ) : (

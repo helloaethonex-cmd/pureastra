@@ -1,0 +1,209 @@
+const BASE = process.env.NEXT_PUBLIC_BACKEND_URL + "/api/v1";
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...init?.headers },
+    ...init,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? `API error ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  parentId?: string | null;
+  children?: Category[];
+}
+
+export interface ProductVariant {
+  id: string;
+  variantName?: string | null;
+  sku?: string | null;
+  price?: number | null;
+  stockQuantity?: number | null;
+  isActive: boolean;
+}
+
+export interface ProductImage {
+  id: string;
+  imageUrl: string;
+  position?: number | null;
+  variantId?: string | null;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  brand?: string | null;
+  isActive: boolean;
+  variants: ProductVariant[];
+  images: ProductImage[];
+  categories?: { category: Category }[];
+}
+
+export interface ProductListResponse {
+  data: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ProductListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryId?: string;
+  brand?: string;
+  isActive?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
+export const listCategories = () =>
+  apiFetch<Category[]>("/products/categories");
+
+export const getCategory = (id: string) =>
+  apiFetch<Category>(`/products/categories/${id}`);
+
+export const createCategory = (body: {
+  name: string;
+  slug?: string;
+  description?: string;
+  parentId?: string;
+}) =>
+  apiFetch<Category>("/products/categories", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateCategory = (
+  id: string,
+  body: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    parentId?: string;
+  }
+) =>
+  apiFetch<Category>(`/products/categories/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const deleteCategory = (id: string) =>
+  apiFetch<void>(`/products/categories/${id}`, {
+    method: "DELETE",
+  });
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+
+export const listProducts = (params: ProductListParams = {}) => {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) q.set(k, String(v));
+  });
+  return apiFetch<ProductListResponse>(`/products?${q.toString()}`);
+};
+
+export const getProductBySlug = (slug: string) =>
+  apiFetch<Product>(`/products/slug/${slug}`);
+
+export const createProduct = (body: {
+  name: string;
+  slug?: string;
+  description?: string;
+  brand?: string;
+  isActive?: boolean;
+  categoryIds?: string[];
+  variants?: {
+    variantName?: string;
+    sku?: string;
+    price?: number;
+    stockQuantity?: number;
+  }[];
+}) =>
+  apiFetch<Product>("/products", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateProduct = (
+  id: string,
+  body: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    brand?: string;
+    isActive?: boolean;
+  }
+) =>
+  apiFetch<Product>(`/products/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const deleteProduct = (id: string) =>
+  apiFetch<void>(`/products/${id}`, {
+    method: "DELETE",
+  });
+
+export const addProductImage = (
+  productId: string,
+  body: { imageUrl: string; position?: number; variantId?: string }
+) =>
+  apiFetch<ProductImage>(`/products/${productId}/images`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const deleteProductImage = (productId: string, imageId: string) =>
+  apiFetch<void>(`/products/${productId}/images/${imageId}`, {
+    method: "DELETE",
+  });
+
+// ─── Upload ───────────────────────────────────────────────────────────────────
+
+export const uploadImageToR2 = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${BASE}/upload/image`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+    // NOTE: Do NOT set Content-Type header — browser will set it with boundary
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? `Upload failed ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.url as string;
+};
+
+// ─── Admin check ──────────────────────────────────────────────────────────────
+
+export const checkAdminAccess = async (): Promise<boolean> => {
+  const res = await fetch(`${BASE}/users/admin`, {
+    credentials: "include",
+  });
+  return res.ok; // 200 = admin, 403 = not admin
+};

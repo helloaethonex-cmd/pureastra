@@ -9,12 +9,13 @@ export async function generateStaticParams() {
 }
 
 type PageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 };
 
-export default function BlogDetailsPage({ params }: PageProps) {
+export default async function BlogDetailsPage(props: PageProps) {
+  const params = await props.params;
   const blog = blogs.find((b) => b.slug === params.slug);
 
   if (!blog) {

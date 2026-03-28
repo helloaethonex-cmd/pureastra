@@ -17,6 +17,7 @@ import {
   faPercent,
   faCircleInfo,
   faBlog,
+  faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { faHeart, faUser } from "@fortawesome/free-regular-svg-icons";
@@ -24,6 +25,20 @@ import { faHeart, faUser } from "@fortawesome/free-regular-svg-icons";
 import { useAuthStore } from "@/store/auth.store";
 import { useSignOut } from "@/hooks/useAuth";
 import AuthModal from "@/components/AuthModal";
+import { useIsAdmin } from "@/hooks/useAdmin";
+import { useCategories } from "@/hooks/useProducts";
+
+// Icon mapping for different category slugs
+const categoryIcons: Record<string, any> = {
+  "face-care": faFaceSmile,
+  "skincare": faFaceSmile,
+  "body-care": faSpa,
+  "hair-care": faWind,
+  "haircare": faWind,
+  "mini-products": faBox,
+  "combos": faTags,
+  "offers": faPercent,
+};
 
 export default function Navbar() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -31,15 +46,12 @@ export default function Navbar() {
 
   const { user } = useAuthStore();
   const signOut = useSignOut();
+  const { data: isAdmin } = useIsAdmin();
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
 
-  const menuItems = [
+  // Static menu items for non-category pages
+  const staticMenuItems = [
     { name: "Home", path: "/", icon: faHouse },
-    { name: "Face", path: "/category/face-care", icon: faFaceSmile },
-    { name: "Body", path: "/category/body-care", icon: faSpa },
-    { name: "Hair", path: "/category/hair-care", icon: faWind },
-    { name: "Miniz", path: "/category/mini-products", icon: faBox },
-    { name: "Combo", path: "/category/combos", icon: faTags },
-    { name: "Offer", path: "/category/offers", icon: faPercent },
     { name: "About", path: "/category/about", icon: faCircleInfo },
     { name: "Blog", path: "/category/blogs", icon: faBlog },
   ];
@@ -104,6 +116,19 @@ export default function Navbar() {
                 >
                   <p className="px-4 py-1 text-xs text-gray-400 truncate">{user.email}</p>
                   <hr className="my-1 border-gray-100" />
+
+                  {/* ADMIN PANEL — only visible to admins */}
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-[#819744] hover:bg-[#EBF1DC] transition font-medium"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <FontAwesomeIcon icon={faShieldHalved} className="text-xs" />
+                      Admin Panel
+                    </Link>
+                  )}
+
                   <Link
                     href="/account"
                     className="block px-4 py-2 text-sm text-[#5E2B16] hover:bg-[#FAF3E2] transition"
@@ -133,23 +158,37 @@ export default function Navbar() {
       <div className="border-b border-gray-200 py-2 bg-white">
         <div className="max-w-[1200px] mx-auto flex justify-center flex-wrap gap-[30px]">
 
-          {menuItems.map((item, index) => (
+          {/* Static menu items */}
+          {staticMenuItems.map((item, index) => (
             <Link
-              key={index}
+              key={`static-${index}`}
               href={item.path}
               className="group flex items-center gap-2 text-[#5E2B16] font-medium text-lg font-['Poppins',sans-serif] transition-all duration-300 hover:text-[#819744] hover:-translate-y-[2px]"
             >
-              {/* ICON */}
               <FontAwesomeIcon
                 icon={item.icon}
                 className="text-sm transition-transform duration-300 group-hover:scale-110"
               />
-
-              {/* TEXT */}
               <span className="relative">
                 {item.name}
+                <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-[#819744] transition-all duration-300 group-hover:w-full"></span>
+              </span>
+            </Link>
+          ))}
 
-                {/* ANIMATED UNDERLINE */}
+          {/* Dynamic category menu items (only top-level categories) */}
+          {!categoriesLoading && categories?.filter((cat) => !cat.parentId).map((category) => (
+            <Link
+              key={category.id}
+              href={`/category/${category.slug}`}
+              className="group flex items-center gap-2 text-[#5E2B16] font-medium text-lg font-['Poppins',sans-serif] transition-all duration-300 hover:text-[#819744] hover:-translate-y-[2px]"
+            >
+              <FontAwesomeIcon
+                icon={categoryIcons[category.slug] || faTags}
+                className="text-sm transition-transform duration-300 group-hover:scale-110"
+              />
+              <span className="relative">
+                {category.name}
                 <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-[#819744] transition-all duration-300 group-hover:w-full"></span>
               </span>
             </Link>
