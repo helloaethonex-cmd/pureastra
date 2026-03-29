@@ -20,9 +20,9 @@ export default function Footer() {
     <footer className="bg-[#8B543E] text-white px-10 pt-17.5 pb-7.5 font-sans">
       <div className="max-w-300 mx-auto">
         {/* TOP GRID */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-10 max-lg:grid-cols-2 max-sm:grid-cols-1">
+        <div className="grid gap-10 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {/* BRAND + NEWSLETTER */}
-          <div>
+          <div className="lg:col-span-2">
             <h2 className="text-3xl font-bold">Pureastra</h2>
 
             <p className="my-5 text-lg">
@@ -171,7 +171,7 @@ export default function Footer() {
             support@pureastra.com
           </p>
           <p>
-            <FontAwesomeIcon icon={faPhone} className="mr-2" /> +91 98765 43210
+            <FontAwesomeIcon icon={faPhone} className="mr-2" /> +91 94002 06479
           </p>
         </div>
 
