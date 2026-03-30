@@ -71,6 +71,14 @@ const router = Router();
  *                         type: string
  *                         nullable: true
  *                         example: "1299.00"
+ *                       isActive:
+ *                         type: boolean
+ *                         example: true
+ *                       deletedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                         example: null
  *                       product:
  *                         type: object
  *                         properties:
@@ -92,6 +100,14 @@ const router = Router();
  *                             type: string
  *                             nullable: true
  *                             example: "Pureastra"
+ *                           isActive:
+ *                             type: boolean
+ *                             example: true
+ *                           deletedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                             example: null
  *                       images:
  *                         type: array
  *                         items:
@@ -120,12 +136,16 @@ const router = Router();
  *                   variantName: "Blue / M"
  *                   sku: "TSHIRT-BLU-M"
  *                   price: "1299.00"
+ *                   isActive: true
+ *                   deletedAt: null
  *                   product:
  *                     id: "10"
  *                     uuid: "d7c9318f-f8f9-4b9b-b497-6459be4fdf85"
  *                     name: "Cotton T-Shirt"
  *                     slug: "cotton-tshirt"
  *                     brand: "Pureastra"
+ *                     isActive: true
+ *                     deletedAt: null
  *                   images:
  *                     - id: "7"
  *                       imageUrl: "https://cdn.example.com/products/10/hero.jpg"
@@ -360,7 +380,7 @@ router.delete("/items/:productVariantId", requireAuth, deleteWishlistItem);
  *                   type: string
  *                   example: "Unauthorized"
  *       404:
- *         description: Wishlist item or variant not found
+ *         description: Wishlist item not found, or variant disappeared during cart add
  *         content:
  *           application/json:
  *             schema:
@@ -372,6 +392,15 @@ router.delete("/items/:productVariantId", requireAuth, deleteWishlistItem);
  *                 code:
  *                   type: string
  *                   example: "WISHLIST_ITEM_NOT_FOUND"
+ *             examples:
+ *               wishlistMissing:
+ *                 value:
+ *                   error: "Wishlist item not found"
+ *                   code: "WISHLIST_ITEM_NOT_FOUND"
+ *               variantMissingAtMove:
+ *                 value:
+ *                   error: "Product variant not found"
+ *                   code: "MOVE_TO_CART_FAILED"
  *       409:
  *         description: Wishlist item exists but is unavailable to add to cart
  *         content:

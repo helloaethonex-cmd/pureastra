@@ -9,17 +9,22 @@ import {
   assignCategories,
   removeCategory as removeCategoryFromProduct,
   addVariantToProduct,
-  updateProductVariant,
-  deleteProductVariant,
-  adjustStock,
   addImageToProduct,
-  removeProductImage,
+  addProductContentSection,
+  editProductContentSection,
+  removeProductContentSection,
   getAllCategories,
   getCategoryById,
   createNewCategory,
   updateExistingCategory,
   deleteCategory,
-  getVariantById,
+  getScopedVariant,
+  updateScopedProductVariant,
+  deleteScopedProductVariant,
+  adjustScopedStock,
+  getPublicProductContentSections,
+  getAdminProductContentSections,
+  removeScopedProductImage,
 } from "./products.service";
 import {
   productQuerySchema,
@@ -31,6 +36,8 @@ import {
   createCategorySchema,
   updateCategorySchema,
   stockAdjustmentSchema,
+  createProductContentSectionSchema,
+  updateProductContentSectionSchema,
 } from "./products.types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -143,7 +150,7 @@ export const removeProductCategory = async (req: Request, res: Response) => {
 /** GET /products/:id/variants/:variantId */
 export const getVariant = async (req: Request, res: Response) => {
   try {
-    const variant = await getVariantById(param(req, "variantId"));
+    const variant = await getScopedVariant(param(req, "id"), param(req, "variantId"));
     res.status(200).json(variant);
   } catch (err) {
     handleError(req, res, err);
@@ -165,7 +172,7 @@ export const addVariant = async (req: Request, res: Response) => {
 export const updateVariant = async (req: Request, res: Response) => {
   try {
     const data = updateVariantSchema.parse(req.body);
-    const variant = await updateProductVariant(param(req, "variantId"), data);
+    const variant = await updateScopedProductVariant(param(req, "id"), param(req, "variantId"), data);
     res.status(200).json(variant);
   } catch (err) {
     handleError(req, res, err);
@@ -175,7 +182,7 @@ export const updateVariant = async (req: Request, res: Response) => {
 /** DELETE /products/:id/variants/:variantId */
 export const removeVariant = async (req: Request, res: Response) => {
   try {
-    await deleteProductVariant(param(req, "variantId"));
+    await deleteScopedProductVariant(param(req, "id"), param(req, "variantId"));
     res.status(200).json({ message: "Variant deleted successfully" });
   } catch (err) {
     handleError(req, res, err);
@@ -186,7 +193,7 @@ export const removeVariant = async (req: Request, res: Response) => {
 export const updateStock = async (req: Request, res: Response) => {
   try {
     const data = stockAdjustmentSchema.parse(req.body);
-    const variant = await adjustStock(param(req, "variantId"), data);
+    const variant = await adjustScopedStock(param(req, "id"), param(req, "variantId"), data);
     res.status(200).json(variant);
   } catch (err) {
     handleError(req, res, err);
@@ -209,8 +216,62 @@ export const addImage = async (req: Request, res: Response) => {
 /** DELETE /products/:id/images/:imageId */
 export const removeImage = async (req: Request, res: Response) => {
   try {
-    await removeProductImage(param(req, "imageId"));
+    await removeScopedProductImage(param(req, "id"), param(req, "imageId"));
     res.status(200).json({ message: "Image deleted successfully" });
+  } catch (err) {
+    handleError(req, res, err);
+  }
+};
+
+// ─── Product Content Sections ────────────────────────────────────────────────
+
+/** GET /products/:id/content-sections */
+export const listProductContent = async (req: Request, res: Response) => {
+  try {
+    const sections = await getPublicProductContentSections(param(req, "id"));
+    res.status(200).json(sections);
+  } catch (err) {
+    handleError(req, res, err);
+  }
+};
+
+/** GET /products/:id/content-sections/admin */
+export const listProductContentAdmin = async (req: Request, res: Response) => {
+  try {
+    const sections = await getAdminProductContentSections(param(req, "id"));
+    res.status(200).json(sections);
+  } catch (err) {
+    handleError(req, res, err);
+  }
+};
+
+/** POST /products/:id/content-sections */
+export const createProductContent = async (req: Request, res: Response) => {
+  try {
+    const data = createProductContentSectionSchema.parse(req.body);
+    const section = await addProductContentSection(param(req, "id"), data);
+    res.status(201).json(section);
+  } catch (err) {
+    handleError(req, res, err);
+  }
+};
+
+/** PATCH /products/:id/content-sections/:sectionId */
+export const updateProductContent = async (req: Request, res: Response) => {
+  try {
+    const data = updateProductContentSectionSchema.parse(req.body);
+    const section = await editProductContentSection(param(req, "id"), param(req, "sectionId"), data);
+    res.status(200).json(section);
+  } catch (err) {
+    handleError(req, res, err);
+  }
+};
+
+/** DELETE /products/:id/content-sections/:sectionId */
+export const deleteProductContent = async (req: Request, res: Response) => {
+  try {
+    await removeProductContentSection(param(req, "id"), param(req, "sectionId"));
+    res.status(200).json({ message: "Product content section removed successfully" });
   } catch (err) {
     handleError(req, res, err);
   }

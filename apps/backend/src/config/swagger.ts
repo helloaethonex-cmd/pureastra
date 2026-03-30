@@ -257,6 +257,126 @@ export const swaggerSpec = swaggerJSDoc({
           },
         },
         // ── Product ──────────────────────────────────────────────────────────
+        ProductContentSection: {
+          type: "object",
+          properties: {
+            id: { type: "string", example: "12" },
+            productId: { type: "string", example: "1" },
+            sectionType: {
+              type: "string",
+              enum: [
+                "BENEFITS",
+                "FAQ",
+                "SUITABLE_FOR",
+                "USAGE_INSTRUCTION",
+                "BEFORE_AFTER",
+                "INGREDIENTS",
+                "HIGHLIGHTS",
+                "CUSTOM",
+              ],
+              example: "BENEFITS",
+            },
+            title: { type: "string", nullable: true, example: "Benefits" },
+            content: {
+              description: "JSON payload rendered by frontend based on sectionType",
+              oneOf: [
+                { type: "string", example: "Simple text content" },
+                {
+                  type: "array",
+                  items: { type: "object", additionalProperties: true },
+                },
+                { type: "object", additionalProperties: true },
+              ],
+            },
+            position: { type: "integer", example: 0 },
+            isActive: { type: "boolean", example: true },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        ProductContentSectionPublic: {
+          type: "object",
+          properties: {
+            sectionType: {
+              type: "string",
+              enum: [
+                "BENEFITS",
+                "FAQ",
+                "SUITABLE_FOR",
+                "USAGE_INSTRUCTION",
+                "BEFORE_AFTER",
+                "INGREDIENTS",
+                "HIGHLIGHTS",
+                "CUSTOM",
+              ],
+              example: "BENEFITS",
+            },
+            title: { type: "string", nullable: true, example: "Benefits" },
+            content: {
+              oneOf: [
+                { type: "string", example: "Simple text content" },
+                {
+                  type: "array",
+                  items: { type: "object", additionalProperties: true },
+                },
+                { type: "object", additionalProperties: true },
+              ],
+            },
+            position: { type: "integer", example: 0 },
+          },
+        },
+        CreateProductContentSectionBody: {
+          type: "object",
+          required: ["sectionType", "content"],
+          properties: {
+            sectionType: {
+              type: "string",
+              enum: [
+                "BENEFITS",
+                "FAQ",
+                "SUITABLE_FOR",
+                "USAGE_INSTRUCTION",
+                "BEFORE_AFTER",
+                "INGREDIENTS",
+                "HIGHLIGHTS",
+                "CUSTOM",
+              ],
+              example: "FAQ",
+            },
+            title: { type: "string", nullable: true, example: "Frequently Asked Questions" },
+            content: {
+              type: "array",
+              items: { type: "object", additionalProperties: true },
+              example: [
+                { question: "Is this safe for pregnancy?", answer: "Yes, generally safe." },
+              ],
+            },
+            position: { type: "integer", minimum: 0, default: 0, example: 0 },
+            isActive: { type: "boolean", default: true, example: true },
+          },
+        },
+        UpdateProductContentSectionBody: {
+          type: "object",
+          properties: {
+            sectionType: {
+              type: "string",
+              enum: [
+                "BENEFITS",
+                "FAQ",
+                "SUITABLE_FOR",
+                "USAGE_INSTRUCTION",
+                "BEFORE_AFTER",
+                "INGREDIENTS",
+                "HIGHLIGHTS",
+                "CUSTOM",
+              ],
+            },
+            title: { type: "string", nullable: true, example: "Updated FAQ" },
+            content: { oneOf: [{ type: "string" }, { type: "array", items: {} }, { type: "object" }] },
+            position: { type: "integer", minimum: 0, example: 1 },
+            isActive: { type: "boolean", example: true },
+          },
+        },
         Product: {
           type: "object",
           properties: {
@@ -291,6 +411,12 @@ export const swaggerSpec = swaggerJSDoc({
             images: {
               type: "array",
               items: { $ref: "#/components/schemas/ProductImage" },
+            },
+            contentSections: {
+              type: "array",
+              items: { $ref: "#/components/schemas/ProductContentSectionPublic" },
+              description:
+                "Present on product detail endpoints. May be omitted on list/create/update responses.",
             },
             createdAt: { type: "string", format: "date-time" },
             updatedAt: { type: "string", format: "date-time" },

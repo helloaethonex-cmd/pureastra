@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import type { PrismaClient as GeneratedPrismaClient } from "../../generated/prisma/client";
 import {
   CreateProductInput,
   UpdateProductInput,
@@ -9,8 +10,12 @@ import {
   CreateCategoryInput,
   UpdateCategoryInput,
   StockAdjustmentInput,
+  CreateProductContentSectionInput,
+  UpdateProductContentSectionInput,
 } from "./products.types";
 import { v4 as uuidv4 } from "uuid";
+
+const prismaClient = prisma as GeneratedPrismaClient;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +27,20 @@ const productFullInclude = {
   categories: { include: { category: true } },
   images: true,
 } as const;
+
+const productDetailInclude: any = {
+  ...productFullInclude,
+  contentSections: {
+    where: { isActive: true },
+    orderBy: [{ sectionType: "asc" }, { position: "asc" }],
+    select: {
+      sectionType: true,
+      title: true,
+      content: true,
+      position: true,
+    },
+  },
+};
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
@@ -78,14 +97,14 @@ export const findAllProducts = async (query: ProductQuery) => {
 export const findProductById = async (id: bigint) => {
   return prisma.product.findFirst({
     where: { id, deletedAt: null },
-    include: productFullInclude,
+    include: productDetailInclude,
   });
 };
 
 export const findProductBySlug = async (slug: string) => {
   return prisma.product.findFirst({
     where: { slug, deletedAt: null },
-    include: productFullInclude,
+    include: productDetailInclude,
   });
 };
 
@@ -154,7 +173,10 @@ export const removeCategoryFromProduct = async (productId: bigint, categoryId: b
 export const findVariantById = async (id: bigint) => {
   return prisma.productVariant.findFirst({
     where: { id, deletedAt: null },
-    include: { images: true },
+    include: {
+      images: true,
+      product: { select: { slug: true } },
+    },
   });
 };
 
@@ -209,6 +231,67 @@ export const addProductImage = async (productId: bigint, data: AddProductImageIn
 
 export const deleteProductImage = async (imageId: bigint) => {
   return prisma.productImage.delete({ where: { id: imageId } });
+};
+
+export const findProductImageById = async (imageId: bigint) => {
+  return prisma.productImage.findUnique({ where: { id: imageId } });
+};
+
+// ─── Product Content Sections ────────────────────────────────────────────────
+
+export const findProductContentSectionById = async (sectionId: bigint) => {
+  return prismaClient.productContentSection.findUnique({
+    where: { id: sectionId },
+  });
+};
+
+export const listProductContentSections = async (productId: bigint, includeInactive = false) => {
+  return prismaClient.productContentSection.findMany({
+    where: {
+      productId,
+      ...(includeInactive ? {} : { isActive: true }),
+    },
+    orderBy: [{ sectionType: "asc" }, { position: "asc" }],
+  });
+};
+
+export const createProductContentSection = async (
+  productId: bigint,
+  data: CreateProductContentSectionInput,
+) => {
+  return prismaClient.productContentSection.create({
+    data: {
+      productId,
+      sectionType: data.sectionType,
+      title: data.title,
+      content: data.content as any,
+      position: data.position ?? 0,
+      isActive: data.isActive ?? true,
+    },
+  });
+};
+
+export const updateProductContentSection = async (
+  sectionId: bigint,
+  data: UpdateProductContentSectionInput,
+) => {
+  return prismaClient.productContentSection.update({
+    where: { id: sectionId },
+    data: {
+      ...(data.sectionType !== undefined ? { sectionType: data.sectionType } : {}),
+      ...(data.title !== undefined ? { title: data.title } : {}),
+      ...(data.content !== undefined ? { content: data.content as any } : {}),
+      ...(data.position !== undefined ? { position: data.position } : {}),
+      ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+    },
+  });
+};
+
+export const deactivateProductContentSection = async (sectionId: bigint) => {
+  return prismaClient.productContentSection.update({
+    where: { id: sectionId },
+    data: { isActive: false },
+  });
 };
 
 // ─── Categories ───────────────────────────────────────────────────────────────
