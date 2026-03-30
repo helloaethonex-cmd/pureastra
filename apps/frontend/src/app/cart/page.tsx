@@ -2,57 +2,44 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeftLong, faPlus, faMinus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { useAuthStore } from "@/store/auth.store";
+import { useCart, useClearCart, useRemoveCartItem, useUpdateCartItem } from "@/hooks/useCart";
+
+const toPriceNumber = (value: number | string | null | undefined) => {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  return Number.isFinite(parsed) ? Number(parsed) : 0;
+};
 
 
 export default function OrderPage() {
+  const { user, isLoading: authLoading } = useAuthStore();
+  const isAuthenticated = Boolean(user);
 
-  // Dummy cart data (replace with real later)
-  const [cart, setCart] = useState([
-    {
-      id: 1,
-      name: "Vitamin C facewash",
-      price: 699,
-      oldPrice: 899,
-      img: "/img/facewash.png",
-      qty: 1,
-    },
-    {
-      id: 2,
-      name: "Apple Berry Foaming Facewash",
-      price: 699,
-      oldPrice: 899,
-      img: "/img/facewash.png",
-      qty: 1,
-    },
-  ]);
+  const { data: cart, isLoading: cartLoading, isError, error } = useCart(isAuthenticated);
+  const updateItem = useUpdateCartItem();
+  const removeItem = useRemoveCartItem();
+  const clearCart = useClearCart();
 
-  //  Increase qty
-  const increase = (id: number) => {
-    setCart(cart.map(item =>
-      item.id === id ? { ...item, qty: item.qty + 1 } : item
-    ));
+  const increase = (itemId: string, quantity: number) => {
+    updateItem.mutate({ itemId, quantity: quantity + 1 });
   };
 
-  //  Decrease qty
- const decrease = (id: number) => {
-  setCart(cart.flatMap(item =>
-    item.id === id
-      ? item.qty === 1
-        ? [] 
-        : { ...item, qty: item.qty - 1 }
-      : item
-  ));
-};
-
-  //  Remove item
-  const removeItem = (id: number) => {
-    setCart(cart.filter(item => item.id !== id));
+  const decrease = (itemId: string, quantity: number) => {
+    if (quantity <= 1) {
+      removeItem.mutate(itemId);
+      return;
+    }
+    updateItem.mutate({ itemId, quantity: quantity - 1 });
   };
 
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+  const items = cart?.items ?? [];
+
+  const subtotal = items.reduce((acc, item) => {
+    const unitPrice = toPriceNumber(item.priceSnapshot ?? item.productVariant.price);
+    return acc + unitPrice * item.quantity;
+  }, 0);
   const discount = 0.03 * subtotal;
   const total = subtotal - discount;
 
@@ -73,17 +60,32 @@ export default function OrderPage() {
         <div className="mb-6 border-t border-[#D6C9B6]" />
 
 
-        {/* ================= EMPTY STATE ================= */}
-        {cart.length === 0 ? (
+        {authLoading || (isAuthenticated && cartLoading) ? (
+          <div className="py-20 text-center text-[#5E2B15]">Loading cart...</div>
+        ) : !isAuthenticated ? (
+          <div className="text-center py-20">
+            <h2 className="text-xl text-[#5E2B15] mb-4">
+              Please sign in to view and manage your cart.
+            </h2>
+            <Link
+              href="/"
+              className="inline-flex bg-[#819744] text-white px-6 py-2 rounded-md"
+            >
+              Continue Shopping
+            </Link>
+          </div>
+        ) : isError ? (
+          <div className="text-center py-20 text-red-600">
+            {(error as Error)?.message ?? "Failed to load cart"}
+          </div>
+        ) : items.length === 0 ? (
           <div className="text-center py-20">
             <h2 className="text-xl text-[#5E2B15] mb-4">
               Oops... Looks like you forgot to add your favourites!
             </h2>
 
-            <Link href="/">
-              <button className="bg-[#819744] text-white px-6 py-2 rounded-md">
-                Shop Now
-              </button>
+            <Link href="/" className="inline-flex bg-[#819744] text-white px-6 py-2 rounded-md">
+              Shop Now
             </Link>
           </div>
         ) : (
@@ -92,13 +94,19 @@ export default function OrderPage() {
             {/* ================= PRODUCTS ================= */}
             <div className="space-y-8">
 
-              {cart.map((item) => (
+              {items.map((item) => {
+                const product = item.productVariant.product;
+                const itemImage = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.png";
+                const itemName = product?.name || "Product";
+                const itemPrice = toPriceNumber(item.priceSnapshot ?? item.productVariant.price);
+
+                return (
                 <div key={item.id} className="flex gap-6 border-b pb-6">
 
                   {/* IMAGE */}
                   <Image
-                    src={item.img}
-                    alt={item.name}
+                    src={itemImage}
+                    alt={itemName}
                     width={120}
                     height={120}
                     className="rounded-md"
@@ -108,15 +116,15 @@ export default function OrderPage() {
                   <div className="flex-1">
 
                     <h2 className="text-lg font-semibold text-[#5E2B15]">
-                      {item.name}
+                      {itemName}
                     </h2>
 
                     <p className="text-sm text-[#7B6A58]">
-                      Size : <span className="text-[#819744]">100ml</span>
+                      Variant: <span className="text-[#819744]">{item.productVariant.variantName || "Default"}</span>
                     </p>
 
                     <p className="text-sm text-[#7B6A58]">
-                      Best Suited for: <span className="text-[#819744]">all skin types</span>
+                      Product: <span className="text-[#819744]">{product.slug}</span>
                     </p>
 
                     {/* QTY */}
@@ -124,18 +132,20 @@ export default function OrderPage() {
 
                       {/* DECREASE */}
                       <button 
-                        onClick={() => decrease(item.id)}
+                        onClick={() => decrease(item.id, item.quantity)}
+                        disabled={updateItem.isPending || removeItem.isPending}
                         className="w-8 h-8 border flex items-center justify-center rounded"
                       >
                         <FontAwesomeIcon icon={faMinus} />
                       </button>
 
                       {/* QTY */}
-                      <span className="text-[16px] font-medium">{item.qty}</span>
+                      <span className="text-[16px] font-medium">{item.quantity}</span>
 
                       {/* INCREASE */}
                       <button
-                        onClick={() => increase(item.id)}
+                        onClick={() => increase(item.id, item.quantity)}
+                        disabled={updateItem.isPending || removeItem.isPending}
                         className="w-8 h-8 border flex items-center justify-center rounded"
                       >
                         <FontAwesomeIcon icon={faPlus} />
@@ -143,7 +153,8 @@ export default function OrderPage() {
 
                       {/* DELETE ICON */}
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem.mutate(item.id)}
+                        disabled={removeItem.isPending}
                         className="ml-4 text-white bg-[#5E2B15] text-sm px-3 py-1 hover:text-red-500 transition"
                       >
                         Remove <FontAwesomeIcon icon={faTrash} />
@@ -155,14 +166,11 @@ export default function OrderPage() {
 
                   {/* PRICE */}
                   <div className="text-right">
-                    <p className="font-semibold">{item.price}</p>
-                    <p className="text-sm line-through text-gray-400">
-                      {item.oldPrice}
-                    </p>
+                    <p className="font-semibold">₹{itemPrice.toFixed(2)}</p>
                   </div>
 
                 </div>
-              ))}
+              )})}
 
             </div>
 
@@ -171,7 +179,7 @@ export default function OrderPage() {
 
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>{subtotal}</span>
+                <span>₹{subtotal.toFixed(2)}</span>
               </div>
 
               <div className="flex justify-between">
@@ -186,7 +194,7 @@ export default function OrderPage() {
 
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total to pay</span>
-                <span>{total.toFixed(2)}</span>
+                <span>₹{total.toFixed(2)}</span>
               </div>
 
             </div>
@@ -196,14 +204,23 @@ export default function OrderPage() {
               You will save ₹{(subtotal * 0.03).toFixed(0)} on this order
             </div>
 
+            <button
+              onClick={() => clearCart.mutate()}
+              disabled={clearCart.isPending}
+              className="w-full mt-2 border border-[#5E2B15] text-[#5E2B15] py-2 font-medium hover:bg-[#efe2cf] transition"
+            >
+              {clearCart.isPending ? "Clearing..." : "Clear Cart"}
+            </button>
+
             {/* ================= SUMMARY ================= */}
             <div className="mt-10 space-y-2 text-[#5E2B15]"></div>
             {/* CHECKOUT */}
             <div className="mt-6">
-              <Link href="/checkout">
-                <button className="w-full bg-[#819744] text-white py-3 font-semibold hover:bg-[#6f873a] transition">
-                  Proceed to checkout
-                </button>
+              <Link
+                href="/shipping"
+                className="block w-full bg-[#819744] text-center text-white py-3 font-semibold hover:bg-[#6f873a] transition"
+              >
+                Proceed to checkout
               </Link>
             </div>
             

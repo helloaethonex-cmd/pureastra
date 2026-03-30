@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 import {
   faCartShopping,
@@ -27,17 +28,18 @@ import { useSignOut } from "@/hooks/useAuth";
 import AuthModal from "@/components/AuthModal";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { useCategories } from "@/hooks/useProducts";
+import { useCart } from "@/hooks/useCart";
 
 // Icon mapping for different category slugs
-const categoryIcons: Record<string, any> = {
+const categoryIcons: Record<string, IconDefinition> = {
   "face-care": faFaceSmile,
-  "skincare": faFaceSmile,
+  skincare: faFaceSmile,
   "body-care": faSpa,
   "hair-care": faWind,
-  "haircare": faWind,
+  haircare: faWind,
   "mini-products": faBox,
-  "combos": faTags,
-  "offers": faPercent,
+  combos: faTags,
+  offers: faPercent,
 };
 
 export default function Navbar() {
@@ -48,6 +50,12 @@ export default function Navbar() {
   const signOut = useSignOut();
   const { data: isAdmin } = useIsAdmin();
   const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { data: cart } = useCart(Boolean(user));
+
+  const cartCount = (cart?.items ?? []).reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
 
   // Static menu items for non-category pages
   const staticMenuItems = [
@@ -96,61 +104,6 @@ export default function Navbar() {
           </Link>
 
           {/* RIGHT ICONS */}
-          <div className="flex gap-5 text-lg [&>svg]:text-[#5E2B15] [&>svg]:cursor-pointer [&>svg]:transition-transform [&>svg:hover]:scale-110 items-center">
-            <FontAwesomeIcon icon={faHeart} />
-
-            {/* USER ICON + DROPDOWN */}
-            <div className="relative">
-              <FontAwesomeIcon
-                icon={faUser}
-                onClick={handleUserIconClick}
-                className="text-[#5E2B15] cursor-pointer transition-transform hover:scale-110"
-                title={user ? user.name : "Login / Sign Up"}
-              />
-
-              {/* LOGGED-IN DROPDOWN */}
-              {user && isUserMenuOpen && (
-                <div
-                  className="absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
-                  onMouseLeave={() => setIsUserMenuOpen(false)}
-                >
-                  <p className="px-4 py-1 text-xs text-gray-400 truncate">{user.email}</p>
-                  <hr className="my-1 border-gray-100" />
-
-                  {/* ADMIN PANEL — only visible to admins */}
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-[#819744] hover:bg-[#EBF1DC] transition font-medium"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <FontAwesomeIcon icon={faShieldHalved} className="text-xs" />
-                      Admin Panel
-                    </Link>
-                  )}
-
-                  <Link
-                    href="/account"
-                    className="block px-4 py-2 text-sm text-[#5E2B16] hover:bg-[#FAF3E2] transition"
-                    onClick={() => setIsUserMenuOpen(false)}
-                  >
-                    My Account
-                  </Link>
-                  <button
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      signOut.mutate();
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
-                  >
-                    {signOut.isPending ? "Signing out..." : "Sign Out"}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <FontAwesomeIcon icon={faCartShopping} />
-          </div>
           <div className="flex items-center gap-3">
 
               {/* Wishlist */}
@@ -166,11 +119,57 @@ export default function Navbar() {
               </Link>
 
               {/* User */}
-              <Link href="/profile">
-                <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md">
-                  <FontAwesomeIcon icon={faUser} />
-                </button>
-              </Link>
+              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md">
+                <FontAwesomeIcon
+                  icon={faUser}
+                  onClick={handleUserIconClick}
+                  className="text-[#5E2B15] cursor-pointer transition-transform hover:scale-110"
+                  title={user ? user.name : "Login / Sign Up"}
+                />
+
+                {user && isUserMenuOpen && (
+                  <div
+                    className="absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
+                    onMouseLeave={() => setIsUserMenuOpen(false)}
+                  >
+                    <p className="px-4 py-1 text-xs text-gray-400 truncate">
+                      {user.email}
+                    </p>
+                    <hr className="my-1 border-gray-100" />
+
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-[#819744] hover:bg-[#EBF1DC] transition font-medium"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <FontAwesomeIcon
+                          icon={faShieldHalved}
+                          className="text-xs"
+                        />
+                        Admin Panel
+                      </Link>
+                    )}
+
+                    <Link
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-[#5E2B16] hover:bg-[#FAF3E2] transition"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      My Account
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        signOut.mutate();
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                    >
+                      {signOut.isPending ? "Signing out..." : "Sign Out"}
+                    </button>
+                  </div>
+                )}
+              </button>
 
               {/* Cart */}
               <Link href="/cart">
@@ -179,7 +178,7 @@ export default function Navbar() {
 
                   {/* Cart Count */}
                   <span className="absolute -top-1 -right-1 bg-[#8B543E] text-white text-[10px] px-1.5 py-[1px] rounded-full">
-                    3
+                    {cartCount}
                   </span>
                 </button>
               </Link>

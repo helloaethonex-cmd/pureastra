@@ -20,6 +20,8 @@ import {
 
 import { motion , AnimatePresence} from "framer-motion";
 import type { Product } from "@/services/api";
+import { useAddCartItem } from "@/hooks/useCart";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function ProductClient({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
@@ -29,6 +31,8 @@ export default function ProductClient({ product }: { product: Product }) {
   const [activeVariantId, setActiveVariantId] = useState<string | null>(
     product.variants[0]?.id ?? null
   );
+  const { user } = useAuthStore();
+  const addCartItem = useAddCartItem();
 
   // Map API images to array of URLs (sorted by position)
   const images = [...product.images]
@@ -39,6 +43,31 @@ export default function ProductClient({ product }: { product: Product }) {
   const displayImages = images.length > 0 ? images : ["/img/facewash.png"];
 
   const activeVariant = product.variants.find((v) => v.id === activeVariantId);
+
+  const handleAddToCart = () => {
+    if (!user) {
+      alert("Please sign in to add items to your cart.");
+      return;
+    }
+
+    if (!activeVariant?.id) {
+      alert("Please select a valid variant.");
+      return;
+    }
+
+    addCartItem.mutate(
+      { productVariantId: activeVariant.id, quantity: qty },
+      {
+        onSuccess: () => {
+          alert("Item added to cart");
+        },
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : "Failed to add to cart";
+          alert(message);
+        },
+      }
+    );
+  };
 
 
   const products = [
@@ -267,11 +296,15 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             {/*  ADD TO CART */}
-            <button className="flex h-[42px]">
+            <button
+              onClick={handleAddToCart}
+              disabled={addCartItem.isPending}
+              className="flex h-[42px] disabled:opacity-70 disabled:cursor-not-allowed"
+            >
 
               {/* TEXT PART */}
               <span className="bg-[#E5EAD9] text-[#5E2B16] px-6 flex items-center font-semibold text-[14px] tracking-wide">
-                ADD TO CART
+                {addCartItem.isPending ? "ADDING..." : "ADD TO CART"}
               </span>
 
               {/* ICON PART */}

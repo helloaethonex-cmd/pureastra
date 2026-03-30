@@ -1,14 +1,29 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPenToSquare } from "@fortawesome/free-regular-svg-icons";
 import Link from "next/link";
+import { useAuthStore } from "@/store/auth.store";
+import { useMyProfile } from "@/hooks/useProfile";
+import { useSignOut } from "@/hooks/useAuth";
+
+const profileField = (label: string, value?: string | null) => ({
+  label,
+  value: value?.trim() || "-",
+});
 
 export default function ProfilePage() {
-  const [gender, setGender] = useState("female");
-  const [isEditing, setIsEditing] = useState(false);
+  const { user, isLoading: authLoading } = useAuthStore();
+  const signOut = useSignOut();
+  const { data: profile, isLoading, isError, error } = useMyProfile(Boolean(user));
+
+  const fields = [
+    profileField("First Name", profile?.firstName),
+    profileField("Last Name", profile?.lastName),
+    profileField("Name", profile?.name),
+    profileField("Email", profile?.email),
+    profileField("Contact Number", profile?.phone),
+    profileField("Role", profile?.role?.name),
+  ];
 
   return (
     <div className="bg-[#F5F0E6] min-h-screen py-16">
@@ -22,107 +37,38 @@ export default function ProfilePage() {
           className="w-[762px] h-[565px] bg-[#EDE3D2] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.08)]"
         >
 
-          {/* EDIT BUTTON */}
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="bg-[#9CB261] text-white px-4 py-1 rounded-md text-sm font-['Poppins',sans-serif] flex items-center gap-2"
-            >
-              <FontAwesomeIcon icon={faPenToSquare} className="text-[14px]" />
-              Edit
-            </button>
-          </div>
-
-          {/* FORM */}
-          <div className="grid grid-cols-2 gap-6 text-[#5E2B16] text-sm">
-
-            <div>
-              <label className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">First Name</label>
-              <input
-                readOnly={!isEditing}
-                className={`w-full mt-1 p-2 rounded-md ${isEditing ? "bg-white" : "bg-gray-100 cursor-not-allowed"}`}
-                defaultValue="Lorem"
-              />
+          {authLoading || (user && isLoading) ? (
+            <div className="h-full flex items-center justify-center text-[#5E2B16] text-lg">
+              Loading profile...
             </div>
-
-            <div>
-              <label className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">Last Name</label>
-              <input
-                readOnly={!isEditing}
-                className={`w-full mt-1 p-2 rounded-md ${isEditing ? "bg-white" : "bg-gray-100 cursor-not-allowed"}`}
-                defaultValue="Ipsum"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <label className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">Email ID</label>
-              <input
-                readOnly={!isEditing}
-                className={`w-full mt-1 p-2 rounded-md ${isEditing ? "bg-white" : "bg-gray-100 cursor-not-allowed"}`}
-                defaultValue="loremipsum@gmail.com"
-              />
-            </div>
-
-            <div>
-              <label className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">Contact Number</label>
-              <input
-                readOnly={!isEditing}
-                className={`w-full mt-1 p-2 rounded-md ${isEditing ? "bg-white" : "bg-gray-100 cursor-not-allowed"}`}
-                defaultValue="+917873686593"
-              />
-            </div>
-
-            <div>
-              <label className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">Alternate Number</label>
-              <input
-                readOnly={!isEditing}
-                className={`w-full mt-1 p-2 rounded-md ${isEditing ? "bg-white" : "bg-gray-100 cursor-not-allowed"}`}
-              />
-            </div>
-
-            <div>
-              <label className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">
-                Birth Date
-              </label>
-              <input
-                type="date"
-                readOnly={!isEditing}
-                defaultValue="2004-06-16"
-                className={`mt-1 w-[350px] p-2 rounded-md text-[#5E2B15] ${
-                  isEditing ? "bg-white" : "bg-gray-100 cursor-not-allowed"
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">Gender</label>
-              <div className="flex gap-4 mt-2 font-['Poppins',serif]">
-                {["male", "female", "other"].map((g) => (
-                  <label key={g} className="flex items-center gap-1">
-                    <input
-                      type="radio"
-                      disabled={!isEditing}
-                      checked={gender === g}
-                      onChange={() => setGender(g)}
-                      className="accent-[#5E2B15]"
-                    />
-                    {g.charAt(0).toUpperCase() + g.slice(1)}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          {/* SAVE BUTTON */}
-          {isEditing && (
-            <div className="mt-8 flex justify-center">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="bg-[#9A5F2D] text-white px-10 py-3 rounded-full text-lg font-['Poppins',serif] hover:opacity-90 transition"
+          ) : !user ? (
+            <div className="h-full flex flex-col items-center justify-center text-center text-[#5E2B16] gap-4">
+              <p className="text-xl">Please sign in to access your profile.</p>
+              <Link
+                href="/"
+                className="bg-[#9A5F2D] text-white px-8 py-3 rounded-full text-base font-['Poppins',serif] hover:opacity-90 transition"
               >
-                Save Details
-              </button>
+                Go to Home
+              </Link>
+            </div>
+          ) : isError ? (
+            <div className="h-full flex items-center justify-center text-red-600 text-lg text-center px-8">
+              {(error as Error)?.message ?? "Failed to load profile"}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-6 text-[#5E2B16] text-sm">
+              {fields.map((field) => (
+                <div key={field.label} className={field.label === "Email" ? "col-span-2" : ""}>
+                  <p className="font-['Poppins',serif] text-[16px] text-[#5E2B15]">{field.label}</p>
+                  <div className="w-full mt-1 p-2 rounded-md bg-white/80 border border-[#d7c8b2] min-h-10">
+                    {field.value}
+                  </div>
+                </div>
+              ))}
+
+              <div className="col-span-2 mt-4 text-sm text-[#6d4b37]">
+                Member since {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "-"}
+              </div>
             </div>
           )}
 
@@ -155,16 +101,23 @@ export default function ProfilePage() {
             {[
                 { name: "Order Track", href: "/order-track" },
                 { name: "Order History", href: "/order-history" },
-                { name: "Wishlist", href: "/wishlist" },
-                { name: "Offer", href: "/offers" },
-                { name: "Log out", href: "/" },
+                { name: "Cart", href: "/cart" },
             ].map((item, i) => (
-                <Link key={i} href={item.href}>
-                <div className="py-6 border-b border-white/20 hover:bg-[#4a1f0f] transition cursor-pointer">
+                <Link
+                  key={i}
+                  href={item.href}
+                  className="py-6 border-b border-white/20 hover:bg-[#4a1f0f] transition cursor-pointer"
+                >
                     {item.name}
-                </div>
                 </Link>
             ))}
+
+            <button
+              onClick={() => signOut.mutate()}
+              className="py-6 border-b border-white/20 hover:bg-[#4a1f0f] transition cursor-pointer"
+            >
+              {signOut.isPending ? "Logging out..." : "Log out"}
+            </button>
             </div>
 
         </motion.div>
