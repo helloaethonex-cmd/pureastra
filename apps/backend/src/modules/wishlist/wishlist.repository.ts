@@ -2,7 +2,13 @@ import { prisma } from "../../lib/prisma";
 
 const wishlistItemInclude = {
   productVariant: {
-    include: {
+    select: {
+      id: true,
+      isActive: true,
+      deletedAt: true,
+      price: true,
+      variantName: true,
+      sku: true,
       product: {
         select: {
           id: true,
@@ -18,11 +24,6 @@ const wishlistItemInclude = {
         orderBy: { position: "asc" as const },
         take: 1,
       },
-      isActive: true,
-      deletedAt: true,
-      price: true,
-      variantName: true,
-      sku: true,
     },
   },
 } as const;

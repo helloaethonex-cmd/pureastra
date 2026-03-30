@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
-import { faHeart } from "@fortawesome/free-regular-svg-icons";
+import { faCartShopping, faHeart as faHeartSolid } from "@fortawesome/free-solid-svg-icons";
+import { faHeart as faHeartRegular } from "@fortawesome/free-regular-svg-icons";
 import { useAddCartItem } from "@/hooks/useCart";
+import {
+  useAddWishlistItem,
+  useRemoveWishlistItem,
+  useWishlist,
+} from "@/hooks/useWishlist";
 import { useAuthStore } from "@/store/auth.store";
 import type { Product } from "@/services/api";
+import { useRouter } from "next/navigation";
 
 type ProductCardProps = {
   active?: boolean;
@@ -21,10 +27,16 @@ const toNumber = (value: number | string | null | undefined) => {
 export default function ProductCard({ active, product }: ProductCardProps) {
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
+  const addWishlistItem = useAddWishlistItem();
+  const removeWishlistItem = useRemoveWishlistItem();
+  const { data: wishlistItems } = useWishlist(Boolean(user));
+  const router = useRouter();
 
   const hoverTags = [
     product.brand ? `Brand: ${product.brand}` : "Pureastra",
-    product.variants.length > 0 ? `${product.variants.length} size options` : "Default size",
+    product.variants.length > 0
+      ? `${product.variants.length} size options`
+      : "Default size",
     "Made Safe Certified",
     "Dermatologically Tested",
   ];
@@ -42,6 +54,10 @@ export default function ProductCard({ active, product }: ProductCardProps) {
   }, Infinity);
 
   const displayPrice = minPrice === Infinity ? 0 : minPrice;
+  const isWishlisted = Boolean(
+    activeVariant?.id &&
+      wishlistItems?.some((item) => item.productVariantId === activeVariant.id),
+  );
 
   const handleAddToCart = () => {
     if (!user) {
@@ -57,12 +73,12 @@ export default function ProductCard({ active, product }: ProductCardProps) {
     addCartItem.mutate(
       { productVariantId: activeVariant.id, quantity: 1 },
       {
-        onSuccess: () => alert("Item added to cart"),
         onError: (error) => {
-          const message = error instanceof Error ? error.message : "Failed to add to cart";
+          const message =
+            error instanceof Error ? error.message : "Failed to add to cart";
           alert(message);
         },
-      }
+      },
     );
   };
 
@@ -72,7 +88,32 @@ export default function ProductCard({ active, product }: ProductCardProps) {
       return;
     }
 
-    alert("Wishlist support is coming soon.");
+    if (!activeVariant?.id) {
+      alert("No wishlist-eligible variant available.");
+      return;
+    }
+
+    if (isWishlisted) {
+      removeWishlistItem.mutate(activeVariant.id, {
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : "Failed to update wishlist";
+          alert(message);
+        },
+      });
+      return;
+    }
+
+    addWishlistItem.mutate(
+      { productVariantId: activeVariant.id },
+      {
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : "Failed to add to wishlist";
+          alert(message);
+        },
+      },
+    );
   };
 
   return (
@@ -102,12 +143,13 @@ export default function ProductCard({ active, product }: ProductCardProps) {
 
         <button
           onClick={handleAddToWishlist}
-          className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center"
+          disabled={addWishlistItem.isPending || removeWishlistItem.isPending}
+          className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center disabled:opacity-70"
           title="Add to wishlist"
         >
           <FontAwesomeIcon
-            icon={faHeart}
-            className="text-base text-white"
+            icon={isWishlisted ? faHeartSolid : faHeartRegular}
+            className={`text-base ${isWishlisted ? "text-red-500" : "text-white"}`}
           />
         </button>
       </div>
@@ -121,7 +163,8 @@ export default function ProductCard({ active, product }: ProductCardProps) {
         </h5>
 
         <p className="font-['Poppins',sans-serif] text-[13px] leading-[1.4] mb-2 opacity-90">
-          {product.description ?? "A gentle formulation crafted to support healthy skin and visible glow."}
+          {product.description ??
+            "A gentle formulation crafted to support healthy skin and visible glow."}
         </p>
 
         <div className="flex justify-between">
@@ -130,7 +173,10 @@ export default function ProductCard({ active, product }: ProductCardProps) {
         </div>
       </div>
 
-      <div className="absolute bottom-0 flex h-0 w-full flex-col items-start justify-center overflow-hidden bg-linear-to-t from-black/65 to-black/20 p-7.5 text-[#D9D9D9] backdrop-blur-[10px] transition-[height] duration-400 ease-in-out group-hover:h-full">
+      <div
+        className="absolute bottom-0 flex h-0 w-full flex-col items-start justify-center overflow-hidden bg-linear-to-t from-black/65 to-black/20 p-7.5 text-[#D9D9D9] backdrop-blur-[10px] transition-[height] duration-400 ease-in-out group-hover:h-full cursor-pointer"
+        onClick={() => router.push(`/product/${product.slug}`)}
+      >
         <h4 className="mb-4.5 translate-y-5 text-left text-[26px] font-semibold opacity-0 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
           {product.name}
         </h4>

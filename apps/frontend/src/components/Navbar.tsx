@@ -31,6 +31,7 @@ import AuthModal from "@/components/AuthModal";
 import { useIsAdmin } from "@/hooks/useAdmin";
 import { useCategories } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
 
 // Icon mapping for different category slugs
 const categoryIcons: Record<string, IconDefinition> = {
@@ -55,11 +56,13 @@ export default function Navbar() {
   const { data: isAdmin } = useIsAdmin();
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const { data: cart } = useCart(Boolean(user));
+  const { data: wishlist } = useWishlist(Boolean(user));
 
   const cartCount = (cart?.items ?? []).reduce(
     (total, item) => total + item.quantity,
     0
   );
+  const wishlistCount = wishlist?.length ?? 0;
 
   // Static menu items for non-category pages
   const staticMenuItems = [
@@ -122,6 +125,9 @@ export default function Navbar() {
             <Link href="/wishlist">
               <button className="relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] transition">
                 <FontAwesomeIcon icon={faHeart} />
+                <span className="absolute -top-1 -right-1 bg-[#819744] text-white text-[10px] px-1 rounded-full">
+                  {wishlistCount}
+                </span>
               </button>
             </Link>
 
@@ -165,7 +171,7 @@ export default function Navbar() {
                     >
                       My Account
                     </Link>
-                    <button
+                    <div
                       onClick={() => {
                         setIsUserMenuOpen(false);
                         signOut.mutate();
@@ -173,7 +179,7 @@ export default function Navbar() {
                       className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
                     >
                       {signOut.isPending ? "Signing out..." : "Sign Out"}
-                    </button>
+                    </div>
                   </div>
                 )}
               </button>

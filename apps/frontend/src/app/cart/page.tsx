@@ -200,7 +200,7 @@ export default function OrderPage() {
             </div>
 
             {/* SAVINGS BOX */}
-            <div className="bg-[#DCE9D8] text-[#2E7D32] px-6 py-4 rounded-xl mb-6 font-medium">
+            <div className="bg-[#DCE9D8] text-[#2E7D32] px-6 py-4 rounded-xl my-2 font-medium">
               You will save ₹{(subtotal * 0.03).toFixed(0)} on this order
             </div>
 

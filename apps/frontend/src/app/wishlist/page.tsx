@@ -1,24 +1,35 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHeart, faStar } from "@fortawesome/free-solid-svg-icons";
+import { faHeart } from "@fortawesome/free-solid-svg-icons";
+import {
+  useWishlist,
+  useRemoveWishlistItem,
+  useMoveWishlistItemToCart,
+} from "@/hooks/useWishlist";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function WishlistPage() {
+  const { user, isLoading: authLoading } = useAuthStore();
+  const { data: wishlist, isLoading, isError, error } = useWishlist(Boolean(user));
+  const removeWishlistItem = useRemoveWishlistItem();
+  const moveWishlistItemToCart = useMoveWishlistItemToCart();
 
-  const [products, setProducts] = useState([
-    { id: 1, name: "Vitamin C Face wash", price: 590, rating: 4.5, img: "/img/facewash.jpeg" },
-    { id: 2, name: "Apple Berry Face wash", price: 590, rating: 4.4, img: "/img/facewash-1.jpeg" },
-    { id: 3, name: "Glow Cleanser", price: 590, rating: 4.3, img: "/img/facewash.png" },
-    { id: 4, name: "Skin Serum", price: 590, rating: 4.6, img: "/img/facewash.png" },
-    { id: 5, name: "Hydra Facewash", price: 590, rating: 4.2, img: "/img/facewash.png" },
-    { id: 6, name: "Brightening Wash", price: 590, rating: 4.5, img: "/img/facewash.png" },
-  ]);
+  const items = wishlist ?? [];
 
-  // ❤️ remove from wishlist
-  const removeItem = (id: number) => {
-    setProducts(products.filter(item => item.id !== id));
+  const removeItem = (productVariantId: string) => {
+    removeWishlistItem.mutate(productVariantId);
+  };
+
+  const moveToCart = (productVariantId: string) => {
+    moveWishlistItemToCart.mutate(productVariantId);
+  };
+
+  const toNumber = (value: number | string | null | undefined) => {
+    const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+    return Number.isFinite(parsed) ? Number(parsed) : 0;
   };
 
   return (
@@ -31,74 +42,115 @@ export default function WishlistPage() {
           Wishlist
         </h1>
 
-        {/* GRID RESPONSIVE */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-
-          {products.map((item) => (
-            <div
-              key={item.id}
-              className="relative rounded-2xl overflow-hidden backdrop-blur-md bg-white/20 border border-white/30 shadow-lg hover:scale-[1.02] transition duration-300"
+        {authLoading || (user && isLoading) ? (
+          <div className="text-center py-20 text-[#5E2B15]">Loading wishlist...</div>
+        ) : !user ? (
+          <div className="text-center py-20">
+            <h2 className="text-[#5E2B15] mb-4">Please sign in to view your wishlist.</h2>
+            <Link
+              href="/"
+              className="inline-flex bg-[#819744] text-white px-6 py-2 rounded-md"
             >
+              Continue Shopping
+            </Link>
+          </div>
+        ) : isError ? (
+          <div className="text-center py-20 text-red-600">
+            {(error as Error)?.message ?? "Failed to load wishlist"}
+          </div>
+        ) : (
+          <>
+            {/* GRID RESPONSIVE */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
 
-              {/* IMAGE */}
-              <Image
-                src={item.img}
-                alt={item.name}
-                width={400}
-                height={400}
-                className="w-full h-[220px] md:h-[260px] object-cover"
-              />
+              {items.map((item) => {
+                const image = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.png";
+                const price = toNumber(item.productVariant.price);
+                const name = item.productVariant.product.name;
+                const slug = item.productVariant.product.slug;
+                return (
+                <div
+                  key={item.id}
+                  className={`relative rounded-2xl overflow-hidden backdrop-blur-md ${item.isAvailable ? "bg-white/20" : "bg-gray-300/20"} border border-white/30 shadow-lg hover:scale-[1.02] transition duration-300`}
+                >
 
-              {/* ❤️ HEART */}
-              <div
-                onClick={() => removeItem(item.id)}
-                className="absolute top-3 right-3 w-9 h-9 bg-white/60 backdrop-blur-md rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition"
-              >
-                <FontAwesomeIcon icon={faHeart} className="text-red-500" />
-              </div>
+                  {/* IMAGE */}
+                  <Image
+                    src={image}
+                    alt={name}
+                    width={400}
+                    height={400}
+                    className="w-full h-[220px] md:h-[260px] object-cover"
+                  />
 
-              {/* GLASS OVERLAY */}
-              <div className="absolute bottom-0 left-0 w-full bg-white/20 backdrop-blur-md text-white p-4">
+                  {/* ❤️ HEART */}
+                  <div
+                    onClick={() => removeItem(item.productVariantId)}
+                    className="absolute top-3 right-3 w-9 h-9 bg-white/60 backdrop-blur-md rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition"
+                  >
+                    <FontAwesomeIcon icon={faHeart} className="text-red-500" />
+                  </div>
 
-                {/* NAME + RATING */}
-                <div className="flex justify-between items-center">
+                  {/* GLASS OVERLAY */}
+                  <div className="absolute bottom-0 left-0 w-full bg-black/40 backdrop-blur-md text-white p-4">
 
-                  <h2 className="font-semibold text-[15px] md:text-[16px]">
-                    {item.name}
-                  </h2>
+                    {/* NAME */}
+                    <div className="flex justify-between items-center gap-3">
+                      <h2 className="font-semibold text-[15px] md:text-[16px]">
+                        {name}
+                      </h2>
+                    </div>
 
-                  {/* ⭐ RATING */}
-                  <div className="flex items-center gap-1 bg-[#7A5C45]/80 px-2 py-[2px] rounded text-xs">
-                    <FontAwesomeIcon icon={faStar} className="text-yellow-400" />
-                    <span>{item.rating}</span>
+                    <p className="text-xs md:text-sm opacity-90 mt-1">
+                      {item.productVariant.variantName ?? item.productVariant.sku ?? "Default variant"}
+                    </p>
+
+                    {/* PRICE */}
+                    <div className={`flex justify-between mt-2 ${item.isAvailable ? "text-white" : "text-red-500"} text-sm`}>
+                      <span>{item.isAvailable ? "Available" : "Out of Stock"}</span>
+                      <span className="font-medium">{price > 0 ? `₹${price.toFixed(2)}` : "-"}</span>
+                    </div>
+
+                    {slug && (
+                      <Link
+                        href={`/product/${slug}`}
+                        className="inline-block mt-3 text-xs underline"
+                      >
+                        View product
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={() => moveToCart(item.productVariantId)}
+                      disabled={!item.isAvailable || moveWishlistItemToCart.isPending}
+                      className="mt-3 block text-xs px-3 py-1.5 rounded-full bg-[#819744] text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {moveWishlistItemToCart.isPending
+                        ? "Moving..."
+                        : "Move to cart"}
+                    </button>
                   </div>
 
                 </div>
-
-                <p className="text-xs md:text-sm opacity-90 mt-1">
-                  Rice Dewy Bright Face Wash With Rice Water & Niacinamide
-                </p>
-
-                {/* PRICE */}
-                <div className="flex justify-between mt-2 text-sm">
-                  <span>100ml</span>
-                  <span className="font-medium">₹{item.price}</span>
-                </div>
-
-              </div>
+              );})}
 
             </div>
-          ))}
 
-        </div>
-
-        {/* EMPTY STATE */}
-        {products.length === 0 && (
-          <div className="text-center py-20">
-            <h2 className="text-[#5E2B15] mb-4">
-              Your wishlist is empty 💔
-            </h2>
-          </div>
+            {/* EMPTY STATE */}
+            {items.length === 0 && (
+              <div className="text-center py-20">
+                <h2 className="text-[#5E2B15] mb-4">
+                  Your wishlist is empty.
+                </h2>
+                <Link
+                  href="/"
+                  className="inline-flex bg-[#819744] text-white px-6 py-2 rounded-md"
+                >
+                  Explore Products
+                </Link>
+              </div>
+            )}
+          </>
         )}
 
       </div>

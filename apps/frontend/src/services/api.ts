@@ -131,6 +131,39 @@ export interface Cart {
   updatedAt: string;
 }
 
+export interface WishlistProduct {
+  id: string;
+  uuid?: string;
+  name: string;
+  slug?: string | null;
+  brand?: string | null;
+}
+
+export interface WishlistVariantImage {
+  id: string;
+  imageUrl?: string | null;
+  position?: number | null;
+}
+
+export interface WishlistProductVariant {
+  id: string;
+  variantName?: string | null;
+  sku?: string | null;
+  price?: number | string | null;
+  product: WishlistProduct;
+  images?: WishlistVariantImage[];
+}
+
+export interface WishlistItem {
+  id: string;
+  userId: string;
+  productVariantId: string;
+  createdAt: string;
+  updatedAt: string;
+  isAvailable: boolean;
+  productVariant: WishlistProductVariant;
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export const listCategories = () =>
@@ -294,4 +327,24 @@ export const removeCartItem = (itemId: string) =>
 export const clearCart = () =>
   apiFetch<{ message: string }>("/cart", {
     method: "DELETE",
+  });
+
+// ─── Wishlist ────────────────────────────────────────────────────────────────
+
+export const getWishlist = () => apiFetch<WishlistItem[]>("/wishlist");
+
+export const addWishlistItem = (body: { productVariantId: string }) =>
+  apiFetch<WishlistItem>("/wishlist/items", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const removeWishlistItem = (productVariantId: string) =>
+  apiFetch<{ message: string }>(`/wishlist/items/${productVariantId}`, {
+    method: "DELETE",
+  });
+
+export const moveWishlistItemToCart = (productVariantId: string) =>
+  apiFetch<{ message: string }>(`/wishlist/items/${productVariantId}/move-to-cart`, {
+    method: "POST",
   });

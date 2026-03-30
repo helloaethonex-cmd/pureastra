@@ -58,7 +58,7 @@ export default function BestProducts() {
             spaceBetween={50}
             centeredSlides={true}
             loop={products.length > 3}
-            autoplay={{ delay: 2500, disableOnInteraction: false }}
+            autoplay={{ delay: 4000, disableOnInteraction: false }}
             navigation={{ nextEl: ".next-btn", prevEl: ".prev-btn" }}
             modules={[Autoplay, Navigation]}
           >
