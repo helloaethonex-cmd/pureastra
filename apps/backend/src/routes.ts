@@ -7,6 +7,7 @@ import authRoute from "./modules/auth/auth.route";
 import ordersRoute from "./modules/orders/orders.route";
 import paymentsRoute from "./modules/payments/payments.route";
 import uploadRoute from "./modules/upload/upload.route";
+import wishlistRoute from "./modules/wishlist/wishlist.route";
 
 // Admin routes
 import ordersAdminRoute from "./modules/orders/orders.admin.route";
@@ -26,6 +27,7 @@ router.use("/auth", authRoute);
 router.use("/orders", ordersRoute);
 router.use("/", paymentsRoute);
 router.use("/upload", uploadRoute);
+router.use("/wishlist", wishlistRoute);
 
 // Admin routes
 router.use("/admin/orders", ordersAdminRoute);
