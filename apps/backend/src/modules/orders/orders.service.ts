@@ -8,22 +8,31 @@ import {
   INVENTORY_RESERVATION_STATUS,
   ORDER_STATUS,
   PAYMENT_STATUS,
+  STATUS_TRANSITIONS,
 } from "./orders.types";
 import {
   createInventoryReservations,
   createOrder,
   createOrderItems,
   createOrderStatusHistory,
+  decrementVariantStockQuantity,
   decrementVariantStockReservedSafe,
   expireReservationsAndReturnRows,
   findActiveCartByUserId,
   findAddressByIdForUser,
   findExpiredReservationsBatch,
+  findInventoryReservationsByOrderId,
   findOrderById,
+  findOrderByOrderNumber,
+  findOrderByOrderNumberForUser,
+  findOrdersForAdmin,
+  findOrdersByUserId,
   incrementOrderNumberSequence,
   incrementVariantStockReserved,
   markCartCheckedOut,
   TxClient,
+  updateInventoryReservationStatus,
+  updateOrderStatus,
 } from "./orders.repository";
 
 const TX_OPTIONS = {
@@ -36,7 +45,8 @@ const SHIPPING_AMOUNT_CENTS = 0;
 const TAX_AMOUNT_CENTS = 0;
 const DISCOUNT_AMOUNT_CENTS = 0;
 
-const centsToDecimal = (cents: number) => new Prisma.Decimal((cents / 100).toFixed(2));
+const centsToDecimal = (cents: number) =>
+  new Prisma.Decimal((cents / 100).toFixed(2));
 
 const toCents = (value: Prisma.Decimal | number | null | undefined) => {
   if (value === null || value === undefined) return 0;
@@ -56,14 +66,20 @@ const groupQuantityByVariant = <
 >(
   rows: T[],
 ) => {
-  const grouped = new Map<string, { productVariantId: bigint; quantity: number }>();
+  const grouped = new Map<
+    string,
+    { productVariantId: bigint; quantity: number }
+  >();
   for (const row of rows) {
     const key = row.productVariantId.toString();
     const existing = grouped.get(key);
     if (existing) {
       existing.quantity += row.quantity;
     } else {
-      grouped.set(key, { productVariantId: row.productVariantId, quantity: row.quantity });
+      grouped.set(key, {
+        productVariantId: row.productVariantId,
+        quantity: row.quantity,
+      });
     }
   }
   return [...grouped.values()];
@@ -119,7 +135,11 @@ const buildPreparedItems = (
   });
 };
 
-const createOrderInTx = async (tx: TxClient, userId: bigint, input: CreateOrderInput) => {
+const createOrderInTx = async (
+  tx: TxClient,
+  userId: bigint,
+  input: CreateOrderInput,
+) => {
   const now = new Date();
   const year = now.getFullYear();
 
@@ -179,7 +199,9 @@ const createOrderInTx = async (tx: TxClient, userId: bigint, input: CreateOrderI
     })),
   );
 
-  const expiresAt = new Date(now.getTime() + env.ORDER_RESERVATION_TTL_MINUTES * 60 * 1000);
+  const expiresAt = new Date(
+    now.getTime() + env.ORDER_RESERVATION_TTL_MINUTES * 60 * 1000,
+  );
   await createInventoryReservations(
     tx,
     preparedItems.map((item) => ({
@@ -194,7 +216,11 @@ const createOrderInTx = async (tx: TxClient, userId: bigint, input: CreateOrderI
 
   const reservedByVariant = groupQuantityByVariant(preparedItems);
   for (const item of reservedByVariant) {
-    await incrementVariantStockReserved(tx, item.productVariantId, item.quantity);
+    await incrementVariantStockReserved(
+      tx,
+      item.productVariantId,
+      item.quantity,
+    );
   }
 
   await createOrderStatusHistory(tx, {
@@ -217,7 +243,10 @@ export const placeOrder = async (userId: string, input: CreateOrderInput) => {
   );
 };
 
-const releaseExpiredReservationsInTx = async (tx: TxClient, batchSize: number) => {
+const releaseExpiredReservationsInTx = async (
+  tx: TxClient,
+  batchSize: number,
+) => {
   const reservations = await findExpiredReservationsBatch(
     tx,
     INVENTORY_RESERVATION_STATUS.ACTIVE,
@@ -244,7 +273,11 @@ const releaseExpiredReservationsInTx = async (tx: TxClient, batchSize: number) =
   );
 
   for (const row of decrementByVariant) {
-    await decrementVariantStockReservedSafe(tx, row.productVariantId, row.quantity);
+    await decrementVariantStockReservedSafe(
+      tx,
+      row.productVariantId,
+      row.quantity,
+    );
   }
 
   return expiredRows.length;
@@ -258,7 +291,11 @@ export const expireInventoryReservations = async () => {
     processedBatches += 1;
 
     const releasedInBatch = await prisma.$transaction(
-      async (tx) => releaseExpiredReservationsInTx(tx, env.ORDER_RESERVATION_RELEASE_BATCH_SIZE),
+      async (tx) =>
+        releaseExpiredReservationsInTx(
+          tx,
+          env.ORDER_RESERVATION_RELEASE_BATCH_SIZE,
+        ),
       TX_OPTIONS,
     );
 
@@ -269,3 +306,277 @@ export const expireInventoryReservations = async () => {
   return releasedTotal;
 };
 
+const isValidStatusTransition = (
+  currentStatus: number,
+  newStatus: number,
+): boolean => {
+  const allowedStatuses = STATUS_TRANSITIONS[currentStatus] ?? [];
+  return allowedStatuses.includes(newStatus);
+};
+
+const updateOrderStatusInTx = async (
+  tx: TxClient,
+  orderNumber: string,
+  newStatus: number,
+  adminUserId: bigint,
+  note?: string,
+) => {
+  const order = await findOrderByOrderNumber(tx, orderNumber);
+  if (!order) {
+    throw new AppError(404, "Order not found", "ORDER_NOT_FOUND");
+  }
+
+  const currentStatus = order.orderStatus;
+
+  if (currentStatus === newStatus) {
+    throw new AppError(400, "Order already in this status", "STATUS_UNCHANGED");
+  }
+
+  if (!isValidStatusTransition(currentStatus, newStatus)) {
+    throw new AppError(
+      400,
+      `Invalid status transition from ${currentStatus} to ${newStatus}`,
+      "INVALID_STATUS_TRANSITION",
+    );
+  }
+
+  if (
+    newStatus === ORDER_STATUS.CANCELLED &&
+    currentStatus >= ORDER_STATUS.SHIPPED
+  ) {
+    throw new AppError(
+      400,
+      "Cannot cancel order after shipping",
+      "CANNOT_CANCEL_SHIPPED_ORDER",
+    );
+  }
+
+  await updateOrderStatus(tx, order.id, newStatus);
+
+  await createOrderStatusHistory(tx, {
+    order: { connect: { id: order.id } },
+    oldStatus: currentStatus,
+    newStatus,
+    changedBy: adminUserId,
+    note: note ?? null,
+  });
+
+  if (newStatus === ORDER_STATUS.SHIPPED) {
+    const reservations = await findInventoryReservationsByOrderId(tx, order.id);
+
+    const variantQuantities = groupQuantityByVariant(
+      reservations.map((r) => ({
+        productVariantId: r.productVariantId,
+        quantity: r.quantity,
+      })),
+    );
+
+    for (const item of variantQuantities) {
+      const updateResult = await decrementVariantStockQuantity(
+        tx,
+        item.productVariantId,
+        item.quantity,
+      );
+      if (updateResult.count === 0) {
+        throw new AppError(
+          409,
+          `Insufficient stock for variant ${item.productVariantId.toString()}`,
+          "INSUFFICIENT_STOCK",
+        );
+      }
+
+      await decrementVariantStockReservedSafe(
+        tx,
+        item.productVariantId,
+        item.quantity,
+      );
+    }
+
+    for (const reservation of reservations) {
+      if (reservation.status === INVENTORY_RESERVATION_STATUS.ACTIVE) {
+        await updateInventoryReservationStatus(
+          tx,
+          reservation.id,
+          INVENTORY_RESERVATION_STATUS.CONFIRMED,
+        );
+      }
+    }
+  }
+
+  if (
+    newStatus === ORDER_STATUS.CANCELLED &&
+    currentStatus < ORDER_STATUS.SHIPPED
+  ) {
+    const reservations = await findInventoryReservationsByOrderId(tx, order.id);
+
+    const variantQuantities = groupQuantityByVariant(
+      reservations.map((r) => ({
+        productVariantId: r.productVariantId,
+        quantity: r.quantity,
+      })),
+    );
+
+    for (const item of variantQuantities) {
+      await decrementVariantStockReservedSafe(
+        tx,
+        item.productVariantId,
+        item.quantity,
+      );
+    }
+
+    for (const reservation of reservations) {
+      if (reservation.status === INVENTORY_RESERVATION_STATUS.ACTIVE) {
+        await updateInventoryReservationStatus(
+          tx,
+          reservation.id,
+          INVENTORY_RESERVATION_STATUS.RELEASED,
+        );
+      }
+    }
+  }
+
+  return findOrderByOrderNumber(tx, orderNumber);
+};
+
+export const updateOrderStatusByOrderNumber = async (
+  orderNumber: string,
+  adminUserId: string,
+  input: { newStatus: number; note?: string },
+) => {
+  return prisma.$transaction(
+    async (tx) =>
+      updateOrderStatusInTx(
+        tx,
+        orderNumber,
+        input.newStatus,
+        BigInt(adminUserId),
+        input.note,
+      ),
+    TX_OPTIONS,
+  );
+};
+
+export const listOrdersForAdmin = async (input: {
+  page: number;
+  limit: number;
+  orderStatus?: number;
+  paymentStatus?: number;
+  search?: string;
+  sortOrder: "asc" | "desc";
+}) => {
+  const { orders, total } = await findOrdersForAdmin(
+    prisma,
+    {
+      orderStatus: input.orderStatus,
+      paymentStatus: input.paymentStatus,
+      search: input.search,
+    },
+    {
+      page: input.page,
+      limit: input.limit,
+      sortOrder: input.sortOrder,
+    },
+  );
+
+  return {
+    data: orders.map((order) => ({
+      id: order.id.toString(),
+      orderNumber: order.orderNumber,
+      userId: order.userId.toString(),
+      orderStatus: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      totalPaid: order.totalPaid.toString(),
+      createdAt: order.createdAt.toISOString(),
+    })),
+    pagination: {
+      page: input.page,
+      limit: input.limit,
+      total,
+      totalPages: Math.ceil(total / input.limit),
+    },
+  };
+};
+
+export const listOrdersForUser = async (
+  userId: string,
+  input: { page: number; limit: number },
+) => {
+  const { orders, total } = await findOrdersByUserId(
+    prisma,
+    BigInt(userId),
+    input,
+  );
+
+  return {
+    data: orders.map((order) => ({
+      orderNumber: order.orderNumber,
+      totalPaid: order.totalPaid.toString(),
+      orderStatus: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      createdAt: order.createdAt.toISOString(),
+    })),
+    pagination: {
+      page: input.page,
+      limit: input.limit,
+      total,
+      totalPages: Math.ceil(total / input.limit),
+    },
+  };
+};
+
+export const getOrderDetailForUser = async (
+  userId: string,
+  orderNumber: string,
+) => {
+  const order = await findOrderByOrderNumberForUser(
+    prisma,
+    orderNumber,
+    BigInt(userId),
+  );
+
+  if (!order) {
+    throw new AppError(404, "Order not found", "ORDER_NOT_FOUND");
+  }
+
+  return {
+    orderNumber: order.orderNumber,
+    orderStatus: order.orderStatus,
+    paymentStatus: order.paymentStatus,
+    productTotal: order.productTotal.toString(),
+    shippingAmount: order.shippingAmount.toString(),
+    taxAmount: order.taxAmount.toString(),
+    discountAmount: order.discountAmount.toString(),
+    totalPaid: order.totalPaid.toString(),
+    shippingAddress: {
+      name: order.shippingName,
+      phone: order.shippingPhone,
+      line1: order.shippingLine1,
+      line2: order.shippingLine2,
+      city: order.shippingCity,
+      state: order.shippingState,
+      postalCode: order.shippingPostalCode,
+      country: order.shippingCountry,
+    },
+    placedAt: order.placedAt?.toISOString() ?? null,
+    createdAt: order.createdAt.toISOString(),
+    items: order.items.map((item) => ({
+      productName: item.productName,
+      variantName: item.variantName,
+      sku: item.sku,
+      quantity: item.quantity,
+      price: item.priceAtPurchase.toString(),
+    })),
+    payments: order.payments.map((payment) => ({
+      amount: payment.amount.toString(),
+      status: payment.paymentStatus,
+      method: payment.paymentMethod,
+      createdAt: payment.createdAt.toISOString(),
+    })),
+    statusHistory: order.statusHistory.map((history) => ({
+      oldStatus: history.oldStatus,
+      newStatus: history.newStatus,
+      note: history.note,
+      createdAt: history.createdAt.toISOString(),
+    })),
+  };
+};

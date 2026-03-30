@@ -30,7 +30,10 @@ export const findOrCreateCart = async (userId?: bigint, sessionId?: string) => {
     ? { userId, status: CART_STATUS.ACTIVE }
     : { sessionId, status: CART_STATUS.ACTIVE };
 
-  const existing = await prisma.cart.findFirst({ where, include: cartFullInclude });
+  const existing = await prisma.cart.findFirst({
+    where,
+    include: cartFullInclude,
+  });
   if (existing) return existing;
 
   return prisma.cart.create({
@@ -53,7 +56,10 @@ export const findCartById = async (id: bigint) => {
 // ─── Cart Items ───────────────────────────────────────────────────────────────
 
 /** Adds an item to the cart. If the variant already exists, increments quantity. */
-export const upsertCartItem = async (cartId: bigint, data: AddCartItemInput) => {
+export const upsertCartItem = async (
+  cartId: bigint,
+  data: AddCartItemInput,
+) => {
   const variant = await prisma.productVariant.findFirst({
     where: { id: data.productVariantId, deletedAt: null },
   });
@@ -66,8 +72,17 @@ export const upsertCartItem = async (cartId: bigint, data: AddCartItemInput) => 
   if (existing) {
     return prisma.cartItem.update({
       where: { id: existing.id },
-      data: { quantity: existing.quantity + data.quantity, priceSnapshot: variant.price },
-      include: { productVariant: { include: { product: { select: { id: true, name: true, slug: true } } } } },
+      data: {
+        quantity: existing.quantity + data.quantity,
+        priceSnapshot: variant.price,
+      },
+      include: {
+        productVariant: {
+          include: {
+            product: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
     });
   }
 
@@ -78,15 +93,26 @@ export const upsertCartItem = async (cartId: bigint, data: AddCartItemInput) => 
       quantity: data.quantity,
       priceSnapshot: variant.price,
     },
-    include: { productVariant: { include: { product: { select: { id: true, name: true, slug: true } } } } },
+    include: {
+      productVariant: {
+        include: { product: { select: { id: true, name: true, slug: true } } },
+      },
+    },
   });
 };
 
-export const updateCartItemQuantity = async (itemId: bigint, data: UpdateCartItemInput) => {
+export const updateCartItemQuantity = async (
+  itemId: bigint,
+  data: UpdateCartItemInput,
+) => {
   return prisma.cartItem.update({
     where: { id: itemId },
     data: { quantity: data.quantity },
-    include: { productVariant: { include: { product: { select: { id: true, name: true, slug: true } } } } },
+    include: {
+      productVariant: {
+        include: { product: { select: { id: true, name: true, slug: true } } },
+      },
+    },
   });
 };
 
@@ -117,7 +143,10 @@ export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
 
   for (const guestItem of guestCart.items) {
     const existing = await prisma.cartItem.findFirst({
-      where: { cartId: userCart.id, productVariantId: guestItem.productVariantId },
+      where: {
+        cartId: userCart.id,
+        productVariantId: guestItem.productVariantId,
+      },
     });
 
     if (existing) {
@@ -143,5 +172,8 @@ export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
     data: { status: CART_STATUS.ABANDONED, abandonedAt: new Date() },
   });
 
-  return prisma.cart.findFirst({ where: { id: userCart.id }, include: cartFullInclude });
+  return prisma.cart.findFirst({
+    where: { id: userCart.id },
+    include: cartFullInclude,
+  });
 };
