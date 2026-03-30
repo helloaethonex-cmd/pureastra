@@ -1,21 +1,16 @@
 import { products } from "@/data/products";
 import ProductClient from "./ProductClient";
 
-export const dynamicParams = false;
-
 export async function generateStaticParams() {
   return products.map((p) => ({
     slug: p.slug,
   }));
 }
 
-//  IMPORTANT CHANGE → async + await params
-export default async function Page({ params }: any) {
-  const resolvedParams = await params; 
+export default function Page({ params }: { params: { slug: string } }) {
+  console.log("PARAMS:", params); 
 
-  const slug = resolvedParams.slug;
-
-  const product = products.find((p) => p.slug === slug);
+  const product = products.find((p) => p.slug === params.slug);
 
   if (!product) {
     return (
