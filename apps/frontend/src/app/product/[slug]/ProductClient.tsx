@@ -450,7 +450,7 @@ export default function ProductClient({ product }: { product: Product }) {
           viewport={{ once: true }}
           className="text-[32px] font-bold text-[#819744] font-['Roboto_Flex']  mb-4"
         >
-          WHY US
+          Whyus
         </motion.h2>
 
         {/* SUBTEXT */}

@@ -27,9 +27,10 @@ export default function CategorySection() {
     : "/category/face-care";
 
   return (
-    <section className="bg-[#E9E2D8] px-[40px] py-[50px]">
+    <section className="bg-[#E9E2D8] px-[16px] md:px-[24px] lg:px-[40px] py-[40px] md:py-[50px]">
+      
       {/* TITLE */}
-      <h2 className="text-center text-[32px] text-[#8B5E4A] font-['Marko_One',serif] mb-5">
+      <h2 className="text-center text-[24px] md:text-[28px] lg:text-[32px] text-[#8B5E4A] font-['Marko_One',serif] mb-5">
         Shop By Category
       </h2>
 
@@ -58,14 +59,14 @@ export default function CategorySection() {
       </div>
 
       {/* VIEW ALL */}
-      <div className="text-right mb-[15px] text-[#5E2B15] text-sm">
+      <div className="text-right mb-[10px] md:mb-[15px] text-[#5E2B15] text-xs md:text-sm">
         <Link href={viewAllHref}>
           View all &gt;
         </Link>
       </div>
 
-      {/* PRODUCT GRID */}
-      <div className="grid grid-cols-3 gap-[25px]">
+      {/* RESPONSIVE GRID */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-[15px] md:gap-[20px] lg:gap-[25px]">
         {productsLoading ? (
           [...Array(6)].map((_, index) => (
             <div key={index} className="h-105 w-full rounded-[25px] bg-[#D9D9D9] animate-pulse" />

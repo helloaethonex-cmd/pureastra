@@ -1,12 +1,13 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import BestProducts from "@/components/BestProducts";
-import ShopConcern from "@/components/ShopConcern";
+import ShopConcern from "../components/ShopConcern";
 import ConcernSlider from "@/components/ConcernSlider";
 import ConcernStrip from "@/components/ConcernStrip";
 import GlowRoutine from "@/components/GlowRoutine";
 import CategorySection from "@/components/CategorySection";
 import AboutPureAstra from "@/components/AboutPureAstra";
+import OurPromise from "@/components/OurPromise";
 import Transformation from "@/components/Transformation";
 import VideoBanner from "@/components/VideoBanner";
 import Testimonial from "@/components/Testimonial";
@@ -24,6 +25,7 @@ export default function Home() {
       <GlowRoutine />
       <CategorySection />
       <AboutPureAstra />
+      <OurPromise />
       <Transformation />
       <VideoBanner />
       <Testimonial />

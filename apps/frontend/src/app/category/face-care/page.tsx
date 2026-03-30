@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { products } from "@/data/products";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
@@ -10,6 +11,7 @@ import {
   faChevronDown,
   faChevronUp,
 } from "@fortawesome/free-solid-svg-icons";
+
 
 export default function FaceCarePage() {
   const [activeFilter, setActiveFilter] = useState("All");
@@ -117,7 +119,7 @@ export default function FaceCarePage() {
               ${
                 activeFilter === item
                   ? "bg-[#819744] text-white"
-                  : "bg-[#EFE6D8] /30 backdrop-blur-md border border-white/30 text-[#5E2B15] hover:bg-[#e4d7c4]"
+                  : "bg-[#EFE6D8]/30 backdrop-blur-md border border-white/30 text-[#5E2B15] hover:bg-[#e4d7c4]"
               }`}
           >
             {item}

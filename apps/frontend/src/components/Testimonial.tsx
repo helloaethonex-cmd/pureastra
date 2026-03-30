@@ -37,14 +37,15 @@ const testimonials = [
 
 export default function Testimonial() {
   return (
-    <section className="bg-[#FFFAED] px-10 py-20 text-center ">
-      <h2 className="text-4xl font-semibold text-[#9E6E5B] mb-12.5 font-['Marko_One',serif]">
+    <section className="bg-[#FFFAED] px-4 sm:px-6 md:px-10 py-14 md:py-20 text-center">
+      
+      {/* HEADING */}
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-[#9E6E5B] mb-10 md:mb-12 font-['Marko_One',serif]">
         Trusted by Skin, Loved by You
       </h2>
 
       <Swiper
-        slidesPerView={3}
-        spaceBetween={80}
+        spaceBetween={20} // mobile default
         centeredSlides={true}
         centeredSlidesBounds={true}
         loop={true}
@@ -54,43 +55,71 @@ export default function Testimonial() {
         }}
         modules={[Autoplay]}
         breakpoints={{
-          0: { slidesPerView: 1 },
-          576: { slidesPerView: 2 },
-          768: { slidesPerView: 3 },
-          1024: { slidesPerView: 3 },
+          0: { slidesPerView: 1, spaceBetween: 20 },
+          576: { slidesPerView: 2, spaceBetween: 30 },
+          768: { slidesPerView: 2, spaceBetween: 40 },
+          1024: { slidesPerView: 3, spaceBetween: 80 }, // desktop SAME
         }}
         className="py-5 px-2"
       >
         {testimonials.map((item, index) => (
           <SwiperSlide key={index}>
-            {/* Card */}
-            <div className="relative bg-white w-full h-45 mb-5 rounded-3xl px-7.5 pt-7.5 pb-7.5 pl-17.5 shadow-[0_8px_0_#e8dfd2] transition-all duration-300 z-20">
-              {/* Quote Icon */}
-              <div className="absolute -top-2.5 right-6 text-6xl text-[#5e2b15] font-black leading-none">
+            
+            {/* CARD */}
+            <div className="
+              relative bg-white w-full 
+              min-h-[180px] md:h-45   /* FIXED */
+              mb-5 rounded-3xl 
+              px-5 sm:px-6 md:px-7.5 
+              pt-6 md:pt-7.5 
+              pb-6 md:pb-7.5 
+              pl-14 sm:pl-16 md:pl-17.5
+              shadow-[0_8px_0_#e8dfd2] 
+              transition-all duration-300 z-20
+            ">
+
+              {/* QUOTE ICON */}
+              <div className="absolute -top-2 right-4 md:right-6 text-4xl md:text-6xl text-[#5e2b15]">
                 <FontAwesomeIcon icon={faQuoteRight} />
               </div>
 
-              {/* Content */}
-              <div className="flex gap-3.75 items-center">
+              {/* CONTENT */}
+              <div className="flex gap-3 items-center">
+
+                {/* IMAGE */}
                 <img
                   src={item.image}
-                  className="absolute -left-7.5 top-10 w-23.75 h-23.75 rounded-full border-[6px] border-[#f5efe6] object-cover"
+                  className="
+                    absolute 
+                    -left-5 sm:-left-6 md:-left-7.5 
+                    top-8 md:top-10 
+                    w-16 h-16 
+                    sm:w-20 sm:h-20 
+                    md:w-23.75 md:h-23.75 
+                    rounded-full 
+                    border-[4px] md:border-[6px] border-[#f5efe6] 
+                    object-cover
+                  "
                   alt={item.name}
                 />
 
                 <div>
-                  <h5 className="text-[22px] text-[#819744] font-['Roboto_Serif',serif] mb-1.25 font-semibold">
+                  <h5 className="text-base sm:text-lg md:text-[22px] text-[#819744] font-['Roboto_Serif',serif] mb-1 font-semibold">
                     {item.name}
                   </h5>
 
-                  <div className="text-[#FFF200] mb-2.5 text-base">★★★★★</div>
+                  <div className="text-[#FFF200] mb-2 text-sm md:text-base">
+                    ★★★★★
+                  </div>
 
-                  <p className="text-[15px] font-['Roboto_Serif',serif] text-[#819744] leading-relaxed max-w-[90%]">
+                  <p className="text-sm md:text-[15px] font-['Roboto_Serif',serif] text-[#819744] leading-relaxed max-w-[95%] md:max-w-[90%]">
                     {item.text}
                   </p>
                 </div>
+
               </div>
             </div>
+
           </SwiperSlide>
         ))}
       </Swiper>
