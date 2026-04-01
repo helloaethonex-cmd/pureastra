@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
@@ -16,59 +17,25 @@ import {
   faClipboardCheck,
   faSnowflake,
   faArrowRight, 
+   faBolt,
+  faDroplet,
+  faSun,
+  faCheckCircle,
+  faStarHalfStroke,
+  faShoppingBag,
+  faIndustry,
+  faBox,
+  faBuilding,
 } from "@fortawesome/free-solid-svg-icons";
 
 import { motion , AnimatePresence} from "framer-motion";
-import type { Product } from "@/services/api";
-import { useAddCartItem } from "@/hooks/useCart";
-import { useAuthStore } from "@/store/auth.store";
 
-export default function ProductClient({ product }: { product: Product }) {
+
+export default function ProductClient({ product }: any) {
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [tab, setTab] = useState("desc");
-  const [activeIndex, setActiveIndex] = useState<number | null>(0);
-  const [activeVariantId, setActiveVariantId] = useState<string | null>(
-    product.variants[0]?.id ?? null
-  );
-  const { user } = useAuthStore();
-  const addCartItem = useAddCartItem();
-
-  // Map API images to array of URLs (sorted by position)
-  const images = [...product.images]
-    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-    .map((img) => img.imageUrl);
-
-  // Fallback image if none
-  const displayImages = images.length > 0 ? images : ["/img/facewash.png"];
-
-  const activeVariant = product.variants.find((v) => v.id === activeVariantId);
-
-  const handleAddToCart = () => {
-    if (!user) {
-      alert("Please sign in to add items to your cart.");
-      return;
-    }
-
-    if (!activeVariant?.id) {
-      alert("Please select a valid variant.");
-      return;
-    }
-
-    addCartItem.mutate(
-      { productVariantId: activeVariant.id, quantity: qty },
-      {
-        onSuccess: () => {
-          alert("Item added to cart");
-        },
-        onError: (error) => {
-          const message = error instanceof Error ? error.message : "Failed to add to cart";
-          alert(message);
-        },
-      }
-    );
-  };
-
+   const [activeIndex, setActiveIndex] = useState<number | null>(0);
 
   const products = [
     {
@@ -153,7 +120,7 @@ export default function ProductClient({ product }: { product: Product }) {
             className="w-full h-[500px] flex items-center justify-center"
           >
               <Image
-              src={displayImages[activeImg]}
+              src={product.images[activeImg]}
               alt={product.name}
               width={665}
               height={646}
@@ -164,7 +131,7 @@ export default function ProductClient({ product }: { product: Product }) {
           {/* THUMBNAILS */}
           <div className="flex gap-4 mt-4">
 
-            {displayImages.map((img: string, i: number) => (
+            {product.images.map((img: string, i: number) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -211,6 +178,46 @@ export default function ProductClient({ product }: { product: Product }) {
             </span>
         </div>
 
+        {/* QUICK INFO */}
+        <div className="space-y-2 mb-4">
+
+          <p className="text-green-700 font-semibold text-[14px] flex items-center gap-2">
+            <FontAwesomeIcon icon={faShoppingBag} />
+            1,000+ Units Sold in 7 Days
+          </p>
+
+          <p className="text-[14px] text-gray-700 flex items-center gap-2">
+            <FontAwesomeIcon icon={faStarHalfStroke} className="text-yellow-500" />
+              4.8/5 Rating
+          </p>
+
+          <div className="flex flex-wrap gap-2 text-[12px]">
+            {[
+              { text: "Brightens", icon: faSun },
+              { text: "Refresh", icon: faBolt },
+              { text: "Gentle", icon: faDroplet },
+              { text: "Non-Drying", icon: faCheckCircle },
+              { text: "pH Balanced", icon: faLeaf },
+            ].map((tag, i) => (
+              <span
+                key={i}
+                className="bg-[#E6F0D6] text-[#5E2B16] px-3 py-1 rounded-full flex items-center gap-1"
+              >
+                <FontAwesomeIcon icon={tag.icon} className="text-[10px]" />
+                {tag.text}
+              </span>
+            ))}
+          </div>
+
+          <p className="text-[#5E2B16] font-semibold flex items-center gap-2">
+            <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />
+            Try It Once. You’ll Reorder.
+          </p>
+
+        </div>
+
+        
+
         {/* DESCRIPTION */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -227,36 +234,53 @@ export default function ProductClient({ product }: { product: Product }) {
         </motion.p>
 
         {/* SIZE */}
-        {product.variants.length > 0 && (
-          <div className="mb-5 flex items-center gap-4">
+        <div className="mb-5 flex items-center gap-4">
 
-            {/* HEADING */}
-            <p className="font-['Roboto_Flex'] font-semibold text-[20px] text-black">
-              Size :
-            </p>
+          {/* HEADING */}
+          <p className="font-['Roboto_Flex'] font-semibold text-[20px] text-black">
+            Size :
+          </p>
 
-            {/* BUTTONS */}
-            <div className="flex items-center gap-3 flex-wrap">
-              {product.variants.map((v) => (
-                <button
-                  key={v.id}
-                  onClick={() => setActiveVariantId(v.id)}
-                  className={`px-4 py-1.5 text-[12px] rounded-full shadow-sm transition ${
-                    activeVariantId === v.id
-                      ? "bg-[#819744] text-white"
-                      : "bg-[#EBF1DC] text-[#5E2B16] hover:bg-[#d9e0c5]"
-                  }`}
-                >
-                  {v.variantName ?? v.sku ?? `Variant ${v.id}`}
-                  {activeVariant?.price != null && activeVariantId === v.id && (
-                    <span className="ml-1 opacity-80">· ₹{activeVariant.price}</span>
-                  )}
-                </button>
-              ))}
-            </div>
+          {/* BUTTONS */}
+          <div className="flex items-center gap-3">
+
+            {/* 50 ml */}
+            <button className="px-4 py-1.5 text-[12px] rounded-full bg-[#EBF1DC] text-[#5E2B16] shadow-sm">
+              50 ml
+            </button>
+
+            {/* 100 ml */}
+            <button className="px-4 py-1.5 text-[12px] rounded-full bg-[#819744] text-white shadow-sm">
+              100 ml
+            </button>
 
           </div>
-        )}
+
+        </div>
+
+        
+        {/* PRICE */}
+        <div className="mb-4">
+
+          {/* PRICE ROW */}
+          <div className="flex items-center gap-3">
+            <p className="text-[28px] font-bold text-[#2C2C2C]">₹370</p>
+
+            <span className="text-gray-400 line-through text-[16px]">
+              ₹390
+            </span>
+
+            <p className="text-sm text-gray-500">
+              (MRP Inclusive of all taxes)
+            </p>
+          </div>
+
+          {/* SAVING TEXT */}
+          <p className="text-[#819744] font-semibold text-[14px] mt-1">
+            You’ll save ₹20
+          </p>
+
+        </div>
 
         {/* BEST SUITED */}
         <p className="mb-6 text-[15px]">
@@ -296,15 +320,11 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             {/*  ADD TO CART */}
-            <button
-              onClick={handleAddToCart}
-              disabled={addCartItem.isPending}
-              className="flex h-[42px] disabled:opacity-70 disabled:cursor-not-allowed"
-            >
+            <button className="flex h-[42px]">
 
               {/* TEXT PART */}
               <span className="bg-[#E5EAD9] text-[#5E2B16] px-6 flex items-center font-semibold text-[14px] tracking-wide">
-                {addCartItem.isPending ? "ADDING..." : "ADD TO CART"}
+                ADD TO CART
               </span>
 
               {/* ICON PART */}
@@ -314,6 +334,11 @@ export default function ProductClient({ product }: { product: Product }) {
 
             </button>
 
+            {/* BUY NOW */}
+            <button className="bg-[#819744] text-white px-5 h-[42px] rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition">
+              <FontAwesomeIcon icon={faBolt} />
+              Buy Now
+            </button>
           </div>
 
           {/* TABS */}
@@ -345,8 +370,13 @@ export default function ProductClient({ product }: { product: Product }) {
           <div className="text-sm text-gray-600 leading-6 space-y-3">
             {tab === "desc" ? (
               <>
+              {/* <p>{product.desc}</p> */}
+
               <p>
-                  {product.description ?? "No description available for this product."}
+                  Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C,
+                  natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle,
+                  toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula
+                  cleanses effectively while keeping your skin balanced, refreshed, and nourished.
               </p>
               </>
               ) : (
@@ -413,6 +443,73 @@ export default function ProductClient({ product }: { product: Product }) {
                 ))}
 
               </div>
+
+              {/* INGREDIENTS */}
+              <div className="mt-10">
+                <h3 className="text-[#819744] font-bold text-[22px] mb-6">
+                  INGREDIENTS:
+                </h3>
+
+                <div className="grid md:grid-cols-2 gap-5 text-[14px]">
+
+                  {[
+                      { title: "Vitamin C", desc: "Even, radiant skin", icon: faSun },
+                      { title: "Tangerine Extract", desc: "Refresh & energize", icon: faBolt },
+                      { title: "Papaya Extract", desc: "Tan-free & clear", icon: faLeaf },
+                      { title: "Vitamin E", desc: "Glow & protect", icon: faCheckCircle },
+                      { title: "Sodium PCA", desc: "Plump & hydrated", icon: faDroplet },
+                      { title: "Glycerine", desc: "Smooth & nourished", icon: faDroplet },
+                    ].map((item, i) => (
+                      <motion.div
+                        key={i}
+                        whileHover={{ scale: 1.05 }} 
+                        className="bg-[#D9DFC8] border border-[#E6E6E6] rounded-xl p-4 flex items-start gap-3 shadow-sm"
+                      >
+                        <div className="w-[36px] h-[36px] rounded-full bg-[#EBF1DC] flex items-center justify-center">
+                          <FontAwesomeIcon icon={item.icon} className="text-[#819744]" />
+                        </div>
+
+                        <div>
+                          <h4 className="font-semibold text-[#2C2C2C]">
+                            {item.title}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {item.desc}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+
+
+                </div>
+
+                <Link href="/ingredients">
+                  <button className="mt-4 bg-[#819744] text-white px-5 py-2 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition">
+                    View Full Ingredients
+                    <FontAwesomeIcon icon={faArrowRight} />
+                  </button>
+                </Link>
+              </div>
+
+              {/* ADD RESULTS HERE */}
+              <div className="mt-8 space-y-3">
+
+                {[
+                  "Week 1: 60% feel hydrated & soft",
+                  "Week 2: 75% notice reduced dullness",
+                  "Week 3: 95% see brighter skin",
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className="bg-[#D9DFC8] px-4 py-3 rounded-lg text-[14px] flex items-center gap-2"
+                  >
+                    <FontAwesomeIcon icon={faCheckCircle} className="text-[#819744]" />
+                    {item}
+                  </div>
+                ))}
+
+              </div>
+
             </div>
 
             {/* RIGHT */}
@@ -799,24 +896,38 @@ export default function ProductClient({ product }: { product: Product }) {
 
         <div className="grid grid-cols-2 gap-6 text-[14px] text-[#5E2B16]">
 
-          <div>
-            <p className="font-semibold">Country of Origin</p>
-            <p>India</p>
+          <div className="flex items-start gap-2">
+            <FontAwesomeIcon icon={faGlobe} className="text-[#819744] mt-1" />
+            <div>
+              <p className="font-semibold">Country of Origin</p>
+              <p>India</p>
+            </div>
+          </div>
+          {/* Marketed By */}
+          <div className="flex items-start gap-3">
+            <FontAwesomeIcon icon={faBuilding} className="text-[#819744] mt-1" />
+            <div>
+              <p className="font-semibold">Marketed By</p>
+              <p>PureAstra Pvt. Ltd.</p>
+            </div>
           </div>
 
-          <div>
-            <p className="font-semibold">Marketed By</p>
-            <p>PureAstra Pvt. Ltd.</p>
+          {/* Manufactured By */}
+          <div className="flex items-start gap-3">
+            <FontAwesomeIcon icon={faIndustry} className="text-[#819744] mt-1" />
+            <div>
+              <p className="font-semibold">Manufactured By</p>
+              <p>PureAstra Labs</p>
+            </div>
           </div>
 
-          <div>
-            <p className="font-semibold">Manufactured By</p>
-            <p>PureAstra Labs</p>
-          </div>
-
-          <div>
-            <p className="font-semibold">Quantity</p>
-            <p>100ml</p>
+          {/* Quantity */}
+          <div className="flex items-start gap-3">
+            <FontAwesomeIcon icon={faBox} className="text-[#819744] mt-1" />
+            <div>
+              <p className="font-semibold">Quantity</p>
+              <p>100ml</p>
+            </div>
           </div>
 
         </div>

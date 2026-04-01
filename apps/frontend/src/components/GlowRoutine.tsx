@@ -32,13 +32,67 @@ export default function GlowRoutine() {
   ];
 
   return (
-    <section className="bg-[#EBF1DC] px-[60px] py-[80px] relative">
-      <h2 className="text-center text-[#9E6E5B] font-['Marko_One',serif] text-[28px] mb-[40px]">
+    <section className="bg-[#EBF1DC] px-[16px] md:px-[30px] lg:px-[60px] py-[50px] md:py-[70px] lg:py-[80px]">
+      
+      {/* TITLE */}
+      <h2 className="text-center text-[#9E6E5B] font-['Marko_One',serif] text-[22px] md:text-[26px] lg:text-[28px] mb-[30px] md:mb-[40px]">
         Your Daily Organic Glow Routine
       </h2>
 
-      <div className="relative w-full before:absolute before:top-0 before:bottom-0 before:left-1/2 before:w-[6px] before:-translate-x-1/2 before:rounded-[10px] before:bg-[linear-gradient(to_bottom,#819743_0%,#B0900F_51%,#5E2B16_100%)] before:bg-[length:100%_200%] before:content-[''] before:animate-[flow_4s_linear_infinite] max-md:before:left-[20px] max-md:before:translate-x-0">
-        
+      {/* ================= MOBILE VIEW ================= */}
+      <div className="md:hidden flex flex-col items-center">
+
+        {steps.map((step, index) => (
+          <div key={index} className="flex flex-col items-center">
+
+            {/* CARD */}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.2 }}
+              className="w-[230px] bg-[#E3E8D5] rounded-xl p-3 shadow-sm text-center"
+            >
+              <img
+                src={step.img}
+                alt={step.title}
+                className="w-full h-[140px] object-cover rounded-lg mb-2"
+              />
+
+              <h4 className="text-[#3B7509] font-semibold text-[14px]">
+                {step.title}
+              </h4>
+
+              <p className="text-[12px] text-[#3B7509] mt-1 leading-tight">
+                {step.desc}
+              </p>
+            </motion.div>
+
+            {/* CONNECTOR (except last item) */}
+            {index !== steps.length - 1 && (
+              <>
+                {/* LINE */}
+                <div className="h-[40px] w-[4px] bg-[#819743]" />
+
+                {/* DOT */}
+                <div className="h-5 w-5 rounded-full border-4 border-[#B0900F] bg-white my-2" />
+
+                {/* LINE */}
+                <div className="h-[40px] w-[4px] bg-[#819743]" />
+              </>
+            )}
+
+          </div>
+        ))}
+
+      </div>
+
+      {/* ================= DESKTOP VIEW (UNCHANGED) ================= */}
+      <div className="hidden md:block relative">
+
+        <div className="absolute left-1/2 top-0 bottom-0 w-[6px] -translate-x-1/2 rounded-[10px] 
+        bg-[linear-gradient(to_bottom,#819743_0%,#B0900F_51%,#5E2B16_100%)]" />
+
         {steps.map((step, index) => {
           const isLeft = index % 2 === 0;
 
@@ -48,15 +102,12 @@ export default function GlowRoutine() {
               initial={{ opacity: 0, y: 80 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{
-                duration: 0.6,
-                delay: index * 0.2,
-                ease: "easeOut",
-              }}
-              className="mb-[50px] grid grid-cols-[1fr_60px_1fr] items-center max-md:mb-10 max-md:grid-cols-1"
+              transition={{ delay: index * 0.2 }}
+              className="mb-[50px] grid grid-cols-[1fr_60px_1fr] items-center"
             >
+
               {/* LEFT */}
-              <div className="px-5 max-md:pl-10 max-md:pr-0">
+              <div className="px-5">
                 {isLeft ? (
                   <motion.img
                     src={step.img}
@@ -77,15 +128,10 @@ export default function GlowRoutine() {
               </div>
 
               {/* DOT */}
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                transition={{ delay: index * 0.2 }}
-                className="z-[2] m-auto h-5 w-5 rounded-full border-4 border-[#B0900F] bg-white max-md:hidden"
-              />
+              <div className="z-[2] m-auto h-5 w-5 rounded-full border-4 border-[#B0900F] bg-white" />
 
               {/* RIGHT */}
-              <div className="px-5 max-md:pl-10 max-md:pr-0">
+              <div className="px-5">
                 {isLeft ? (
                   <div>
                     <h4 className="text-[#3B7509] font-semibold mb-2">
@@ -104,10 +150,12 @@ export default function GlowRoutine() {
                   />
                 )}
               </div>
+
             </motion.div>
           );
         })}
       </div>
+
     </section>
   );
 }

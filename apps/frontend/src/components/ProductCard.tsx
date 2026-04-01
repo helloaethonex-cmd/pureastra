@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< HEAD
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCartShopping, faHeart as faHeartSolid } from "@fortawesome/free-solid-svg-icons";
@@ -31,6 +32,31 @@ export default function ProductCard({ active, product }: ProductCardProps) {
   const removeWishlistItem = useRemoveWishlistItem();
   const { data: wishlistItems } = useWishlist(Boolean(user));
   const router = useRouter();
+=======
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
+import { faHeart as faHeartOutline } from "@fortawesome/free-regular-svg-icons";
+import { faHeart as faHeartSolid } from "@fortawesome/free-solid-svg-icons";
+
+type Product = {
+  title: string;
+  desc: string;
+  price: number;
+  size: string;
+  img: string;
+  category: "Face Care" | "Body Care" | "Hair Care";
+};
+
+export default function ProductCard({
+  product,
+  active,
+}: {
+  product: Product;
+  active?: boolean;
+}) {
+  const [liked, setLiked] = useState(false);
+>>>>>>> 2df67f3 (reponsive landing page and description page updation)
 
   const hoverTags = [
     product.brand ? `Brand: ${product.brand}` : "Pureastra",
@@ -117,6 +143,7 @@ export default function ProductCard({ active, product }: ProductCardProps) {
   };
 
   return (
+<<<<<<< HEAD
     <div className="group relative h-105 w-full scale-[0.85] overflow-hidden rounded-[25px] bg-[#D9D9D9] opacity-90 transition-all duration-400 ease-in-out before:pointer-events-none before:absolute before:bottom-0 before:z-1 before:h-30 before:w-full before:bg-linear-to-t before:from-black/25 before:to-transparent in-[.swiper-slide-active_&]:z-2 in-[.swiper-slide-active_&]:scale-100 in-[.swiper-slide-active_&]:opacity-100 in-[.swiper-slide-next_&]:scale-90 in-[.swiper-slide-next_&]:opacity-[0.85] in-[.swiper-slide-prev_&]:scale-90 in-[.swiper-slide-prev_&]:opacity-[0.85]">
       {/* Image */}
       <Link href={`/product/${product.slug}`}>
@@ -134,12 +161,44 @@ export default function ProductCard({ active, product }: ProductCardProps) {
           disabled={addCartItem.isPending}
           className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center disabled:opacity-70"
           title="Add to cart"
+=======
+    <div className="group relative h-full w-full overflow-hidden rounded-[25px] bg-[#D9D9D9] transition-all duration-400 ease-in-out before:pointer-events-none before:absolute before:bottom-0 before:z-1 before:h-30 before:w-full before:bg-linear-to-t before:from-black/25 before:to-transparent">
+      
+      {/* IMAGE */}
+      <img
+        src={product.img}
+        alt={product.title}
+        className="w-full h-full object-cover"
+      />
+
+      {/* ICONS */}
+      <div className="absolute top-3.5 right-3.5 flex gap-2 z-10">
+        
+        {/* Wishlist */}
+        <button
+          onClick={() => setLiked(!liked)}
+          className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center"
+        >
+          <FontAwesomeIcon
+            icon={liked ? faHeartSolid : faHeartOutline}
+            className={`text-base ${
+              liked ? "text-red-500" : "text-white"
+            } transition`}
+          />
+        </button>
+
+        {/* Cart */}
+        <button
+          onClick={() => alert(`${product.title} added to cart`)}
+          className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center"
+>>>>>>> 2df67f3 (reponsive landing page and description page updation)
         >
           <FontAwesomeIcon
             icon={faCartShopping}
             className="text-base text-white"
           />
         </button>
+<<<<<<< HEAD
 
         <button
           onClick={handleAddToWishlist}
@@ -152,13 +211,18 @@ export default function ProductCard({ active, product }: ProductCardProps) {
             className={`text-base ${isWishlisted ? "text-red-500" : "text-white"}`}
           />
         </button>
+=======
+>>>>>>> 2df67f3 (reponsive landing page and description page updation)
       </div>
 
       {/* NORMAL DETAILS */}
       <div
-        className={`absolute bottom-0 z-3 flex w-full flex-col justify-end border-t border-white/15 bg-black/15 px-4.5 py-4 text-white backdrop-blur-md transition-opacity duration-300 group-hover:opacity-0 ${active ? "show" : ""}`}
+        className={`absolute bottom-0 z-3 flex w-full flex-col justify-end border-t border-white/15 bg-black/15 px-4.5 py-4 text-white backdrop-blur-md transition-opacity duration-300 group-hover:opacity-0 ${
+          active ? "show" : ""
+        }`}
       >
         <h5 className="text-[18px] font-semibold mb-1 font-['Roboto_Serif',serif]">
+<<<<<<< HEAD
           {product.name}
         </h5>
 
@@ -179,13 +243,34 @@ export default function ProductCard({ active, product }: ProductCardProps) {
       >
         <h4 className="mb-4.5 translate-y-5 text-left text-[26px] font-semibold opacity-0 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
           {product.name}
+=======
+          {product.title}
+        </h5>
+
+        <p className="font-['Poppins',sans-serif] text-[13px] leading-[1.4] mb-2 opacity-90">
+          {product.desc}
+        </p>
+
+        <div className="flex justify-between">
+          <span>{product.size}</span>
+          <span>₹{product.price}</span>
+        </div>
+      </div>
+
+      {/* HOVER OVERLAY */}
+      <div className="absolute bottom-0 flex h-0 w-full flex-col items-start justify-center overflow-hidden bg-linear-to-t from-black/65 to-black/20 p-7.5 text-[#D9D9D9] backdrop-blur-[10px] transition-[height] duration-400 ease-in-out group-hover:h-full">
+        
+        <h4 className="mb-4.5 translate-y-5 text-left text-[26px] font-semibold opacity-0 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
+          {product.title}
+>>>>>>> 2df67f3 (reponsive landing page and description page updation)
         </h4>
+
         <div className="flex w-full flex-col items-start gap-3 opacity-0 translate-y-5 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
           {hoverTags.map((tag, idx) => (
             <span
               key={tag}
               className="translate-y-5 rounded-[20px] bg-white/25 px-4 py-2 text-[14px] opacity-0 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100"
-              style={{ transitionDelay: `${(idx + 1) * 0.2}s` }}
+              style={{ transitionDelay: `${(idx + 1) * 0.15}s` }}
             >
               {tag}
             </span>

@@ -18,18 +18,38 @@ export default function ConcernSlider() {
         }}
         pagination={{ clickable: true }}
         modules={[Autoplay, Pagination]}
-        className="h-screen max-h-[600px] w-full max-md:h-[300px]"
+        
+        //  RESPONSIVE HEIGHT FIX
+        className="
+          w-full 
+          h-[220px] 
+          sm:h-[260px] 
+          md:h-[350px] 
+          lg:h-screen lg:max-h-[600px]
+        "
       >
         <SwiperSlide>
-          <img src="/img/banner-1.png" alt="banner1" className="w-full h-full object-top object-cover transition-transform duration-500" />
+          <img
+            src="/img/banner-1.png"
+            alt="banner1"
+            className="w-full h-full object-contain md:object-cover object-center bg-[#f5f5f5]"
+          />
         </SwiperSlide>
 
         <SwiperSlide>
-          <img src="/img/banner-2.png" alt="banner2" className="w-full h-full object-top object-cover transition-transform duration-500" />
+          <img
+            src="/img/banner-2.png"
+            alt="banner2"
+            className="w-full h-full object-contain md:object-cover object-center bg-[#f5f5f5]"
+          />
         </SwiperSlide>
 
         <SwiperSlide>
-          <img src="/img/banner-3.png" alt="banner3" className="w-full h-full object-top object-cover transition-transform duration-500" />
+          <img
+            src="/img/banner-3.png"
+            alt="banner3"
+            className="w-full h-full object-contain md:object-cover object-center bg-[#f5f5f5]"
+          />
         </SwiperSlide>
       </Swiper>
     </div>
