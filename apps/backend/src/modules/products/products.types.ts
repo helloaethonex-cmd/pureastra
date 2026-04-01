@@ -29,6 +29,44 @@ export const addProductImageSchema = z.object({
 
 export type AddProductImageInput = z.infer<typeof addProductImageSchema>;
 
+// ─── Product Content Sections ────────────────────────────────────────────────
+
+export const productContentSectionTypeSchema = z.enum([
+  "BENEFITS",
+  "FAQ",
+  "SUITABLE_FOR",
+  "USAGE_INSTRUCTION",
+  "BEFORE_AFTER",
+  "INGREDIENTS",
+  "HIGHLIGHTS",
+  "CUSTOM",
+]);
+
+export const productContentJsonSchema = z.union([
+  z.string(),
+  z.array(z.unknown()),
+  z.record(z.string(), z.unknown()),
+]);
+
+export const createProductContentSectionSchema = z.object({
+  sectionType: productContentSectionTypeSchema,
+  title: z.string().min(1).max(200).optional(),
+  content: productContentJsonSchema,
+  position: z.coerce.number().int().min(0).default(0),
+  isActive: z.boolean().default(true),
+});
+
+export const updateProductContentSectionSchema = z.object({
+  sectionType: productContentSectionTypeSchema.optional(),
+  title: z.string().min(1).max(200).nullable().optional(),
+  content: productContentJsonSchema.optional(),
+  position: z.coerce.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type CreateProductContentSectionInput = z.infer<typeof createProductContentSectionSchema>;
+export type UpdateProductContentSectionInput = z.infer<typeof updateProductContentSectionSchema>;
+
 // ─── Product ───────────────────────────────────────────────────────────────────
 
 export const createProductSchema = z.object({

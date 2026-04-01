@@ -40,6 +40,23 @@ export interface ProductImage {
   variantId?: string | null;
 }
 
+export type ProductContentSectionType =
+  | "BENEFITS"
+  | "FAQ"
+  | "SUITABLE_FOR"
+  | "USAGE_INSTRUCTION"
+  | "BEFORE_AFTER"
+  | "INGREDIENTS"
+  | "HIGHLIGHTS"
+  | "CUSTOM";
+
+export interface ProductContentSection {
+  sectionType: ProductContentSectionType;
+  title?: string | null;
+  content: unknown;
+  position: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -49,6 +66,7 @@ export interface Product {
   isActive: boolean;
   variants: ProductVariant[];
   images: ProductImage[];
+  contentSections?: ProductContentSection[];
   categories?: { category: Category }[];
 }
 

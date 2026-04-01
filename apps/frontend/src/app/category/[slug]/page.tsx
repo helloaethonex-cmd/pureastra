@@ -11,16 +11,21 @@ function requireBackendUrl() {
 }
 
 async function fetchCategories(): Promise<Category[]> {
-  const base = requireBackendUrl();
-  const res = await fetch(`${base}/api/v1/products/categories`, {
-    cache: "force-cache",
-  });
+  try {
+    const base = requireBackendUrl();
+    const res = await fetch(`${base}/api/v1/products/categories`, {
+      cache: "force-cache",
+    });
 
-  if (!res.ok) {
+    if (!res.ok) {
+      return [];
+    }
+
+    return (await res.json()) as Category[];
+  } catch (error) {
+    console.error("[fetchCategories] Error while fetching categories:", error);
     return [];
   }
-
-  return (await res.json()) as Category[];
 }
 
 function collectCategorySlugs(categories: Category[]): string[] {
