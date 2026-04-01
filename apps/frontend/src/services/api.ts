@@ -91,6 +91,97 @@ export interface ProductListParams {
   sortOrder?: "asc" | "desc";
 }
 
+export interface UserRole {
+  id: string;
+  name: string;
+}
+
+export interface UserProfile {
+  id: string;
+  publicId: string;
+  email: string;
+  phone?: string | null;
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  image?: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  role?: UserRole | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartProduct {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface CartVariantImage {
+  id: string;
+  imageUrl?: string | null;
+}
+
+export interface CartProductVariant {
+  id: string;
+  variantName?: string | null;
+  price?: number | string | null;
+  product: CartProduct;
+  images?: CartVariantImage[];
+}
+
+export interface CartItem {
+  id: string;
+  quantity: number;
+  priceSnapshot?: number | string | null;
+  productVariant: CartProductVariant;
+}
+
+export interface Cart {
+  id: string;
+  userId?: string | null;
+  sessionId?: string | null;
+  status: number;
+  items: CartItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WishlistProduct {
+  id: string;
+  uuid?: string;
+  name: string;
+  slug?: string | null;
+  brand?: string | null;
+}
+
+export interface WishlistVariantImage {
+  id: string;
+  imageUrl?: string | null;
+  position?: number | null;
+}
+
+export interface WishlistProductVariant {
+  id: string;
+  variantName?: string | null;
+  sku?: string | null;
+  price?: number | string | null;
+  product: WishlistProduct;
+  images?: WishlistVariantImage[];
+}
+
+export interface WishlistItem {
+  id: string;
+  userId: string;
+  productVariantId: string;
+  createdAt: string;
+  updatedAt: string;
+  isAvailable: boolean;
+  productVariant: WishlistProductVariant;
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export const listCategories = () =>
@@ -225,3 +316,53 @@ export const checkAdminAccess = async (): Promise<boolean> => {
   });
   return res.ok; // 200 = admin, 403 = not admin
 };
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export const getMyProfile = () => apiFetch<UserProfile>("/users/me");
+
+// ─── Cart ─────────────────────────────────────────────────────────────────────
+
+export const getCart = () => apiFetch<Cart>("/cart");
+
+export const addCartItem = (body: { productVariantId: string; quantity: number }) =>
+  apiFetch<CartItem>("/cart/items", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateCartItemQuantity = (itemId: string, quantity: number) =>
+  apiFetch<CartItem>(`/cart/items/${itemId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ quantity }),
+  });
+
+export const removeCartItem = (itemId: string) =>
+  apiFetch<{ message: string }>(`/cart/items/${itemId}`, {
+    method: "DELETE",
+  });
+
+export const clearCart = () =>
+  apiFetch<{ message: string }>("/cart", {
+    method: "DELETE",
+  });
+
+// ─── Wishlist ────────────────────────────────────────────────────────────────
+
+export const getWishlist = () => apiFetch<WishlistItem[]>("/wishlist");
+
+export const addWishlistItem = (body: { productVariantId: string }) =>
+  apiFetch<WishlistItem>("/wishlist/items", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const removeWishlistItem = (productVariantId: string) =>
+  apiFetch<{ message: string }>(`/wishlist/items/${productVariantId}`, {
+    method: "DELETE",
+  });
+
+export const moveWishlistItemToCart = (productVariantId: string) =>
+  apiFetch<{ message: string }>(`/wishlist/items/${productVariantId}/move-to-cart`, {
+    method: "POST",
+  });

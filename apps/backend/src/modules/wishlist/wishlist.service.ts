@@ -14,7 +14,7 @@ const parseUserId = (userId: string) => BigInt(userId);
 export const getWishlistForUser = async (userId: string) => {
   const items = await findWishlistItemsByUserId(parseUserId(userId));
 
-  return items.map((item) => ({
+  return items.map((item: any) => ({
     ...item,
     isAvailable:
       item.productVariant.deletedAt === null &&

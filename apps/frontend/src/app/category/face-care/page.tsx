@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { products } from "@/data/products";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
@@ -11,10 +12,9 @@ import {
   faChevronUp,
 } from "@fortawesome/free-solid-svg-icons";
 
+
 export default function FaceCarePage() {
   const [activeFilter, setActiveFilter] = useState("All");
-
-  // MULTI-OPEN ACCORDION
   const [openProduct, setOpenProduct] = useState(true);
   const [openPrice, setOpenPrice] = useState(true);
 
@@ -93,7 +93,6 @@ export default function FaceCarePage() {
   ];
 
   const handleAddToCart = (product: any) => {
-    console.log("Added to cart:", product);
     alert(`${product.name} added to cart`);
   };
 
@@ -103,24 +102,24 @@ export default function FaceCarePage() {
       : products.filter((p) => p.type === activeFilter);
 
   return (
-    <section className="bg-[#FAF3E2] min-h-screen px-6 md:px-12 py-10">
+    <section className="bg-[#F5F0E6] min-h-screen px-4 md:px-10 py-10">
 
       {/* TITLE */}
-      <h1 className="text-center text-[32px] font-bold font-['Roboto',serif] text-[#9E6E5B] mb-6">
+      <h1 className="text-center text-[28px] md:text-[32px] font-bold text-[#9E6E5B] mb-8 font-['Roboto']">
         Face wash
       </h1>
 
       {/* TOP FILTER */}
-      <div className="flex justify-center gap-4 flex-wrap mb-10">
+      <div className="flex justify-center gap-3 flex-wrap mb-10">
         {filters.map((item) => (
           <button
             key={item}
             onClick={() => setActiveFilter(item)}
-            className={`px-5 py-2 rounded-full text-sm font-['Poppins']
+            className={`px-4 py-2 rounded-full text-sm transition
               ${
                 activeFilter === item
                   ? "bg-[#819744] text-white"
-                  : "bg-[#EFE6D8] text-[#5E2B15] shadow-sm hover:bg-[#e4d7c4]"
+                  : "bg-[#EFE6D8]/30 backdrop-blur-md border border-white/30 text-[#5E2B15] hover:bg-[#e4d7c4]"
               }`}
           >
             {item}
@@ -129,73 +128,76 @@ export default function FaceCarePage() {
       </div>
 
       {/* MAIN LAYOUT */}
-      <div className="grid grid-cols-[250px_1fr] gap-8 max-lg:grid-cols-1">
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
-        {/* SIDEBAR ACCORDION */}
-        <div className="bg-white p-5 rounded-xl shadow-sm h-fit">
+        {/* ================= SIDEBAR ================= */}
+        <div className="backdrop-blur-md bg-white/20 border border-white/30 p-5 rounded-2xl shadow-lg h-fit">
+
+          <h2 className="font-semibold text-[#5E2B15] mb-4 text-lg">
+            Filters
+          </h2>
 
           {/* PRODUCT TYPE */}
           <div>
             <div
               onClick={() => setOpenProduct(!openProduct)}
-              className="flex justify-between items-center cursor-pointer"
+              className="flex justify-between cursor-pointer"
             >
-              <h3 className="text-sm font-semibold">SHOP BY PRODUCT TYPE</h3>
-
-              <FontAwesomeIcon
-                icon={openProduct ? faChevronUp : faChevronDown}
-                className="text-[#5E2B15] text-sm transition-transform duration-300"
-              />
+              <h3 className="text-sm font-semibold">PRODUCT TYPE</h3>
+              <FontAwesomeIcon icon={openProduct ? faChevronUp : faChevronDown} />
             </div>
 
             {openProduct && (
-              <ul className="mt-4 space-y-3 text-sm max-h-[180px] overflow-y-auto pr-2">
-                <li className="cursor-pointer hover:text-[#819744]">Face Wash</li>
-                <li className="cursor-pointer hover:text-[#819744]">Face Serum</li>
-                <li className="cursor-pointer hover:text-[#819744]">Face Mask</li>
-                <li className="cursor-pointer hover:text-[#819744]">Face Cream</li>
-                <li className="cursor-pointer hover:text-[#819744]">Moisturizer</li>
+              <ul className="mt-4 space-y-3 text-sm">
+                {["Face Wash", "Face Serum", "Face Mask", "Moisturizer"].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <input type="checkbox" className="accent-[#5E2B15]" />
+                    {item}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
 
-          {/* DIVIDER */}
-          <div className="border-t my-5"></div>
+          <div className="border-t my-5" />
 
           {/* PRICE */}
           <div>
             <div
               onClick={() => setOpenPrice(!openPrice)}
-              className="flex justify-between items-center cursor-pointer"
+              className="flex justify-between cursor-pointer"
             >
               <h3 className="text-sm font-semibold">PRICE</h3>
-
-              <FontAwesomeIcon
-                icon={openPrice ? faChevronUp : faChevronDown}
-                className="text-[#5E2B15] text-sm transition-transform duration-300"
-              />
+              <FontAwesomeIcon icon={openPrice ? faChevronUp : faChevronDown} />
             </div>
 
             {openPrice && (
               <ul className="mt-4 space-y-3 text-sm">
-                <li className="cursor-pointer hover:text-[#819744]">₹ 200 - ₹ 500</li>
-                <li className="cursor-pointer hover:text-[#819744]">₹ 500 - ₹ 1000</li>
+                <li className="flex items-center gap-2">
+                  <input type="checkbox" className="accent-[#5E2B15]" />
+                  ₹200 - ₹500
+                </li>
+                <li className="flex items-center gap-2">
+                  <input type="checkbox" className="accent-[#5E2B15]" />
+                  ₹500 - ₹1000
+                </li>
               </ul>
             )}
           </div>
-
         </div>
 
-        {/* PRODUCT GRID */}
-        <div className="grid grid-cols-3 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
+        {/* ================= PRODUCTS ================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
           {filteredProducts.map((product) => (
             <div
               key={product.slug}
-              className="relative rounded-[16px] overflow-hidden group bg-[#D9D9D9]"
+              className="relative rounded-2xl overflow-hidden backdrop-blur-md bg-white/20 border border-white/30 shadow-lg hover:scale-[1.03] transition"
             >
+
               {/* TAG */}
               {product.tag && (
-                <div className="absolute top-3 left-3 bg-[#9333ea] text-white text-[10px] px-2 py-1 rounded-full z-10">
+                <div className="absolute top-3 left-3 bg-purple-600 text-white text-[10px] px-2 py-1 rounded-full z-10">
                   {product.tag}
                 </div>
               )}
@@ -207,47 +209,46 @@ export default function FaceCarePage() {
                   alt={product.name}
                   width={300}
                   height={300}
-                  className="w-full h-[260px] object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+                  className="w-full h-[220px] md:h-[260px] object-cover"
                 />
               </Link>
 
-            
-              {/* OVERLAY */}
-                <div className="absolute bottom-0 left-0 right-0 
-                bg-black/15 backdrop-blur-md 
-                p-4 text-white 
-                rounded-b-[16px] transition-all duration-300 group-hover:bg-black/25"
-                >
-                <div className="flex justify-between items-center">
-                    <h3 className="font-semibold text-sm">
-                    {product.name}
-                    </h3>
-
-                    <div className="flex items-center gap-1 text-xs text-[#F59E0B]">
-                    <FontAwesomeIcon icon={faStar} />
-                    {product.rating}
-                    </div>
-                </div>
-
-                <p className="text-xs mt-1 opacity-90 line-clamp-2">
-                    {product.desc}
-                </p>
-
-                <div className="flex justify-between text-xs mt-2">
-                    <span>{product.size}</span>
-                    <span>₹ {product.price}</span>
-                </div>
-                </div>
-
-              {/* CART BUTTON */}
+              {/* CART */}
               <button
                 onClick={() => handleAddToCart(product)}
-                className="absolute top-3 right-3 bg-white/90 rounded-full w-9 h-9 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition"
+                className="absolute top-3 right-3 bg-white/70 backdrop-blur-md rounded-full w-9 h-9 flex items-center justify-center"
               >
                 <FontAwesomeIcon icon={faCartShopping} className="text-[#819744]" />
               </button>
+
+              {/* GLASS OVERLAY */}
+              <div className="absolute bottom-0 left-0 w-full bg-white/20 backdrop-blur-md border-t border-white/20 text-white p-4">
+
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-semibold">
+                    {product.name}
+                  </h3>
+
+                  <div className="flex items-center gap-1 text-xs">
+                    <FontAwesomeIcon icon={faStar} className="text-yellow-400" />
+                    {product.rating}
+                  </div>
+                </div>
+
+                <p className="text-xs mt-1 opacity-90 line-clamp-2">
+                  {product.desc}
+                </p>
+
+                <div className="flex justify-between text-xs mt-2">
+                  <span>{product.size}</span>
+                  <span>₹{product.price}</span>
+                </div>
+
+              </div>
+
             </div>
           ))}
+
         </div>
 
       </div>

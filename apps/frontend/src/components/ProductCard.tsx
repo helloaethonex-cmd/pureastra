@@ -1,36 +1,157 @@
 "use client";
 
+import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
-import { faHeart } from "@fortawesome/free-regular-svg-icons";
+import { faCartShopping, faHeart as faHeartSolid } from "@fortawesome/free-solid-svg-icons";
+import { faHeart as faHeartRegular } from "@fortawesome/free-regular-svg-icons";
+import { useAddCartItem } from "@/hooks/useCart";
+import {
+  useAddWishlistItem,
+  useRemoveWishlistItem,
+  useWishlist,
+} from "@/hooks/useWishlist";
+import { useAuthStore } from "@/store/auth.store";
+import type { Product } from "@/services/api";
+import { useRouter } from "next/navigation";
 
-export default function ProductCard({ active }: { active?: boolean }) {
+type ProductCardProps = {
+  active?: boolean;
+  product: Product;
+};
+
+const toNumber = (value: number | string | null | undefined) => {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  return Number.isFinite(parsed) ? Number(parsed) : 0;
+};
+
+export default function ProductCard({ active, product }: ProductCardProps) {
+  const { user } = useAuthStore();
+  const addCartItem = useAddCartItem();
+  const addWishlistItem = useAddWishlistItem();
+  const removeWishlistItem = useRemoveWishlistItem();
+  const { data: wishlistItems } = useWishlist(Boolean(user));
+  const router = useRouter();
+
   const hoverTags = [
-    "Brighten Skin",
-    "Promote Even Skin Tone",
-    "Fights Free Radical Damage",
+    product.brand ? `Brand: ${product.brand}` : "Pureastra",
+    product.variants.length > 0
+      ? `${product.variants.length} size options`
+      : "Default size",
     "Made Safe Certified",
+    "Dermatologically Tested",
   ];
+
+  const primaryImage =
+    product.images.find((img) => img.position === 0)?.imageUrl ||
+    product.images[0]?.imageUrl ||
+    "/img/facewash.png";
+
+  const activeVariant = product.variants[0];
+  const minPrice = product.variants.reduce((min, variant) => {
+    const variantPrice = toNumber(variant.price);
+    if (variantPrice <= 0) return min;
+    return variantPrice < min ? variantPrice : min;
+  }, Infinity);
+
+  const displayPrice = minPrice === Infinity ? 0 : minPrice;
+  const isWishlisted = Boolean(
+    activeVariant?.id &&
+      wishlistItems?.some((item) => item.productVariantId === activeVariant.id),
+  );
+
+  const handleAddToCart = () => {
+    if (!user) {
+      alert("Please sign in to add items to your cart.");
+      return;
+    }
+
+    if (!activeVariant?.id) {
+      alert("No purchasable variant available.");
+      return;
+    }
+
+    addCartItem.mutate(
+      { productVariantId: activeVariant.id, quantity: 1 },
+      {
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : "Failed to add to cart";
+          alert(message);
+        },
+      },
+    );
+  };
+
+  const handleAddToWishlist = () => {
+    if (!user) {
+      alert("Please sign in to add items to your wishlist.");
+      return;
+    }
+
+    if (!activeVariant?.id) {
+      alert("No wishlist-eligible variant available.");
+      return;
+    }
+
+    if (isWishlisted) {
+      removeWishlistItem.mutate(activeVariant.id, {
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : "Failed to update wishlist";
+          alert(message);
+        },
+      });
+      return;
+    }
+
+    addWishlistItem.mutate(
+      { productVariantId: activeVariant.id },
+      {
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : "Failed to add to wishlist";
+          alert(message);
+        },
+      },
+    );
+  };
 
   return (
     <div className="group relative h-105 w-full scale-[0.85] overflow-hidden rounded-[25px] bg-[#D9D9D9] opacity-90 transition-all duration-400 ease-in-out before:pointer-events-none before:absolute before:bottom-0 before:z-1 before:h-30 before:w-full before:bg-linear-to-t before:from-black/25 before:to-transparent in-[.swiper-slide-active_&]:z-2 in-[.swiper-slide-active_&]:scale-100 in-[.swiper-slide-active_&]:opacity-100 in-[.swiper-slide-next_&]:scale-90 in-[.swiper-slide-next_&]:opacity-[0.85] in-[.swiper-slide-prev_&]:scale-90 in-[.swiper-slide-prev_&]:opacity-[0.85]">
       {/* Image */}
-      <img
-        src="/img/Facewash.jpeg"
-        alt="product"
-        className="w-full h-full object-cover"
-      />
+      <Link href={`/product/${product.slug}`}>
+        <img
+          src={primaryImage}
+          alt={product.name}
+          className="w-full h-full object-cover"
+        />
+      </Link>
 
-      {/* ICON CIRCLE */}
-      <div className="absolute top-3.75 right-3.75 w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center z-5">
-        <FontAwesomeIcon
-          icon={faCartShopping}
-          className="absolute text-base text-white transition duration-300 group-hover:scale-[0.8] group-hover:opacity-0"
-        />
-        <FontAwesomeIcon
-          icon={faHeart}
-          className="absolute text-base text-white opacity-0 transition duration-300 group-hover:scale-110 group-hover:opacity-100"
-        />
+      {/* ACTION BUTTONS */}
+      <div className="absolute top-3.75 right-3.75 z-5 flex items-center gap-2">
+        <button
+          onClick={handleAddToCart}
+          disabled={addCartItem.isPending}
+          className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center disabled:opacity-70"
+          title="Add to cart"
+        >
+          <FontAwesomeIcon
+            icon={faCartShopping}
+            className="text-base text-white"
+          />
+        </button>
+
+        <button
+          onClick={handleAddToWishlist}
+          disabled={addWishlistItem.isPending || removeWishlistItem.isPending}
+          className="w-10 h-10 rounded-full bg-white/25 backdrop-blur-md flex items-center justify-center disabled:opacity-70"
+          title="Add to wishlist"
+        >
+          <FontAwesomeIcon
+            icon={isWishlisted ? faHeartSolid : faHeartRegular}
+            className={`text-base ${isWishlisted ? "text-red-500" : "text-white"}`}
+          />
+        </button>
       </div>
 
       {/* NORMAL DETAILS */}
@@ -38,25 +159,26 @@ export default function ProductCard({ active }: { active?: boolean }) {
         className={`absolute bottom-0 z-3 flex w-full flex-col justify-end border-t border-white/15 bg-black/15 px-4.5 py-4 text-white backdrop-blur-md transition-opacity duration-300 group-hover:opacity-0 ${active ? "show" : ""}`}
       >
         <h5 className="text-[18px] font-semibold mb-1 font-['Roboto_Serif',serif]">
-          Vitamin C Face wash
+          {product.name}
         </h5>
 
         <p className="font-['Poppins',sans-serif] text-[13px] leading-[1.4] mb-2 opacity-90">
-          The first step in a skincare routine, cleansing or washing your face,
-          helps eliminate excess oil, dirt, and lethargy. Pureastra Vitamin C
-          Face Wash with Vitamin C and Turmeric&apos;s goodness has brightening
-          properties to give your skin a natural glow.
+          {product.description ??
+            "A gentle formulation crafted to support healthy skin and visible glow."}
         </p>
 
         <div className="flex justify-between">
-          <span>100ml</span>
-          <span>₹590</span>
+          <span>{activeVariant?.variantName ?? "Default"}</span>
+          <span>{displayPrice > 0 ? `₹${displayPrice.toFixed(2)}` : "-"}</span>
         </div>
       </div>
 
-      <div className="absolute bottom-0 flex h-0 w-full flex-col items-start justify-center overflow-hidden bg-linear-to-t from-black/65 to-black/20 p-7.5 text-[#D9D9D9] backdrop-blur-[10px] transition-[height] duration-400 ease-in-out group-hover:h-full">
+      <div
+        className="absolute bottom-0 flex h-0 w-full flex-col items-start justify-center overflow-hidden bg-linear-to-t from-black/65 to-black/20 p-7.5 text-[#D9D9D9] backdrop-blur-[10px] transition-[height] duration-400 ease-in-out group-hover:h-full cursor-pointer"
+        onClick={() => router.push(`/product/${product.slug}`)}
+      >
         <h4 className="mb-4.5 translate-y-5 text-left text-[26px] font-semibold opacity-0 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
-          Vitamin C Face wash
+          {product.name}
         </h4>
         <div className="flex w-full flex-col items-start gap-3 opacity-0 translate-y-5 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
           {hoverTags.map((tag, idx) => (

@@ -20,14 +20,16 @@ export default function Transformation() {
   ];
 
   return (
-    <section className="bg-[#FAF3E2] text-center px-[40px] py-[60px] relative">
-      <h2 className="text-[28px] font-['Marko_One',serif] text-[#9E6E5B] mb-[40px]">
+    <section className="bg-[#FAF3E2] text-center px-4 sm:px-6 md:px-[40px] py-10 md:py-[60px] relative">
+      
+      {/* HEADING */}
+      <h2 className="text-xl sm:text-2xl md:text-[28px] font-['Marko_One',serif] text-[#9E6E5B] mb-6 md:mb-[40px]">
         Visible Transformation with Pureastra
       </h2>
+
       <Swiper
-        slidesPerView={3}
         centeredSlides={true}
-        spaceBetween={20}
+        spaceBetween={16}
         loop={true}
         navigation={{
           nextEl: ".trans-next",
@@ -35,74 +37,92 @@ export default function Transformation() {
         }}
         modules={[Navigation]}
         breakpoints={{
-          320: { slidesPerView: 1.2 },
-          768: { slidesPerView: 2 },
-          1024: { slidesPerView: 3 },
+          320: { slidesPerView: 1.1, spaceBetween: 12 },
+          480: { slidesPerView: 1.2 },
+          768: { slidesPerView: 2, spaceBetween: 16 },
+          1024: { slidesPerView: 3, spaceBetween: 20 }, // desktop SAME
         }}
       >
         {data.map((item, index) => (
           <SwiperSlide key={index}>
-            <div className="flex items-center justify-center gap-2 relative">
-              {/* BEFORE CARD */}
-              <div className="w-[284px] h-[368px] bg-[#FAF3E2] rounded-[29px] overflow-hidden border border-black shadow-[0_8px_20px_rgba(0,0,0,0.08)] flex flex-col transition-transform duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 relative">
 
-                {/* IMAGE */}
+              {/* BEFORE CARD */}
+              <div className="
+                w-[160px] h-[230px]
+                sm:w-[220px] sm:h-[300px]
+                md:w-[284px] md:h-[368px]   /* desktop SAME */
+                bg-[#FAF3E2] rounded-[20px] md:rounded-[29px]
+                overflow-hidden border border-black
+                shadow-[0_8px_20px_rgba(0,0,0,0.08)]
+                flex flex-col transition-transform duration-300 hover:-translate-y-1
+              ">
                 <img
                   src={item.before}
                   alt="before"
-                  className="w-full h-[313px] object-cover"
+                  className="w-full h-[70%] md:h-[313px] object-cover"
                 />
-
-                {/* BOTTOM LABEL */}
-                <div className="h-[55px] flex items-center justify-center bg-[#FAF3E2]">
-                  <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
                     Dull Skin
                   </p>
                 </div>
-
               </div>
 
-              
-              {/* CENTER ARROW */}
+              {/* ARROW */}
               <div className="absolute left-1/2 -translate-x-1/2 z-10">
-                <div className="w-[114px] h-[59px] bg-[#FAF3E2] rounded-[40px] border border-black flex items-center justify-center shadow-md">
-                  <FontAwesomeIcon icon={faArrowRight} className="text-lg" />
+                <div className="
+                  w-[60px] h-[35px]
+                  sm:w-[80px] sm:h-[45px]
+                  md:w-[114px] md:h-[59px]  /* desktop SAME */
+                  bg-[#FAF3E2] rounded-full border border-black
+                  flex items-center justify-center shadow-md
+                ">
+                  <FontAwesomeIcon icon={faArrowRight} className="text-sm md:text-lg" />
                 </div>
               </div>
 
               {/* AFTER CARD */}
-              <div className="w-[284px] h-[368px] bg-[#FAF3E2] rounded-[29px] overflow-hidden border border-black shadow-[0_8px_20px_rgba(0,0,0,0.08)] flex flex-col transition-transform duration-300 hover:-translate-y-1">
-
+              <div className="
+                w-[160px] h-[230px]
+                sm:w-[220px] sm:h-[300px]
+                md:w-[284px] md:h-[368px]  /* desktop SAME */
+                bg-[#FAF3E2] rounded-[20px] md:rounded-[29px]
+                overflow-hidden border border-black
+                shadow-[0_8px_20px_rgba(0,0,0,0.08)]
+                flex flex-col transition-transform duration-300 hover:-translate-y-1
+              ">
                 <img
                   src={item.after}
                   alt="after"
-                  className="w-full h-[313px] object-cover"
+                  className="w-full h-[70%] md:h-[313px] object-cover"
                 />
-
-                <div className="h-[55px] flex items-center justify-center bg-[#FAF3E2]">
-                  <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
                     Radiant Skin
                   </p>
                 </div>
-
               </div>
+
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
 
-      {/* NAV BUTTONS — absolute positioned relative to section */}
-      <button className="trans-prev absolute top-1/2 -translate-y-1/2 left-[10px] w-10 h-10 rounded-full border-none bg-white shadow-[0_4px_10px_rgba(0,0,0,0.1)] cursor-pointer z-10">
+      {/* NAV BUTTONS */}
+      <button className="trans-prev absolute top-1/2 -translate-y-1/2 left-2 md:left-[10px] w-8 h-8 md:w-10 md:h-10 rounded-full bg-white shadow-md z-10">
         <FontAwesomeIcon icon={faChevronLeft} />
       </button>
 
-      <button className="trans-next absolute top-1/2 -translate-y-1/2 right-[10px] w-10 h-10 rounded-full border-none bg-white shadow-[0_4px_10px_rgba(0,0,0,0.1)] cursor-pointer z-10">
+      <button className="trans-next absolute top-1/2 -translate-y-1/2 right-2 md:right-[10px] w-8 h-8 md:w-10 md:h-10 rounded-full bg-white shadow-md z-10">
         <FontAwesomeIcon icon={faChevronRight} />
       </button>
 
-      <p className="mt-5 text-[#819744] text-[18px] font-medium font-['Roboto_Serif',serif]">
+      {/* FOOTER TEXT */}
+      <p className="mt-4 md:mt-5 text-[#819744] text-sm sm:text-base md:text-[18px] font-medium font-['Roboto_Serif',serif]">
         Brighter skin in just 2 weeks
       </p>
+
     </section>
   );
 }

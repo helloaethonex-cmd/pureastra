@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -12,6 +11,8 @@ import {
   faFilter,
 } from "@fortawesome/free-solid-svg-icons";
 import { useCategories, useProducts } from "@/hooks/useProducts";
+import { useAddCartItem } from "@/hooks/useCart";
+import { useAuthStore } from "@/store/auth.store";
 import { type Category } from "@/services/api";
 
 interface CategoryPageContentProps {
@@ -28,6 +29,8 @@ export default function CategoryPageContent({
   const [minPrice, setMinPrice] = useState<number | undefined>();
   const [maxPrice, setMaxPrice] = useState<number | undefined>();
   const [search, setSearch] = useState("");
+  const { user } = useAuthStore();
+  const addCartItem = useAddCartItem();
 
   const { data: categoriesData } = useCategories();
 
@@ -40,6 +43,29 @@ export default function CategoryPageContent({
   });
 
   const products = data?.data ?? [];
+
+  const handleAddToCart = (productVariantId?: string) => {
+    if (!user) {
+      alert("Please sign in to add items to your cart.");
+      return;
+    }
+
+    if (!productVariantId) {
+      alert("No purchasable variant available.");
+      return;
+    }
+
+    addCartItem.mutate(
+      { productVariantId, quantity: 1 },
+      {
+        onSuccess: () => alert("Item added to cart"),
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : "Failed to add to cart";
+          alert(message);
+        },
+      }
+    );
+  };
 
   return (
     <section className="bg-[#FAF3E2] min-h-screen px-6 md:px-12 py-10">
@@ -216,7 +242,11 @@ export default function CategoryPageContent({
                     </div>
 
                     {/* CART BUTTON */}
-                    <button className="absolute top-3 right-3 bg-white/90 rounded-full w-9 h-9 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition">
+                    <button
+                      onClick={() => handleAddToCart(product.variants[0]?.id)}
+                      disabled={addCartItem.isPending}
+                      className="absolute top-3 right-3 bg-white/90 rounded-full w-9 h-9 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition disabled:opacity-70"
+                    >
                       <FontAwesomeIcon icon={faCartShopping} className="text-[#819744]" />
                     </button>
                   </div>
