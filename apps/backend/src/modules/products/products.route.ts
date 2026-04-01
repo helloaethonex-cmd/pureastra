@@ -20,6 +20,11 @@ import {
   // Product Images
   addImage,
   removeImage,
+  listProductContent,
+  listProductContentAdmin,
+  createProductContent,
+  updateProductContent,
+  deleteProductContent,
   // Categories
   listCategories,
   getCategory,
@@ -42,8 +47,8 @@ const router = Router();
  *       - Categories
  *     summary: List all categories
  *     description: >
- *       Returns a flat list of root-level categories, each including their
- *       non-deleted direct children. Useful for rendering a full category tree.
+ *       Returns all non-deleted categories, each including their non-deleted
+ *       direct children.
  *     responses:
  *       200:
  *         description: Array of categories with nested children
@@ -266,7 +271,7 @@ router.delete("/categories/:id", requireAuth, requireRole("admin"), removeCatego
  *       - Products
  *     summary: List products
  *     description: >
- *       Returns a paginated, filterable list of active products.
+ *       Returns a paginated, filterable list of non-deleted products.
  *       Supports free-text search across name, description and brand.
  *       No authentication required.
  *     parameters:
@@ -383,7 +388,7 @@ router.delete("/categories/:id", requireAuth, requireRole("admin"), removeCatego
  *                 stockQuantity: 200
  *     responses:
  *       201:
- *         description: Newly created product with variants, categories, and images
+ *         description: Newly created product with variants, categories, and images (detail content sections are fetched via product detail endpoints)
  *         content:
  *           application/json:
  *             schema:
@@ -1175,5 +1180,292 @@ router.post("/:id/images", requireAuth, requireRole("admin"), addImage);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete("/:id/images/:imageId", requireAuth, requireRole("admin"), removeImage);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCT CONTENT SECTION ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @openapi
+ * /api/v1/products/{id}/content-sections:
+ *   get:
+ *     tags:
+ *       - Products
+ *     summary: List product content sections
+ *     description: >
+ *       Returns only active content sections (benefits, FAQ, suitable-for,
+ *       usage, before-after, etc.) for the given product.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Numeric product ID
+ *         example: "1"
+ *     responses:
+ *       200:
+ *         description: Ordered list of product content sections
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ProductContentSectionPublic'
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
+ *   post:
+ *     tags:
+ *       - Products
+ *     summary: Create product content section
+ *     description: >
+ *       Creates a content block for a product. Combined uniqueness is enforced on
+ *       `(productId, sectionType, position)` to keep display order deterministic.
+ *       **Requires admin role.**
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Numeric product ID
+ *         example: "1"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateProductContentSectionBody'
+ *           example:
+ *             sectionType: "BENEFITS"
+ *             title: "Benefits"
+ *             position: 0
+ *             content:
+ *               - heading: "Brightens and evens tone"
+ *                 description: "Helps reduce dullness with vitamin C."
+ *               - heading: "Hydrates and plumps"
+ *                 description: "Locks moisture for softer skin."
+ *     responses:
+ *       201:
+ *         description: Created content section
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductContentSection'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Not authorized (admin only)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Duplicate sectionType + position for the same product
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get("/:id/content-sections", listProductContent);
+
+/**
+ * @openapi
+ * /api/v1/products/{id}/content-sections/admin:
+ *   get:
+ *     tags:
+ *       - Products
+ *     summary: List all product content sections (admin)
+ *     description: >
+ *       Returns both active and inactive content sections for content management.
+ *       **Requires admin role.**
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Numeric product ID
+ *         example: "1"
+ *     responses:
+ *       200:
+ *         description: Ordered list of content sections including inactive records
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ProductContentSection'
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Not authorized (admin only)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Product not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get("/:id/content-sections/admin", requireAuth, requireRole("admin"), listProductContentAdmin);
+router.post("/:id/content-sections", requireAuth, requireRole("admin"), createProductContent);
+
+/**
+ * @openapi
+ * /api/v1/products/{id}/content-sections/{sectionId}:
+ *   patch:
+ *     tags:
+ *       - Products
+ *     summary: Update product content section
+ *     description: >
+ *       Partially updates a content section. Supports changing section type, title,
+ *       content payload, active flag, and display position. **Requires admin role.**
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "1"
+ *       - in: path
+ *         name: sectionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "12"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateProductContentSectionBody'
+ *           example:
+ *             position: 1
+ *             title: "Updated Benefits"
+ *     responses:
+ *       200:
+ *         description: Updated content section
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductContentSection'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Not authorized (admin only)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Product or content section not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Duplicate sectionType + position for the same product
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *
+ *   delete:
+ *     tags:
+ *       - Products
+ *     summary: Soft-remove product content section
+ *     description: >
+ *       Deactivates a content section by setting `isActive=false`.
+ *       This avoids data loss and preserves auditability. **Requires admin role.**
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "1"
+ *       - in: path
+ *         name: sectionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "12"
+ *     responses:
+ *       200:
+ *         description: Content section deactivated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *             example:
+ *               message: "Product content section removed successfully"
+ *       401:
+ *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Not authorized (admin only)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Product or content section not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.patch("/:id/content-sections/:sectionId", requireAuth, requireRole("admin"), updateProductContent);
+router.delete("/:id/content-sections/:sectionId", requireAuth, requireRole("admin"), deleteProductContent);
 
 export default router;

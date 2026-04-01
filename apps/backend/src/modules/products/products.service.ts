@@ -14,12 +14,24 @@ import {
   adjustVariantStock,
   addProductImage,
   deleteProductImage,
+  findProductImageById,
+  listProductContentSections,
+  createProductContentSection,
+  updateProductContentSection,
+  deactivateProductContentSection,
+  findProductContentSectionById,
   findAllCategories,
   findCategoryById,
   createCategory,
   updateCategory,
   softDeleteCategory,
 } from "./products.repository";
+import {
+  buildProductDetailCacheKey,
+  deleteCachedKey,
+  getCachedJson,
+  setCachedJson,
+} from "../../lib/cache/product-detail.cache";
 import {
   CreateProductInput,
   UpdateProductInput,
@@ -30,7 +42,19 @@ import {
   CreateCategoryInput,
   UpdateCategoryInput,
   StockAdjustmentInput,
+  CreateProductContentSectionInput,
+  UpdateProductContentSectionInput,
 } from "./products.types";
+
+const PRODUCT_DETAIL_CACHE_TTL_SECONDS = 300;
+
+const cacheKeyById = (id: string) => buildProductDetailCacheKey(`id:${id}`);
+const cacheKeyBySlug = (slug: string) => buildProductDetailCacheKey(`slug:${slug}`);
+
+const invalidateProductDetailCache = async (id: string, slug?: string | null) => {
+  const keys = [cacheKeyById(id), ...(slug ? [cacheKeyBySlug(slug)] : [])];
+  await Promise.all(keys.map((key) => deleteCachedKey(key)));
+};
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
@@ -39,41 +63,74 @@ export const getAllProducts = async (query: ProductQuery) => {
 };
 
 export const getProductById = async (id: string) => {
+  const cached = await getCachedJson<any>(cacheKeyById(id));
+  if (cached) return cached;
+
   const product = await findProductById(BigInt(id));
   if (!product) throw { status: 404, message: "Product not found" };
+
+  await Promise.all([
+    setCachedJson(cacheKeyById(id), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
+    ...(product.slug
+      ? [setCachedJson(cacheKeyBySlug(product.slug), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS)]
+      : []),
+  ]);
+
   return product;
 };
 
 export const getProductBySlug = async (slug: string) => {
+  const cached = await getCachedJson<any>(cacheKeyBySlug(slug));
+  if (cached) return cached;
+
   const product = await findProductBySlug(slug);
   if (!product) throw { status: 404, message: "Product not found" };
+
+  await Promise.all([
+    setCachedJson(cacheKeyBySlug(slug), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
+    setCachedJson(cacheKeyById(product.id.toString()), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
+  ]);
+
   return product;
 };
 
 export const createNewProduct = async (data: CreateProductInput) => {
-  return createProduct(data);
+  const created = await createProduct(data);
+  await invalidateProductDetailCache(created.id.toString(), created.slug);
+  return created;
 };
 
 export const updateExistingProduct = async (id: string, data: UpdateProductInput) => {
-  await getProductById(id); // ensure exists
-  return updateProduct(BigInt(id), data);
+  const existing = await getProductById(id); // ensure exists
+  const updated = await updateProduct(BigInt(id), data);
+  await Promise.all([
+    invalidateProductDetailCache(id, existing.slug),
+    invalidateProductDetailCache(id, updated.slug),
+  ]);
+  return updated;
 };
 
 export const deleteProduct = async (id: string) => {
-  await getProductById(id); // ensure exists
-  return softDeleteProduct(BigInt(id));
+  const existing = await getProductById(id); // ensure exists
+  const deleted = await softDeleteProduct(BigInt(id));
+  await invalidateProductDetailCache(id, existing.slug);
+  return deleted;
 };
 
 // ─── Product Categories ───────────────────────────────────────────────────────
 
 export const assignCategories = async (productId: string, categoryIds: bigint[]) => {
-  await getProductById(productId);
-  return assignCategoriesToProduct(BigInt(productId), categoryIds);
+  const product = await getProductById(productId);
+  const result = await assignCategoriesToProduct(BigInt(productId), categoryIds);
+  await invalidateProductDetailCache(productId, product.slug);
+  return result;
 };
 
 export const removeCategory = async (productId: string, categoryId: string) => {
-  await getProductById(productId);
-  return removeCategoryFromProduct(BigInt(productId), BigInt(categoryId));
+  const product = await getProductById(productId);
+  const result = await removeCategoryFromProduct(BigInt(productId), BigInt(categoryId));
+  await invalidateProductDetailCache(productId, product.slug);
+  return result;
 };
 
 // ─── Product Variants ─────────────────────────────────────────────────────────
@@ -84,35 +141,167 @@ export const getVariantById = async (id: string) => {
   return variant;
 };
 
+const getScopedVariantById = async (productId: string, variantId: string) => {
+  const variant = await getVariantById(variantId);
+  if (variant.productId.toString() !== productId) {
+    throw { status: 404, message: "Variant not found" };
+  }
+  return variant;
+};
+
 export const addVariantToProduct = async (productId: string, data: CreateVariantInput) => {
-  await getProductById(productId);
-  return createVariant(BigInt(productId), data);
+  const product = await getProductById(productId);
+  const created = await createVariant(BigInt(productId), data);
+  await invalidateProductDetailCache(productId, product.slug);
+  return created;
 };
 
 export const updateProductVariant = async (variantId: string, data: UpdateVariantInput) => {
-  await getVariantById(variantId);
-  return updateVariant(BigInt(variantId), data);
+  const existing = await getVariantById(variantId);
+  const updated = await updateVariant(BigInt(variantId), data);
+  await invalidateProductDetailCache(existing.productId.toString(), existing.product?.slug);
+  return updated;
 };
 
 export const deleteProductVariant = async (variantId: string) => {
-  await getVariantById(variantId);
-  return softDeleteVariant(BigInt(variantId));
+  const existing = await getVariantById(variantId);
+  const deleted = await softDeleteVariant(BigInt(variantId));
+  await invalidateProductDetailCache(existing.productId.toString(), existing.product?.slug);
+  return deleted;
 };
 
 export const adjustStock = async (variantId: string, data: StockAdjustmentInput) => {
-  await getVariantById(variantId);
-  return adjustVariantStock(BigInt(variantId), data);
+  const existing = await getVariantById(variantId);
+  const updated = await adjustVariantStock(BigInt(variantId), data);
+  await invalidateProductDetailCache(existing.productId.toString(), existing.product?.slug);
+  return updated;
 };
 
 // ─── Product Images ───────────────────────────────────────────────────────────
 
 export const addImageToProduct = async (productId: string, data: AddProductImageInput) => {
-  await getProductById(productId);
-  return addProductImage(BigInt(productId), data);
+  const product = await getProductById(productId);
+  const image = await addProductImage(BigInt(productId), data);
+  await invalidateProductDetailCache(productId, product.slug);
+  return image;
 };
 
-export const removeProductImage = async (imageId: string) => {
-  return deleteProductImage(BigInt(imageId));
+// ─── Product Content Sections ────────────────────────────────────────────────
+
+export const getProductContentSections = async (productId: string, includeInactive = false) => {
+  await getProductById(productId);
+  return listProductContentSections(BigInt(productId), includeInactive);
+};
+
+export const getPublicProductContentSections = async (productId: string) => {
+  const sections = await getProductContentSections(productId, false);
+  return sections.map((section) => ({
+    sectionType: section.sectionType,
+    title: section.title,
+    content: section.content,
+    position: section.position,
+  }));
+};
+
+export const getAdminProductContentSections = async (productId: string) => {
+  return getProductContentSections(productId, true);
+};
+
+export const addProductContentSection = async (productId: string, data: CreateProductContentSectionInput) => {
+  const product = await getProductById(productId);
+  try {
+    const created = await createProductContentSection(BigInt(productId), data);
+    await invalidateProductDetailCache(productId, product.slug);
+    return created;
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      throw {
+        status: 409,
+        message: "Content section with this sectionType and position already exists for this product",
+      };
+    }
+    throw err;
+  }
+};
+
+export const editProductContentSection = async (
+  productId: string,
+  sectionId: string,
+  data: UpdateProductContentSectionInput,
+) => {
+  const product = await getProductById(productId);
+  const section = await findProductContentSectionById(BigInt(sectionId));
+
+  if (!section || section.productId.toString() !== productId) {
+    throw { status: 404, message: "Product content section not found" };
+  }
+
+  try {
+    const updated = await updateProductContentSection(BigInt(sectionId), data);
+    await invalidateProductDetailCache(productId, product.slug);
+    return updated;
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      throw {
+        status: 409,
+        message: "Content section with this sectionType and position already exists for this product",
+      };
+    }
+    throw err;
+  }
+};
+
+export const removeProductContentSection = async (productId: string, sectionId: string) => {
+  const product = await getProductById(productId);
+  const section = await findProductContentSectionById(BigInt(sectionId));
+
+  if (!section || section.productId.toString() !== productId) {
+    throw { status: 404, message: "Product content section not found" };
+  }
+
+  const deactivated = await deactivateProductContentSection(BigInt(sectionId));
+  await invalidateProductDetailCache(productId, product.slug);
+  return deactivated;
+};
+
+export const getScopedVariant = async (productId: string, variantId: string) => {
+  return getScopedVariantById(productId, variantId);
+};
+
+export const updateScopedProductVariant = async (
+  productId: string,
+  variantId: string,
+  data: UpdateVariantInput,
+) => {
+  await getScopedVariantById(productId, variantId);
+  return updateProductVariant(variantId, data);
+};
+
+export const deleteScopedProductVariant = async (productId: string, variantId: string) => {
+  await getScopedVariantById(productId, variantId);
+  return deleteProductVariant(variantId);
+};
+
+export const adjustScopedStock = async (
+  productId: string,
+  variantId: string,
+  data: StockAdjustmentInput,
+) => {
+  await getScopedVariantById(productId, variantId);
+  return adjustStock(variantId, data);
+};
+
+export const removeScopedProductImage = async (productId: string, imageId: string) => {
+  const image = await findProductImageById(BigInt(imageId));
+  if (!image || image.productId?.toString() !== productId) {
+    throw { status: 404, message: "Image not found" };
+  }
+
+  const deleted = await deleteProductImage(BigInt(imageId));
+  const product = await findProductById(BigInt(productId));
+  await invalidateProductDetailCache(productId, product?.slug);
+
+  return deleted;
 };
 
 // ─── Categories ───────────────────────────────────────────────────────────────
