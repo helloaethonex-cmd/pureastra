@@ -41,16 +41,21 @@ async function fetchProductSlugs(): Promise<string[]> {
 }
 
 async function fetchProductBySlug(slug: string): Promise<Product | null> {
-  const base = requireBackendUrl();
-  const res = await fetch(`${base}/api/v1/products/slug/${slug}`, {
-    cache: "force-cache",
-  });
+  try {
+    const base = requireBackendUrl();
+    const res = await fetch(`${base}/api/v1/products/slug/${slug}`, {
+      cache: "force-cache",
+    });
 
-  if (!res.ok) {
+    if (!res.ok) {
+      return null;
+    }
+
+    return (await res.json()) as Product;
+  } catch (error) {
+    console.error(`[fetchProductBySlug] Error for slug "${slug}":`, error);
     return null;
   }
-
-  return (await res.json()) as Product;
 }
 
 export async function generateStaticParams() {
