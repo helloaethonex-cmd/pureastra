@@ -4,36 +4,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faLock,
-  faDatabase,
-  faUserShield,
-  faCookie,
+  faBan,
+  faCircleExclamation,
+  faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
 
 const faqs = [
   {
-    q: "What personal information do you collect?",
-    a: "We collect your name, email address, phone number, and delivery address when you place an order. We may also collect browsing data through cookies to improve your experience.",
+    q: "Can I cancel my order after placing it?",
+    a: "Once an order is confirmed and payment is made, cancellation is not possible. Your order enters processing immediately to ensure fast dispatch.",
   },
   {
-    q: "Is my payment information stored?",
-    a: "No. All payments are processed through a secure third-party payment gateway. We do not store or have access to your card or UPI details.",
+    q: "What if I made a mistake in my order?",
+    a: "Please double-check your cart, address, and product selections before confirming your order. We are unable to make changes or cancel orders once they are placed.",
   },
   {
-    q: "Do you share my data with third parties?",
-    a: "We only share your information with authorised partners such as courier services and payment processors — strictly for fulfilling your order. We never sell your data.",
+    q: "What if I want to cancel because of a delay?",
+    a: "Shipping delays can occasionally happen due to courier partners or unforeseen events. We are unable to cancel orders on account of shipping delays, but we will keep you informed with tracking details.",
   },
   {
-    q: "How long do you keep my data?",
-    a: "We retain your data for as long as needed to process your orders, provide support, and meet legal obligations. You can request deletion at any time by contacting us.",
+    q: "Will I be charged if my order is cancelled by Pureastra?",
+    a: "On rare occasions, we may cancel an order due to stock unavailability or payment issues. In such cases, a full refund will be processed to your original payment method within 5–7 business days.",
   },
   {
-    q: "Can I opt out of marketing emails?",
-    a: "Yes. You can unsubscribe from our marketing communications at any time using the unsubscribe link in any email we send.",
+    q: "Can I cancel a bulk or combo order?",
+    a: "No, bulk and combo orders are also non-cancellable once confirmed.",
   },
 ];
 
-export default function PrivacyPolicy() {
+export default function CancellationPolicy() {
   const [active, setActive] = useState<number | null>(null);
 
   return (
@@ -47,56 +46,46 @@ export default function PrivacyPolicy() {
         className="text-center mb-14"
       >
         <h1 className="text-3xl md:text-5xl font-['Marko_One',serif] text-[#8B543E] mb-4">
-          Privacy Policy
+          Cancellation Policy
         </h1>
         <p className="max-w-2xl mx-auto text-sm md:text-base text-[#5C4A4A]">
-          Your privacy matters to us. Here is exactly how we collect, use, and protect your personal information when you shop with Pureastra.
+          We process orders quickly to get your products to you as fast as possible. Please read our cancellation terms before placing an order.
         </p>
       </motion.div>
 
       {/* Policy Cards */}
       <div className="max-w-5xl mx-auto space-y-8">
+
         {[
           {
-            icon: faDatabase,
-            title: "Information We Collect",
+            icon: faBan,
+            title: "No Cancellations After Order Confirmation",
             points: [
-              "Name, email address, phone number, and delivery address when you place an order.",
-              "Payment details handled exclusively by our secure third-party payment gateway.",
-              "Browsing behaviour and preferences via cookies to improve your shopping experience.",
-              "Any communication you send us through email, WhatsApp, or contact forms.",
+              "Orders cannot be cancelled once payment is confirmed.",
+              "Processing begins immediately after an order is placed.",
+              "This applies to all product types, including combos and bulk orders.",
+              "Please review your items, address, and quantities carefully before placing your order.",
+            ],
+            highlight: "We strongly recommend reviewing your order before confirming payment, as all sales are final.",
+          },
+          {
+            icon: faCircleExclamation,
+            title: "Cancellation by Pureastra",
+            points: [
+              "We reserve the right to cancel orders in case of stock unavailability.",
+              "Orders identified as fraudulent or suspicious may be cancelled without notice.",
+              "Pricing errors or technical issues may also result in order cancellation.",
+              "You will be notified promptly, and a full refund will be processed within 5–7 business days.",
             ],
           },
           {
-            icon: faLock,
-            title: "How We Use Your Information",
+            icon: faShieldHalved,
+            title: "Your Order Is Secure",
             points: [
-              "To process, confirm, and deliver your orders.",
-              "To send order updates, tracking information, and support responses.",
-              "To send promotional offers if you have opted in — you can unsubscribe anytime.",
-              "To improve our website, products, and overall customer experience.",
-              "We never sell your personal information to any third party.",
-            ],
-            highlight: "Your data is used only to serve you better. We do not sell or misuse your information under any circumstances.",
-          },
-          {
-            icon: faUserShield,
-            title: "How We Protect Your Data",
-            points: [
-              "All data is stored on secure servers with restricted access.",
-              "Payments are processed through SSL-encrypted, PCI-compliant gateways.",
-              "We do not store your card numbers, UPI IDs, or banking credentials.",
-              "Access to customer data is limited to authorised personnel only.",
-            ],
-          },
-          {
-            icon: faCookie,
-            title: "Cookies and Tracking",
-            points: [
-              "We use cookies to remember your preferences and improve site performance.",
-              "Analytics tools help us understand how visitors use our website.",
-              "No personal identity is exposed through our analytics data.",
-              "You can disable cookies through your browser settings at any time.",
+              "All payments are processed through a secure, encrypted payment gateway.",
+              "You will receive an order confirmation and invoice via email after payment.",
+              "Tracking details will be shared once your order is dispatched.",
+              "If you have any concerns, please reach out to our support team immediately.",
             ],
           },
         ].map((section, i) => (
@@ -185,7 +174,7 @@ export default function PrivacyPolicy() {
         {/* CTA */}
         <div className="text-center mt-10">
           <p className="text-sm text-[#6B5B5B] mb-3">
-            Have a question about your data?
+            Still have questions about your order?
           </p>
           <a
             href="mailto:support@pureastra.com"

@@ -82,25 +82,29 @@ export default function Footer() {
           <div>
             <h4 className="mb-3.75 text-lg">Policies</h4>
             <ul className="list-none p-0 space-y-2 text-sm text-[#f1f1f1] [&>li]:cursor-pointer">
-              
-              <li>
-                <Link href="/privacy-policy" className="cursor-pointer">
-                  Privacy Policy
-                </Link>
-              </li>
               <li>
                 <Link href="/terms" className="cursor-pointer">
                   Terms &amp; Conditions
                 </Link>
               </li>
               <li>
-                <Link href="/shipping" className="cursor-pointer">
-                  Shipping &amp; Cancellation
+                <Link href="/privacy-policy" className="cursor-pointer">
+                  Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/returns" className="cursor-pointer">
-                  Returns &amp; Refund
+                <Link href="/refund-policy" className="cursor-pointer">
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/cancellation-policy" className="cursor-pointer">
+                  Cancellation Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/shipping" className="cursor-pointer">
+                  Shipping Policy
                 </Link>
               </li>
             </ul>

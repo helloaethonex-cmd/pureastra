@@ -4,36 +4,36 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faLock,
-  faDatabase,
-  faUserShield,
-  faCookie,
+  faRotateLeft,
+  faCircleExclamation,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { faWhatsapp as faWhatsappBrand } from "@fortawesome/free-brands-svg-icons";
 
 const faqs = [
   {
-    q: "What personal information do you collect?",
-    a: "We collect your name, email address, phone number, and delivery address when you place an order. We may also collect browsing data through cookies to improve your experience.",
+    q: "Do you offer refunds?",
+    a: "We do not offer monetary refunds. If you receive a damaged or defective product, we replace it free of cost after verification.",
   },
   {
-    q: "Is my payment information stored?",
-    a: "No. All payments are processed through a secure third-party payment gateway. We do not store or have access to your card or UPI details.",
+    q: "What counts as a damaged product?",
+    a: "A product is considered damaged if it arrives broken, leaking, or clearly defective. Minor variations in scent, texture, or color due to natural ingredients are normal and are not considered defects.",
   },
   {
-    q: "Do you share my data with third parties?",
-    a: "We only share your information with authorised partners such as courier services and payment processors — strictly for fulfilling your order. We never sell your data.",
+    q: "How do I request a replacement?",
+    a: "Share a clear photo or video of the damaged product via WhatsApp within 48 hours of delivery. Our team will review and respond within 1–2 business days.",
   },
   {
-    q: "How long do you keep my data?",
-    a: "We retain your data for as long as needed to process your orders, provide support, and meet legal obligations. You can request deletion at any time by contacting us.",
+    q: "How long does the replacement take?",
+    a: "Once your claim is verified, the replacement will be shipped and delivered within 7–14 business days.",
   },
   {
-    q: "Can I opt out of marketing emails?",
-    a: "Yes. You can unsubscribe from our marketing communications at any time using the unsubscribe link in any email we send.",
+    q: "Can I get a refund if I ordered the wrong product?",
+    a: "Orders placed are final. Please review your cart carefully before checkout. We are unable to process a refund or exchange for wrong orders placed by the customer.",
   },
 ];
 
-export default function PrivacyPolicy() {
+export default function RefundPolicy() {
   const [active, setActive] = useState<number | null>(null);
 
   return (
@@ -47,56 +47,48 @@ export default function PrivacyPolicy() {
         className="text-center mb-14"
       >
         <h1 className="text-3xl md:text-5xl font-['Marko_One',serif] text-[#8B543E] mb-4">
-          Privacy Policy
+          Refund Policy
         </h1>
         <p className="max-w-2xl mx-auto text-sm md:text-base text-[#5C4A4A]">
-          Your privacy matters to us. Here is exactly how we collect, use, and protect your personal information when you shop with Pureastra.
+          We stand behind every product we make. Here is everything you need to know about how we handle refunds and replacements.
         </p>
       </motion.div>
 
       {/* Policy Cards */}
       <div className="max-w-5xl mx-auto space-y-8">
+
         {[
           {
-            icon: faDatabase,
-            title: "Information We Collect",
+            icon: faRotateLeft,
+            title: "Our Refund Approach",
             points: [
-              "Name, email address, phone number, and delivery address when you place an order.",
-              "Payment details handled exclusively by our secure third-party payment gateway.",
-              "Browsing behaviour and preferences via cookies to improve your shopping experience.",
-              "Any communication you send us through email, WhatsApp, or contact forms.",
+              "We do not offer monetary refunds for any order.",
+              "Replacements are provided for verified damaged or defective products only.",
+              "Replacements match the original product ordered.",
+              "The replacement policy does not apply to products mishandled after delivery.",
             ],
           },
           {
-            icon: faLock,
-            title: "How We Use Your Information",
+            icon: faCircleExclamation,
+            title: "How to Raise a Replacement Request",
             points: [
-              "To process, confirm, and deliver your orders.",
-              "To send order updates, tracking information, and support responses.",
-              "To send promotional offers if you have opted in — you can unsubscribe anytime.",
-              "To improve our website, products, and overall customer experience.",
-              "We never sell your personal information to any third party.",
+              "Inspect your order carefully once it arrives.",
+              "If the product is damaged, record a clear unboxing video or photograph as proof.",
+              "Contact us via WhatsApp within 48 hours of receiving the order.",
+              "Our team will verify the claim and confirm the replacement within 1–2 business days.",
+              "Replacements are shipped and typically delivered within 7–14 business days.",
             ],
-            highlight: "Your data is used only to serve you better. We do not sell or misuse your information under any circumstances.",
+            highlight: "Claims raised after 48 hours of delivery will not be accepted. Please check your order as soon as it arrives.",
           },
           {
-            icon: faUserShield,
-            title: "How We Protect Your Data",
+            icon: faXmark,
+            title: "What Is Not Covered",
             points: [
-              "All data is stored on secure servers with restricted access.",
-              "Payments are processed through SSL-encrypted, PCI-compliant gateways.",
-              "We do not store your card numbers, UPI IDs, or banking credentials.",
-              "Access to customer data is limited to authorised personnel only.",
-            ],
-          },
-          {
-            icon: faCookie,
-            title: "Cookies and Tracking",
-            points: [
-              "We use cookies to remember your preferences and improve site performance.",
-              "Analytics tools help us understand how visitors use our website.",
-              "No personal identity is exposed through our analytics data.",
-              "You can disable cookies through your browser settings at any time.",
+              "Products damaged by the customer after delivery.",
+              "Incorrect orders placed by the customer.",
+              "Minor variation in color, texture, or scent due to natural ingredients.",
+              "Products purchased outside our official website.",
+              "Skin reactions caused by individual sensitivities or allergies.",
             ],
           },
         ].map((section, i) => (
@@ -185,13 +177,16 @@ export default function PrivacyPolicy() {
         {/* CTA */}
         <div className="text-center mt-10">
           <p className="text-sm text-[#6B5B5B] mb-3">
-            Have a question about your data?
+            Got a damaged product? We are here to help.
           </p>
           <a
-            href="mailto:support@pureastra.com"
+            href="https://wa.me/919400206479"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-block bg-[#8B543E] hover:bg-[#6f3f2d] text-white px-6 py-2 rounded-full text-sm transition"
           >
-            Contact Support
+            <FontAwesomeIcon icon={faWhatsappBrand} className="mr-2" />
+            Contact via WhatsApp
           </a>
         </div>
       </div>
