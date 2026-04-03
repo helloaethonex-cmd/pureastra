@@ -1,3 +1,4 @@
+import type { Product, ProductListResponse } from "@/services/api";
 import { products } from "@/data/products";
 import ProductClient from "./ProductClient";
 

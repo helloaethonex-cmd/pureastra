@@ -162,7 +162,7 @@ export default function ProductClient({ product }: any) {
         <div className="pt-2">
 
         {/* TITLE */}
-        <h2 className="text-[30px] font-bold text-black mb-2">
+        <h2 className="text-[30px] font-bold text-[#5E2B16] mb-2">
             {product.name}
         </h2>
 
@@ -173,7 +173,7 @@ export default function ProductClient({ product }: any) {
                 <FontAwesomeIcon key={i} icon={faStar} />
             ))}
             </div>
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-[#8B5E3C] text-[14px] text-semibold">
             12 Customer review
             </span>
         </div>
@@ -186,7 +186,7 @@ export default function ProductClient({ product }: any) {
             1,000+ Units Sold in 7 Days
           </p>
 
-          <p className="text-[14px] text-gray-700 flex items-center gap-2">
+          <p className="text-[14px] text-[#8B5E3C] flex items-center gap-2">
             <FontAwesomeIcon icon={faStarHalfStroke} className="text-yellow-500" />
               4.8/5 Rating
           </p>
@@ -223,7 +223,7 @@ export default function ProductClient({ product }: any) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-[14px] text-[#5f5f5f] leading-6 mb-6 max-w-[500px]"
+          className="text-[14px] text-[#5E2B16] leading-6 mb-6 max-w-[500px]"
         >
             Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C,
             natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle,
@@ -237,24 +237,38 @@ export default function ProductClient({ product }: any) {
         <div className="mb-5 flex items-center gap-4">
 
           {/* HEADING */}
-          <p className="font-['Roboto_Flex'] font-semibold text-[20px] text-black">
+          <p className="font-['Roboto_Flex'] font-semibold text-[20px] text-[#819744]">
             Size :
           </p>
 
           {/* BUTTONS */}
           <div className="flex items-center gap-3">
 
-            {/* 50 ml */}
-            <button className="px-4 py-1.5 text-[12px] rounded-full bg-[#EBF1DC] text-[#5E2B16] shadow-sm">
-              50 ml
-            </button>
+          {/* 50 ml */}
+          <button
+            onClick={() => setActiveIndex(0)}
+            className={`px-4 py-1.5 text-[12px] rounded-full shadow-sm ${
+              activeIndex === 0
+                ? "bg-[#819744] text-[#5E2B16] font-semibold"
+                : "bg-[#EBF1DC] text-[#5E2B16]"
+            }`}
+          >
+            50 ml
+          </button>
 
-            {/* 100 ml */}
-            <button className="px-4 py-1.5 text-[12px] rounded-full bg-[#819744] text-white shadow-sm">
-              100 ml
-            </button>
+          {/* 100 ml */}
+          <button
+            onClick={() => setActiveIndex(1)}
+            className={`px-4 py-1.5 text-[12px] rounded-full shadow-sm ${
+              activeIndex === 1
+                ? "bg-[#819744] text-[#5E2B16] font-semibold"
+                : "bg-[#EBF1DC] text-[#5E2B16]"
+            }`}
+          >
+            100 ml
+          </button>
 
-          </div>
+        </div>
 
         </div>
 
@@ -264,15 +278,15 @@ export default function ProductClient({ product }: any) {
 
           {/* PRICE ROW */}
           <div className="flex items-center gap-3">
-            <p className="text-[28px] font-bold text-[#2C2C2C]">₹370</p>
+            <p className="text-[28px] font-bold text-[#5E2B16]">₹370</p>
 
-            <span className="text-gray-400 line-through text-[16px]">
+            <span className="text-[#5E2B16]/60 line-through text-[16px]">
               ₹390
             </span>
 
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[#8B5E3C]">
               (MRP Inclusive of all taxes)
-            </p>
+          </p>
           </div>
 
           {/* SAVING TEXT */}
@@ -347,7 +361,7 @@ export default function ProductClient({ product }: any) {
               onClick={() => setTab("desc")}
               className={`pb-2 font-semibold ${
                   tab === "desc"
-                  ? "text-[#5E2B16] border-b-2 border-[#5E2B16]"
+                  ? "text-[#3B7509] border-b-2 border-[#5E2B16]"
                   : "text-gray-500"
               }`}
               >
@@ -358,7 +372,7 @@ export default function ProductClient({ product }: any) {
               onClick={() => setTab("reviews")}
               className={`pb-2 font-semibold ${
                   tab === "reviews"
-                  ? "text-[#5E2B16] border-b-2 border-[#5E2B16]"
+                  ? "text-[#3B7509] border-b-2 border-[#5E2B16]"
                   : "text-gray-500"
               }`}
               >
@@ -370,9 +384,9 @@ export default function ProductClient({ product }: any) {
           <div className="text-sm text-gray-600 leading-6 space-y-3">
             {tab === "desc" ? (
               <>
-              {/* <p>{product.desc}</p> */}
+             
 
-              <p>
+              <p className="text-[14px] text-[#5E2B16] leading-6 mb-6 ">
                   Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C,
                   natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle,
                   toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula

@@ -1,46 +1,40 @@
-import Image from "next/image";
-
 export default function Hero() {
   return (
-    <section className="w-full">
+    <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden">
 
-      <div className="grid grid-cols-1 md:grid-cols-2 items-center">
+      {/* BACKGROUND VIDEO */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute top-0 left-0 w-full h-full object-cover"
+      >
+        <source src="/video/hero-banner.mp4" type="video/mp4" />
+      </video>
 
-        {/* LEFT SIDE */}
-        <div className="order-2 md:order-1 px-5 sm:px-8 md:px-10 py-8 md:py-0">
+      {/* DARK OVERLAY (optional but recommended) */}
+      <div className="absolute inset-0 bg-black/30"></div>
 
-          <h2 className="mb-3 text-[#7A4E3A] font-semibold 
-            text-2xl sm:text-3xl md:text-[32px] leading-tight">
-            Reveal Your Natural Glow
-          </h2>
+      {/* CONTENT */}
+      <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
 
-          <p className="mb-4 max-w-[400px] text-sm sm:text-base leading-relaxed">
-            Gentle, natural skincare designed to cleanse, nourish, and protect
-            your skin every day.
-          </p>
+        <h2 className="mb-4 text-white font-semibold 
+          text-2xl sm:text-3xl md:text-5xl leading-tight">
+          Reveal Your Natural Glow
+        </h2>
 
-          <button
-            className="bg-[#5E2B15] text-white px-5 py-2.5 rounded transition-all duration-300
-            hover:bg-[#819744] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0.5"
-          >
-            Explore Collection
-          </button>
+        <p className="mb-6 max-w-[500px] text-white text-sm sm:text-base md:text-lg">
+          Gentle, natural skincare designed to cleanse, nourish,
+          and protect your skin every day.
+        </p>
 
-        </div>
-
-        {/* RIGHT SIDE IMAGE */}
-        <div className="order-1 md:order-2 w-full">
-
-          <Image
-            src="/img/facewash.png"
-            alt="product"
-            width={700}
-            height={600}
-            className="w-full h-[260px] sm:h-[350px] md:h-auto object-cover"
-            priority
-          />
-
-        </div>
+        <button
+          className="bg-[#5E2B15] text-white px-6 py-3 rounded 
+          transition-all duration-300 hover:bg-[#819744] hover:-translate-y-0.5"
+        >
+          Explore Collection
+        </button>
 
       </div>
 

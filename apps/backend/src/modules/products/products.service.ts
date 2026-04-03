@@ -195,7 +195,7 @@ export const getProductContentSections = async (productId: string, includeInacti
 
 export const getPublicProductContentSections = async (productId: string) => {
   const sections = await getProductContentSections(productId, false);
-  return sections.map((section) => ({
+  return sections.map((section: any) => ({
     sectionType: section.sectionType,
     title: section.title,
     content: section.content,

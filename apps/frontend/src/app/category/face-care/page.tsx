@@ -24,7 +24,7 @@ export default function FaceCarePage() {
     "Sensitive Skin",
   ];
 
-  // ✅ KEEP YOUR LOCAL PRODUCTS (NO CHANGE)
+  //  KEEP YOUR LOCAL PRODUCTS (NO CHANGE)
   const products = [
     {
       slug: "vitamin-c-face-wash",
@@ -91,13 +91,13 @@ export default function FaceCarePage() {
     },
   ];
 
-  // ✅ FILTER LOGIC
+  //  FILTER LOGIC
   const filteredProducts =
     activeFilter === "All"
       ? products
       : products.filter((p) => p.type === activeFilter);
 
-  // ✅ CART FUNCTION
+  // CART FUNCTION
   const handleAddToCart = (product: any) => {
     alert(`${product.name} added to cart`);
   };
