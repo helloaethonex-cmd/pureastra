@@ -26,6 +26,7 @@ const router = Router();
  *       Returns the current active cart. If the caller is authenticated the
  *       cart is looked up by `userId`; otherwise by `sessionId` provided via
  *       the `x-session-id` request header or `sessionId` query param.
+ *       For guest requests, `sessionId` is required.
  *       A new cart is created automatically if none exists.
  *     parameters:
  *       - in: header
@@ -41,6 +42,12 @@ const router = Router();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Cart'
+ *       400:
+ *         description: Missing session ID for guest request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Internal server error
  *         content:
@@ -58,13 +65,14 @@ router.get("/", getCart);
  *       - Cart
  *     summary: Clear cart
  *     description: >
- *       Removes all items from the active cart. Resolves the cart by `userId`
- *       (authenticated) or `sessionId` (guest). **Requires authentication.**
+ *       Removes all items from the authenticated user's active cart.
+ *       If no active cart exists, this is treated as a successful no-op.
+ *       **Requires authentication.**
  *     security:
  *       - cookieAuth: []
  *     responses:
  *       200:
- *         description: Cart cleared
+ *         description: Cart cleared (or already empty)
  *         content:
  *           application/json:
  *             schema:
@@ -95,7 +103,7 @@ router.delete("/", requireAuth, emptyCart);
  *       Adds a product variant to the active cart. If the variant already
  *       exists in the cart the quantities are summed. The cart is resolved
  *       automatically (see GET /cart). Works for both authenticated users and
- *       guest sessions.
+ *       guest sessions. For guest requests, `x-session-id` is required.
  *     parameters:
  *       - in: header
  *         name: x-session-id
@@ -119,7 +127,7 @@ router.delete("/", requireAuth, emptyCart);
  *             schema:
  *               $ref: '#/components/schemas/CartItem'
  *       400:
- *         description: Validation error
+ *         description: Validation error or missing session ID for guest request
  *         content:
  *           application/json:
  *             schema:
@@ -180,6 +188,12 @@ router.post("/items", addItem);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Cart item not found in user's active cart
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *
  *   delete:
  *     tags:
@@ -207,6 +221,12 @@ router.post("/items", addItem);
  *               message: "Item removed from cart"
  *       401:
  *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Cart item not found in user's active cart
  *         content:
  *           application/json:
  *             schema:

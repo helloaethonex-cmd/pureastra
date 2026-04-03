@@ -26,6 +26,10 @@ const cartFullInclude = {
 
 /** Returns the existing active cart for a user (or session), or creates a new one. */
 export const findOrCreateCart = async (userId?: bigint, sessionId?: string) => {
+  if (!userId && !sessionId) {
+    throw new Error("Either userId or sessionId is required");
+  }
+
   const where = userId
     ? { userId, status: CART_STATUS.ACTIVE }
     : { sessionId, status: CART_STATUS.ACTIVE };
@@ -49,6 +53,13 @@ export const findOrCreateCart = async (userId?: bigint, sessionId?: string) => {
 export const findCartById = async (id: bigint) => {
   return prisma.cart.findFirst({
     where: { id },
+    include: cartFullInclude,
+  });
+};
+
+export const findActiveCartByUserId = async (userId: bigint) => {
+  return prisma.cart.findFirst({
+    where: { userId, status: CART_STATUS.ACTIVE },
     include: cartFullInclude,
   });
 };
@@ -101,10 +112,23 @@ export const upsertCartItem = async (
   });
 };
 
-export const updateCartItemQuantity = async (
+export const updateCartItemQuantityForUser = async (
   itemId: bigint,
+  userId: bigint,
   data: UpdateCartItemInput,
 ) => {
+  const existing = await prisma.cartItem.findFirst({
+    where: {
+      id: itemId,
+      cart: {
+        userId,
+        status: CART_STATUS.ACTIVE,
+      },
+    },
+  });
+
+  if (!existing) return null;
+
   return prisma.cartItem.update({
     where: { id: itemId },
     data: { quantity: data.quantity },
@@ -116,8 +140,18 @@ export const updateCartItemQuantity = async (
   });
 };
 
-export const removeCartItem = async (itemId: bigint) => {
-  return prisma.cartItem.delete({ where: { id: itemId } });
+export const removeCartItemForUser = async (itemId: bigint, userId: bigint) => {
+  const deleted = await prisma.cartItem.deleteMany({
+    where: {
+      id: itemId,
+      cart: {
+        userId,
+        status: CART_STATUS.ACTIVE,
+      },
+    },
+  });
+
+  return deleted.count > 0;
 };
 
 export const clearCartItems = async (cartId: bigint) => {
