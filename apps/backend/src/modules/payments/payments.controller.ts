@@ -3,16 +3,16 @@ import { Prisma } from "../../generated/prisma/client";
 import { ZodError } from "zod";
 import { AppError } from "../../lib/errors/app-error";
 import {
-  confirmPaymentAttempt,
   createPaymentForOrder,
+  processRazorpayWebhookEvent,
+  verifyRazorpayPaymentAttempt,
 } from "./payments.service";
 import {
-  confirmPaymentBodySchema,
-  confirmPaymentParamsSchema,
   createPaymentAttemptBodySchema,
   createPaymentAttemptParamsSchema,
+  razorpayVerifyBodySchema,
+  razorpayVerifyParamsSchema,
 } from "./payments.types";
-import { env } from "../../config/env";
 
 const handleError = (req: Request, res: Response, err: unknown) => {
   if (err instanceof AppError) {
@@ -43,7 +43,7 @@ export const createOrderPaymentAttempt = async (req: Request, res: Response) => 
     const userId = req.user?.id?.toString();
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const idempotencyKey = req.header("Idempotency-Key");
+    const idempotencyKey = req.header("Idempotency-Key")?.trim();
     if (!idempotencyKey) {
       return res.status(400).json({ error: "Idempotency-Key header is required" });
     }
@@ -64,18 +64,40 @@ export const createOrderPaymentAttempt = async (req: Request, res: Response) => 
   }
 };
 
-export const confirmPayment = async (req: Request, res: Response) => {
+export const verifyRazorpayPayment = async (req: Request, res: Response) => {
   try {
-    const secret = req.header("x-payment-webhook-secret");
-    if (!secret || secret !== env.PAYMENT_WEBHOOK_SECRET) {
-      return res.status(401).json({ error: "Invalid webhook secret" });
+    const userId = req.user?.id?.toString();
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const params = razorpayVerifyParamsSchema.parse(req.params);
+    const body = razorpayVerifyBodySchema.parse(req.body);
+
+    const payment = await verifyRazorpayPaymentAttempt(userId, params.id, body);
+    return res.status(200).json(payment);
+  } catch (err) {
+    return handleError(req, res, err);
+  }
+};
+
+export const handleRazorpayWebhook = async (req: Request, res: Response) => {
+  try {
+    const signature = req.header("x-razorpay-signature");
+    if (!signature) {
+      return res.status(401).json({ error: "Missing webhook signature" });
     }
 
-    const params = confirmPaymentParamsSchema.parse(req.params);
-    const body = confirmPaymentBodySchema.parse(req.body);
+    if (!Buffer.isBuffer(req.body)) {
+      return res.status(400).json({ error: "Invalid webhook payload" });
+    }
 
-    const payment = await confirmPaymentAttempt(params.id, body);
-    return res.status(200).json(payment);
+    const providerEventIdHeader = req.header("x-razorpay-event-id") ?? undefined;
+    const result = await processRazorpayWebhookEvent(
+      req.body,
+      signature,
+      providerEventIdHeader,
+    );
+
+    return res.status(200).json(result);
   } catch (err) {
     return handleError(req, res, err);
   }

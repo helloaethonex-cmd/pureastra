@@ -20,6 +20,7 @@ app.use(
 );
 
 app.use(requestLogger);
+app.use("/api/v1/payments/webhooks/razorpay", express.raw({ type: "application/json" }));
 app.use(express.json());
 
 app.all("/api/auth/*splat", toNodeHandler(auth));

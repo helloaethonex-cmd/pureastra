@@ -19,14 +19,6 @@ import { ZodError } from "zod";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const handleError = (req: Request, res: Response, err: unknown) => {
-  if (typeof err === "object" && err !== null && "status" in err && "message" in err) {
-    const status = Number((err as { status: unknown }).status);
-    const message = String((err as { message: unknown }).message);
-    if (Number.isFinite(status)) {
-      return res.status(status).json({ error: message });
-    }
-  }
-
   if (err instanceof AppError) {
     return res.status(err.status).json({ error: err.message, code: err.code });
   }

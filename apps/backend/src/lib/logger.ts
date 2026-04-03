@@ -18,7 +18,7 @@ export const logger = pino({
     paths: [
       "req.headers.authorization",
       "req.headers.cookie",
-      "req.headers.x-payment-webhook-secret",
+      "req.headers.x-razorpay-signature",
       "password",
       "token",
       "accessToken",

@@ -213,8 +213,12 @@ export default function ProductsPage() {
     }
 
     try {
-      const mutation = useAddProductImage(productId);
-      await mutation.mutateAsync({ file: imageFile });
+      if (!uploadingImageFor || uploadingImageFor !== productId) {
+        setError("Image upload state is out of sync. Please retry.");
+        return;
+      }
+
+      await addImageMutation.mutateAsync({ file: imageFile });
       setSuccess("Image uploaded successfully!");
       setUploadingImageFor(null);
       setImageFile(null);

@@ -35,6 +35,30 @@ export const findPaymentByIdWithOrder = (tx: TxClient, paymentId: bigint) => {
   });
 };
 
+export const findPaymentByProviderOrderId = (tx: TxClient, providerOrderId: string) => {
+  return tx.payment.findFirst({
+    where: { providerOrderId },
+    include: { order: true },
+  });
+};
+
+export const findPaymentByProviderPaymentId = (
+  tx: TxClient,
+  providerPaymentId: string,
+) => {
+  return tx.payment.findFirst({
+    where: { providerPaymentId },
+    include: { order: true },
+  });
+};
+
+export const findPaymentByProviderEventId = (tx: TxClient, providerEventId: string) => {
+  return tx.payment.findFirst({
+    where: { providerEventId },
+    include: { order: true },
+  });
+};
+
 export const updatePayment = (
   tx: TxClient,
   paymentId: bigint,
@@ -71,4 +95,3 @@ export const createOrderStatusHistory = (
 ) => {
   return tx.orderStatusHistory.create({ data });
 };
-

@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faLayerGroup,
   faBoxOpen,
-  faImage,
+  faTruck,
   faLock,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -60,6 +60,14 @@ export default function AdminPage() {
       bg: "bg-[#EDE3D2]",
       accent: "#9E6E5B",
     },
+    {
+      icon: faTruck,
+      title: "Manage Orders",
+      desc: "Track placed orders and advance fulfillment statuses",
+      href: "/admin/orders",
+      bg: "bg-[#E8F0EC]",
+      accent: "#5B8D7C",
+    },
   ];
 
   return (
@@ -80,7 +88,7 @@ export default function AdminPage() {
       </div>
 
       {/* CARDS */}
-      <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+      <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
         {cards.map((card) => (
           <Link
             key={card.href}

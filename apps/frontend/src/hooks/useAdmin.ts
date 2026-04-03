@@ -12,6 +12,8 @@ import {
   addProductImage,
   deleteProductImage,
   uploadImageToR2,
+  listAdminOrders,
+  updateAdminOrderStatus,
 } from "@/services/api";
 
 // ─── Admin check ──────────────────────────────────────────────────────────────
@@ -154,6 +156,42 @@ export function useDeleteProductImage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["product"] });
+    },
+  });
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+export function useAdminOrders(params?: {
+  page?: number;
+  limit?: number;
+  orderStatus?: number;
+  paymentStatus?: number;
+  search?: string;
+  sortOrder?: "asc" | "desc";
+}) {
+  return useQuery({
+    queryKey: ["adminOrders", params],
+    queryFn: () => listAdminOrders(params),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useUpdateAdminOrderStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orderNumber,
+      newStatus,
+      note,
+    }: {
+      orderNumber: string;
+      newStatus: number;
+      note?: string;
+    }) => updateAdminOrderStatus(orderNumber, { newStatus, note }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminOrders"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
     },
   });
 }
