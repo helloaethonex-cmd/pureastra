@@ -19,8 +19,8 @@ app.use(
   }),
 );
 
-app.use(express.json());
 app.use(requestLogger);
+app.use(express.json());
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
