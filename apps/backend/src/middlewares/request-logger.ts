@@ -12,7 +12,10 @@ const httpLogger = pinoHttp({
       query: req.query,
       params: req.params,
       userId: req.user?.id?.toString(),
-      remoteAddress: req.socket.remoteAddress,
+      remoteAddress:
+        req.socket?.remoteAddress ??
+        (req as any).raw?.socket?.remoteAddress ??
+        (req as any).connection?.remoteAddress,
     }),
     res: (res) => ({
       statusCode: res.statusCode,
