@@ -14,6 +14,7 @@ export function useCart(enabled = true) {
     queryKey: ["cart"],
     queryFn: getCart,
     enabled,
+    retry: false,
     staleTime: 1000 * 30,
   });
 }
