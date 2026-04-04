@@ -91,7 +91,9 @@ const toPaymentAttemptResponse = (payment: {
   createdAt: payment.createdAt.toISOString(),
 });
 
-export const createPaymentForOrder = async (
+type PaymentAttemptRecord = Awaited<ReturnType<typeof prisma.payment.findUnique>>;
+
+export const createPendingPaymentAttemptForOrder = async (
   userId: string,
   orderId: bigint,
   idempotencyKey: string,
@@ -106,7 +108,7 @@ export const createPaymentForOrder = async (
     );
   }
 
-  const payment = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const order = await findOrderForUser(tx, orderId, BigInt(userId));
     if (!order) {
       throw new AppError(404, "Order not found", "ORDER_NOT_FOUND");
@@ -145,6 +147,16 @@ export const createPaymentForOrder = async (
       paymentStatus: PAYMENT_STATUS.PENDING,
     });
   }, TX_OPTIONS);
+};
+
+const ensureRazorpayProviderOrderForPaymentRecord = async (payment: NonNullable<PaymentAttemptRecord>) => {
+  if (payment.paymentProvider.toLowerCase() !== "razorpay") {
+    throw new AppError(
+      400,
+      "Only razorpay payment provider is supported",
+      "UNSUPPORTED_PAYMENT_PROVIDER",
+    );
+  }
 
   if (payment.providerOrderId) {
     return toPaymentAttemptResponse(payment);
@@ -168,6 +180,7 @@ export const createPaymentForOrder = async (
       paymentIntentId: razorpayOrder.id,
     },
   });
+
   if (updateResult.count === 0) {
     const latest = await prisma.payment.findUnique({ where: { id: payment.id } });
     if (!latest) {
@@ -182,6 +195,31 @@ export const createPaymentForOrder = async (
   }
 
   return toPaymentAttemptResponse(updatedPayment);
+};
+
+export const ensureProviderOrderForPaymentAttempt = async (paymentId: bigint) => {
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) {
+    throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
+  }
+
+  return ensureRazorpayProviderOrderForPaymentRecord(payment);
+};
+
+export const createPaymentForOrder = async (
+  userId: string,
+  orderId: bigint,
+  idempotencyKey: string,
+  body: CreatePaymentAttemptBody,
+) => {
+  const payment = await createPendingPaymentAttemptForOrder(
+    userId,
+    orderId,
+    idempotencyKey,
+    body,
+  );
+
+  return ensureRazorpayProviderOrderForPaymentRecord(payment);
 };
 
 export const confirmPaymentAttempt = async (

@@ -233,6 +233,44 @@ export interface PaymentAttempt {
   createdAt: string;
 }
 
+export interface CheckoutPreviewLineItem {
+  productVariantId: string;
+  productName: string;
+  variantName: string | null;
+  sku: string | null;
+  quantity: number;
+  unitPrice: string;
+  lineTotal: string;
+}
+
+export interface CheckoutPreviewResponse {
+  flowType: "cart" | "buy_now";
+  items: CheckoutPreviewLineItem[];
+  totals: {
+    productTotal: string;
+    shippingAmount: string;
+    taxAmount: string;
+    discountAmount: string;
+    grandTotal: string;
+    outstandingAmount: string;
+  };
+  couponStatus: "NOT_IMPLEMENTED";
+  couponDiscountAmount: "0.00";
+  couponMessage: string;
+  previewToken: string;
+  expiresAt: string;
+}
+
+export interface CheckoutConfirmResponse {
+  order: CreatedOrder;
+  payment: PaymentAttempt;
+  coupon: {
+    couponStatus: "NOT_IMPLEMENTED";
+    couponDiscountAmount: "0.00";
+    couponMessage: string;
+  };
+}
+
 export interface WishlistProduct {
   id: string;
   uuid?: string;
@@ -410,6 +448,52 @@ export const getMyProfile = () => apiFetch<UserProfile>("/users/me");
 export const listMyAddresses = () => apiFetch<Address[]>("/addresses");
 
 // ─── Orders + Payments (Checkout) ─────────────────────────────────────────────
+
+export const previewCheckout = (body: {
+  addressId: string;
+  note?: string;
+  couponCode?: string;
+}) =>
+  apiFetch<CheckoutPreviewResponse>("/checkout/preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const confirmCheckout = (
+  body: { previewToken: string },
+  idempotencyKey: string,
+) =>
+  apiFetch<CheckoutConfirmResponse>("/checkout/confirm", {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+export const previewBuyNowCheckout = (body: {
+  productVariantId: string;
+  quantity: number;
+  addressId: string;
+  note?: string;
+  couponCode?: string;
+}) =>
+  apiFetch<CheckoutPreviewResponse>("/checkout/buy-now/preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const confirmBuyNowCheckout = (
+  body: { previewToken: string },
+  idempotencyKey: string,
+) =>
+  apiFetch<CheckoutConfirmResponse>("/checkout/buy-now/confirm", {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(body),
+  });
 
 export const createOrder = (body: { addressId: string; note?: string }) =>
   apiFetch<CreatedOrder>("/orders", {

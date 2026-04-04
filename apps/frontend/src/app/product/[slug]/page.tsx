@@ -13,29 +13,22 @@ function requireBackendUrl() {
 async function fetchProductSlugs(): Promise<string[]> {
   try {
     const base = requireBackendUrl();
-    // Use limit=100 to avoid backend validation errors
-    console.log(`[fetchProductSlugs] Fetching from: ${base}/api/v1/products?limit=100`);
-    
+
     const res = await fetch(`${base}/api/v1/products?limit=100`, {
       cache: "force-cache",
     });
 
-    console.log(`[fetchProductSlugs] Response status: ${res.status}`);
-
     if (!res.ok) {
-      console.error(`[fetchProductSlugs] Failed with status ${res.status}`);
+      console.warn(`[fetchProductSlugs] backend responded with ${res.status}`);
       return [];
     }
 
     const data = (await res.json()) as ProductListResponse;
-    console.log(`[fetchProductSlugs] Found ${data.data?.length || 0} products`);
-    
     const slugs = data.data.map((product) => product.slug).filter(Boolean);
-    console.log(`[fetchProductSlugs] Returning ${slugs.length} valid slugs`);
-    
+
     return slugs;
   } catch (error) {
-    console.error('[fetchProductSlugs] Error:', error);
+    console.warn("[fetchProductSlugs] backend unavailable during build");
     return [];
   }
 }
@@ -53,18 +46,16 @@ async function fetchProductBySlug(slug: string): Promise<Product | null> {
 
     return (await res.json()) as Product;
   } catch (error) {
-    console.error(`[fetchProductBySlug] Error for slug "${slug}":`, error);
+    console.warn(`[fetchProductBySlug] backend unavailable for slug "${slug}" during build`);
     return null;
   }
 }
 
 export async function generateStaticParams() {
   const slugs = await fetchProductSlugs();
-  console.log(`[generateStaticParams] Found ${slugs.length} product slugs`);
-  
+
   // Next.js requires at least one param for export, so return a placeholder if empty
   if (slugs.length === 0) {
-    console.log('[generateStaticParams] No products found, returning placeholder');
     return [{ slug: '__no_products__' }];
   }
   

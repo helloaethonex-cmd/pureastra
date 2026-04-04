@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeftLong, faCircle } from "@fortawesome/free-solid-svg-icons";
@@ -29,7 +30,7 @@ const statusColor = (orderStatus: number, paymentStatus: number) => {
   return "text-[#819744]";
 };
 
-export default function OrderHistoryPage() {
+function OrderHistoryPageContent() {
   const searchParams = useSearchParams();
   const focusOrderNumber = searchParams.get("order");
   const { data, isLoading, isError, error } = useMyOrders({ page: 1, limit: 30 });
@@ -116,6 +117,22 @@ export default function OrderHistoryPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OrderHistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-[#F5F0E6] min-h-screen py-10 px-6">
+          <div className="max-w-5xl mx-auto py-16 text-center text-[#5E2B16]">
+            Loading order history…
+          </div>
+        </div>
+      }
+    >
+      <OrderHistoryPageContent />
+    </Suspense>
   );
 }
 

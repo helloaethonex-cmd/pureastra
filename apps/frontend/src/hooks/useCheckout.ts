@@ -2,11 +2,10 @@
 
 import { useMutation } from "@tanstack/react-query";
 import {
-  createOrder,
-  createOrderPaymentAttempt,
+  confirmCheckout,
   getOrderDetail,
-  listMyOrders,
   listMyAddresses,
+  previewCheckout,
   verifyRazorpayPayment,
 } from "@/services/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -77,44 +76,18 @@ export const useCheckout = () => {
         throw new Error("Please add a delivery address before checkout");
       }
 
-      let order: Awaited<ReturnType<typeof createOrder>>;
-      try {
-        order = await createOrder({
-          addressId: selectedAddress.id,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Checkout failed";
-        if (!message.toLowerCase().includes("cart")) {
-          throw error;
-        }
+      const checkoutPreview = await previewCheckout({
+        addressId: selectedAddress.id,
+      });
 
-        const orders = await listMyOrders({ page: 1, limit: 10 });
-        const retryOrder = orders.data.find(
-          (item) => item.paymentStatus === 0 && item.orderStatus !== 5,
-        );
-
-        if (!retryOrder) {
-          throw error;
-        }
-
-        order = {
-          id: retryOrder.id,
-          orderNumber: retryOrder.orderNumber,
-          orderStatus: retryOrder.orderStatus,
-          paymentStatus: retryOrder.paymentStatus,
-          totalPaid: retryOrder.totalPaid,
-          createdAt: retryOrder.createdAt,
-        };
-      }
-
-      const paymentAttempt = await createOrderPaymentAttempt(
-        order.id,
+      const checkoutResult = await confirmCheckout(
         {
-          paymentProvider: "razorpay",
-          paymentMethod: "upi",
+          previewToken: checkoutPreview.previewToken,
         },
         generateIdempotencyKey(),
       );
+
+      const { order, payment: paymentAttempt } = checkoutResult;
 
       if (!paymentAttempt.razorpayOrderId) {
         throw new Error("Payment provider order was not created");

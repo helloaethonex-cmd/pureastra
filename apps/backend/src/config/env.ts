@@ -46,6 +46,8 @@ export const envSchema = z.object({
   ORDER_RESERVATION_RELEASE_MAX_BATCHES: z.coerce.number().int().positive().default(50),
   ORDER_RESERVATION_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
   ORDER_RESERVATION_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
+  CHECKOUT_PREVIEW_TTL_SECONDS: z.coerce.number().int().positive().default(600),
+  CHECKOUT_IDEMPOTENCY_TTL_SECONDS: z.coerce.number().int().positive().default(86400),
   PAYMENT_PROVIDER_DEFAULT: z.string().trim().min(1).default("razorpay"),
   RAZORPAY_KEY_ID: z.string().trim().min(1),
   RAZORPAY_KEY_SECRET: z.string().trim().min(1),
