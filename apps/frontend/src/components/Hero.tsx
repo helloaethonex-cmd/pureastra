@@ -32,7 +32,7 @@ export default function Hero() {
         <div className="order-1 md:order-2 w-full">
 
           <Image
-            src="/img/facewash.png"
+            src="/img/facewash.webp"
             alt="product"
             width={700}
             height={600}

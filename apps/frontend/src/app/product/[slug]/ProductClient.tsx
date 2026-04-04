@@ -40,7 +40,7 @@ export default function ProductClient({ product }: { product: Product }) {
     .map((img) => img.imageUrl);
 
   // Fallback image if none
-  const displayImages = images.length > 0 ? images : ["/img/facewash.png"];
+  const displayImages = images.length > 0 ? images : ["/img/facewash.webp"];
 
   const activeVariant = product.variants.find((v) => v.id === activeVariantId);
 
@@ -72,17 +72,17 @@ export default function ProductClient({ product }: { product: Product }) {
 
   const products = [
     {
-      img: "/img/facewash.png",
+      img: "/img/facewash.webp",
       title: "Vitamin C Face wash",
       price: 590,
     },
     {
-      img: "/img/facewash.png",
+      img: "/img/facewash.webp",
       title: "Rice Face Wash",
       price: 690,
     },
     {
-      img: "/img/facewash.png",
+      img: "/img/facewash.webp",
       title: "Glow Cleanser",
       price: 750,
     },
@@ -451,7 +451,7 @@ export default function ProductClient({ product }: { product: Product }) {
         </motion.p>
 
         {/* BACKGROUND */}
-        <div className="bg-[url('/img/why-us-banner.png')] bg-cover bg-center py-12">
+        <div className="bg-[url('/img/why-us-banner.webp')] bg-cover bg-center py-12">
           <div className="max-w-6xl mx-auto grid grid-cols-5 gap-6 px-6 max-md:grid-cols-2">
             {[
               { icon: faLeaf, text: "Crafted with pure, real ingredients" },
@@ -619,7 +619,7 @@ export default function ProductClient({ product }: { product: Product }) {
               {/* BEFORE */}
               <div className="relative w-full h-[313px]">
                 <Image
-                  src="/img/before1.png"
+                  src="/img/before1.webp"
                   alt="before"
                   fill
                   className="object-cover"
@@ -647,7 +647,7 @@ export default function ProductClient({ product }: { product: Product }) {
               {/* AFTER */}
               <div className="relative w-full h-[313px]">
                 <Image
-                  src="/img/after1.png"
+                  src="/img/after1.webp"
                   alt="after"
                   fill
                   className="object-cover"

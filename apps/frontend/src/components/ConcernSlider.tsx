@@ -8,9 +8,9 @@ import "swiper/css/pagination";
 import { Autoplay, Pagination } from "swiper/modules";
 
 const banners = [
-  { src: "/img/banner-1.png", alt: "Banner 1" },
-  { src: "/img/banner-2.png", alt: "Banner 2" },
-  { src: "/img/banner-3.png", alt: "Banner 3" },
+  { src: "/img/banner-1.webp", alt: "Banner 1" },
+  { src: "/img/banner-2.webp", alt: "Banner 2" },
+  { src: "/img/banner-3.webp", alt: "Banner 3" },
 ];
 
 export default function ConcernSlider() {

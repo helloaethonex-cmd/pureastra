@@ -110,7 +110,7 @@ export default function Navbar() {
           {/* LOGO */}
           <Link href="/" className="flex justify-center items-center">
             <Image
-              src="/img/pureastra.png"
+              src="/img/pureastra.webp"
               alt="Pureastra Logo"
               width={150}
               height={50}

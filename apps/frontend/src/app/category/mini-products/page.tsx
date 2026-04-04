@@ -8,7 +8,7 @@ export default function MiniProductsPage() {
       desc: "Travel size face wash",
       price: "199",
       size: "50ml",
-      img: "/img/banner-3.png",
+      img: "/img/banner-3.webp",
       rating: 4.3,
     },
     {
@@ -17,7 +17,7 @@ export default function MiniProductsPage() {
       desc: "Compact daily cleanser",
       price: "149",
       size: "50ml",
-      img: "/img/banner-1.png",
+      img: "/img/banner-1.webp",
       rating: 4.2,
     },
   ];

@@ -45,7 +45,7 @@ export default function ProductCard({ active, product }: ProductCardProps) {
   const primaryImage =
     product.images.find((img) => img.position === 0)?.imageUrl ||
     product.images[0]?.imageUrl ||
-    "/img/facewash.png";
+    "/img/facewash.webp";
 
   const activeVariant = product.variants[0];
   const minPrice = product.variants.reduce((min, variant) => {

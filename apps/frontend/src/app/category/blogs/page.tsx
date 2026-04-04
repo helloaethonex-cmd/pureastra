@@ -8,19 +8,19 @@ export default function BlogPage() {
     {
       slug: "vitamin-c-benefits",
       title: "Benefits of Vitamin C for Skin",
-      img: "/img/banner-1.png",
+      img: "/img/banner-1.webp",
       desc: "Learn how Vitamin C boosts glow and reduces pigmentation.",
     },
     {
       slug: "daily-skincare-routine",
       title: "Daily Skincare Routine",
-      img: "/img/banner-2.png",
+      img: "/img/banner-2.webp",
       desc: "Step-by-step routine for healthy skin.",
     },
     {
       slug: "natural-ingredients",
       title: "Natural Ingredients Guide",
-      img: "/img/banner-3.png",
+      img: "/img/banner-3.webp",
       desc: "Explore the power of natural skincare ingredients.",
     },
   ];
@@ -31,7 +31,7 @@ export default function BlogPage() {
       {/*  HERO SECTION */}
       <div className="relative h-[260px] flex items-center justify-center text-center">
         <Image
-          src="/img/blogs-banner.png"
+          src="/img/blogs-banner.webp"
           alt="blog banner"
           fill
           className="object-cover opacity-30"

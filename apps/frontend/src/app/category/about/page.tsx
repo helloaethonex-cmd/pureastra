@@ -9,7 +9,7 @@ export default function AboutPage() {
       {/* HERO */}
       <div className="relative h-[220px] sm:h-[260px] md:h-[300px] flex items-center justify-center text-center px-4">
         <Image
-          src="/img/about-banner.png"
+          src="/img/about-banner.webp"
           alt="about banner"
           fill
           className="object-cover opacity-30"
@@ -50,7 +50,7 @@ export default function AboutPage() {
         {/* IMAGE */}
         <div className="order-1 md:order-2 rounded-2xl overflow-hidden shadow-md">
           <Image
-            src="/img/banner-2.png"
+            src="/img/banner-2.webp"
             alt="brand"
             width={500}
             height={400}
@@ -90,7 +90,7 @@ export default function AboutPage() {
         {/* IMAGE */}
         <div className="rounded-2xl overflow-hidden shadow-md">
           <Image
-            src="/img/founder.png"
+            src="/img/founder.webp"
             alt="founder"
             width={500}
             height={400}

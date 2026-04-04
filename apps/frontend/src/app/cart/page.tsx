@@ -100,7 +100,7 @@ export default function OrderPage() {
 
               {items.map((item) => {
                 const product = item.productVariant.product;
-                const itemImage = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.png";
+                const itemImage = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.webp";
                 const itemName = product?.name || "Product";
                 const itemPrice = toPriceNumber(item.priceSnapshot ?? item.productVariant.price);
 

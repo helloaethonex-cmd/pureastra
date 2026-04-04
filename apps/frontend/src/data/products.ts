@@ -14,9 +14,9 @@ export const products: ProductType[] = [
     price: 590,
     rating: 4.5,
     images: [
-      "/img/facewash.png",
-      "/img/product-1.png",
-      "/img/banner-2.png",
+      "/img/facewash.webp",
+      "/img/product-1.webp",
+      "/img/banner-2.webp",
     ],
     desc: "Brightens skin with Vitamin C & Niacinamide",
   },
@@ -26,8 +26,8 @@ export const products: ProductType[] = [
     price: 499,
     rating: 4.4,
     images: [
-      "/img/banner-2.png",
-      "/img/banner-3.png",
+      "/img/banner-2.webp",
+      "/img/banner-3.webp",
     ],
     desc: "Hydrating cleanser for glowing skin",
   },
@@ -37,7 +37,7 @@ export const products: ProductType[] = [
     price: 549,
     rating: 4.2,
     images: [
-      "/img/banner-3.png",
+      "/img/banner-3.webp",
     ],
     desc: "Soothing cleanser for sensitive skin",
   },

@@ -13,11 +13,11 @@ import {
 
 export default function Transformation() {
   const data = [
-    { before: "/img/before1.png", after: "/img/after1.png" },
-    { before: "/img/before1.png", after: "/img/after1.png" },
-    { before: "/img/before1.png", after: "/img/after1.png" },
-    { before: "/img/before1.png", after: "/img/after1.png" },
-    { before: "/img/before1.png", after: "/img/after1.png" },
+    { before: "/img/before1.webp", after: "/img/after1.webp" },
+    { before: "/img/before1.webp", after: "/img/after1.webp" },
+    { before: "/img/before1.webp", after: "/img/after1.webp" },
+    { before: "/img/before1.webp", after: "/img/after1.webp" },
+    { before: "/img/before1.webp", after: "/img/after1.webp" },
   ];
 
   return (

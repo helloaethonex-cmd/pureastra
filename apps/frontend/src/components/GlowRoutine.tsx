@@ -7,27 +7,27 @@ export default function GlowRoutine() {
     {
       title: "Refresh",
       desc: "Start your day by cleansing your face to remove overnight oil and toxins",
-      img: "/img/routine-1.png",
+      img: "/img/routine-1.webp",
     },
     {
       title: "Tone",
       desc: "Apply a natural toner to shrink pores and restore pH balance",
-      img: "/img/routine-2.png",
+      img: "/img/routine-2.webp",
     },
     {
       title: "Nourish",
       desc: "Use a lightweight serum or essence packed with natural extracts",
-      img: "/img/routine-3.png",
+      img: "/img/routine-3.webp",
     },
     {
       title: "Moisturize",
       desc: "Keep your skin hydrated and smooth with a moisturizer",
-      img: "/img/routine-4.png",
+      img: "/img/routine-4.webp",
     },
     {
       title: "Shield",
       desc: "Apply sunscreen to protect from sun damage and pollution",
-      img: "/img/routine-5.png",
+      img: "/img/routine-5.webp",
     },
   ];
 

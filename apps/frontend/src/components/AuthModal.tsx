@@ -81,7 +81,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
         {/* LEFT SIDE */}
         <div className="w-1/2 relative hidden sm:block">
           <Image
-            src="/img/login.png"
+            src="/img/login.webp"
             alt="Login visual"
             fill
             className="object-cover"
