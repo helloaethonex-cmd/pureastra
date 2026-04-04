@@ -34,10 +34,13 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder="E-mail"
-                className="border-0 px-3.75 py-2.5 flex-1 bg-transparent text-white outline-none placeholder:text-[#ddd]"
+                className="border-0 px-4 py-2.5 flex-1 min-w-0 bg-transparent text-white outline-none placeholder:text-[#ddd]"
               />
-              <button className="bg-white/20 border-0 px-3.75 py-2.5 text-white cursor-pointer">
-                <FontAwesomeIcon icon={faArrowRight} />
+              <button
+                aria-label="Subscribe"
+                className="border-0 w-12 flex items-center justify-center text-white cursor-pointer shrink-0 bg-linear-to-r from-white/10 to-white/22"
+              >
+                <FontAwesomeIcon icon={faArrowRight} className="text-sm" />
               </button>
             </div>
 
@@ -55,7 +58,6 @@ export default function Footer() {
           <div>
             <h4 className="mb-3.75 text-lg">Top Categories</h4>
             <ul className="list-none p-0 space-y-2 text-sm text-[#f1f1f1] [&>li]:cursor-pointer">
-
               <li>
                 <Link href="/category/face-care">Face Care</Link>
               </li>
@@ -75,7 +77,6 @@ export default function Footer() {
               <li>
                 <Link href="/category/mini-products">Mini Products</Link>
               </li>
-
             </ul>
           </div>
 
@@ -114,17 +115,26 @@ export default function Footer() {
             <h4 className="mb-3.75 text-lg">Best Sellers</h4>
             <ul className="list-none p-0 space-y-2 text-sm text-[#f1f1f1] [&>li]:cursor-pointer">
               <li>
-                <Link href="/product/vitamin-c-face-wash" className="cursor-pointer">
+                <Link
+                  href="/product/vitamin-c-face-wash"
+                  className="cursor-pointer"
+                >
                   Vitamin C Face Wash
                 </Link>
               </li>
               <li>
-                <Link href="/product/brightening-serum" className="cursor-pointer">
+                <Link
+                  href="/product/brightening-serum"
+                  className="cursor-pointer"
+                >
                   Brightening Serum
                 </Link>
               </li>
               <li>
-                <Link href="/product/hair-growth-oil" className="cursor-pointer">
+                <Link
+                  href="/product/hair-growth-oil"
+                  className="cursor-pointer"
+                >
                   Hair Growth Oil
                 </Link>
               </li>
