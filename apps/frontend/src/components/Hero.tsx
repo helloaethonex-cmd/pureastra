@@ -1,7 +1,8 @@
+import Image from "next/image";
+
 export default function Hero() {
   return (
     <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden">
-
       {/* BACKGROUND VIDEO */}
       <video
         autoPlay
@@ -18,15 +19,16 @@ export default function Hero() {
 
       {/* CONTENT */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
-
-        <h2 className="mb-4 text-white font-semibold 
-          text-2xl sm:text-3xl md:text-5xl leading-tight">
+        <h2
+          className="mb-4 text-white font-semibold 
+          text-2xl sm:text-3xl md:text-5xl leading-tight"
+        >
           Reveal Your Natural Glow
         </h2>
 
         <p className="mb-6 max-w-[500px] text-white text-sm sm:text-base md:text-lg">
-          Gentle, natural skincare designed to cleanse, nourish,
-          and protect your skin every day.
+          Gentle, natural skincare designed to cleanse, nourish, and protect
+          your skin every day.
         </p>
 
         <button
@@ -35,9 +37,19 @@ export default function Hero() {
         >
           Explore Collection
         </button>
-
       </div>
 
+      {/* RIGHT SIDE IMAGE */}
+      <div className="order-1 md:order-2 w-full">
+        <Image
+          src="/img/facewash.webp"
+          alt="product"
+          width={700}
+          height={600}
+          className="w-full h-[260px] sm:h-[350px] md:h-auto object-cover"
+          priority
+        />
+      </div>
     </section>
   );
 }

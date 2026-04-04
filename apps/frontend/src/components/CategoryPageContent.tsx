@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
@@ -205,11 +206,16 @@ export default function CategoryPageContent({
                     {/* IMAGE */}
                     <Link href={`/product/${product.slug}`}>
                       {primaryImage ? (
-                        <img
-                          src={primaryImage.imageUrl}
-                          alt={product.name}
-                          className="w-full h-[260px] object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
-                        />
+                        <div className="relative w-full h-[260px]">
+                          <Image
+                            src={primaryImage.imageUrl}
+                            alt={product.name}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            loading="lazy"
+                          />
+                        </div>
                       ) : (
                         <div className="w-full h-[260px] bg-[#EDE6D8] flex items-center justify-center text-gray-400 text-sm">
                           No image

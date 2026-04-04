@@ -1,5 +1,7 @@
 import { prisma } from "../../lib/prisma";
+import { Prisma } from "../../generated/prisma/client";
 import { AddCartItemInput, UpdateCartItemInput } from "./cart.types";
+import { AppError } from "../../lib/errors/app-error";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,10 @@ const cartFullInclude = {
 
 /** Returns the existing active cart for a user (or session), or creates a new one. */
 export const findOrCreateCart = async (userId?: bigint, sessionId?: string) => {
+  if (!userId && !sessionId) {
+    throw new Error("Either userId or sessionId is required");
+  }
+
   const where = userId
     ? { userId, status: CART_STATUS.ACTIVE }
     : { sessionId, status: CART_STATUS.ACTIVE };
@@ -53,6 +59,13 @@ export const findCartById = async (id: bigint) => {
   });
 };
 
+export const findActiveCartByUserId = async (userId: bigint) => {
+  return prisma.cart.findFirst({
+    where: { userId, status: CART_STATUS.ACTIVE },
+    include: cartFullInclude,
+  });
+};
+
 // ─── Cart Items ───────────────────────────────────────────────────────────────
 
 /** Adds an item to the cart. If the variant already exists, increments quantity. */
@@ -63,7 +76,9 @@ export const upsertCartItem = async (
   const variant = await prisma.productVariant.findFirst({
     where: { id: data.productVariantId, deletedAt: null },
   });
-  if (!variant) throw { status: 404, message: "Product variant not found" };
+  if (!variant) {
+    throw new AppError(404, "Product variant not found", "PRODUCT_VARIANT_NOT_FOUND");
+  }
 
   const existing = await prisma.cartItem.findFirst({
     where: { cartId, productVariantId: data.productVariantId },
@@ -101,10 +116,23 @@ export const upsertCartItem = async (
   });
 };
 
-export const updateCartItemQuantity = async (
+export const updateCartItemQuantityForUser = async (
   itemId: bigint,
+  userId: bigint,
   data: UpdateCartItemInput,
 ) => {
+  const existing = await prisma.cartItem.findFirst({
+    where: {
+      id: itemId,
+      cart: {
+        userId,
+        status: CART_STATUS.ACTIVE,
+      },
+    },
+  });
+
+  if (!existing) return null;
+
   return prisma.cartItem.update({
     where: { id: itemId },
     data: { quantity: data.quantity },
@@ -116,8 +144,18 @@ export const updateCartItemQuantity = async (
   });
 };
 
-export const removeCartItem = async (itemId: bigint) => {
-  return prisma.cartItem.delete({ where: { id: itemId } });
+export const removeCartItemForUser = async (itemId: bigint, userId: bigint) => {
+  const deleted = await prisma.cartItem.deleteMany({
+    where: {
+      id: itemId,
+      cart: {
+        userId,
+        status: CART_STATUS.ACTIVE,
+      },
+    },
+  });
+
+  return deleted.count > 0;
 };
 
 export const clearCartItems = async (cartId: bigint) => {
@@ -139,41 +177,92 @@ export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
 
   if (!guestCart || guestCart.items.length === 0) return null;
 
-  const userCart = await findOrCreateCart(userId);
-
-  for (const guestItem of guestCart.items) {
-    const existing = await prisma.cartItem.findFirst({
-      where: {
-        cartId: userCart.id,
-        productVariantId: guestItem.productVariantId,
-      },
+  return prisma.$transaction(async (tx) => {
+    const existingUserCart = await tx.cart.findFirst({
+      where: { userId, status: CART_STATUS.ACTIVE },
+      include: cartFullInclude,
     });
 
-    if (existing) {
-      await prisma.cartItem.update({
-        where: { id: existing.id },
-        data: { quantity: existing.quantity + guestItem.quantity },
-      });
-    } else {
-      await prisma.cartItem.create({
+    const userCart =
+      existingUserCart ??
+      (await tx.cart.create({
         data: {
-          cartId: userCart.id,
+          userId,
+          status: CART_STATUS.ACTIVE,
+        },
+        include: cartFullInclude,
+      }));
+
+    const guestGrouped = new Map<
+      string,
+      { productVariantId: bigint; quantity: number; priceSnapshot: typeof guestCart.items[number]["priceSnapshot"] }
+    >();
+
+    for (const guestItem of guestCart.items) {
+      const key = guestItem.productVariantId.toString();
+      const existing = guestGrouped.get(key);
+      if (existing) {
+        existing.quantity += guestItem.quantity;
+        if (!existing.priceSnapshot && guestItem.priceSnapshot) {
+          existing.priceSnapshot = guestItem.priceSnapshot;
+        }
+      } else {
+        guestGrouped.set(key, {
           productVariantId: guestItem.productVariantId,
           quantity: guestItem.quantity,
           priceSnapshot: guestItem.priceSnapshot,
-        },
+        });
+      }
+    }
+
+    const groupedRows = [...guestGrouped.values()];
+    const variantIds = groupedRows.map((row) => row.productVariantId);
+
+    const existingItems = await tx.cartItem.findMany({
+      where: {
+        cartId: userCart.id,
+        productVariantId: { in: variantIds },
+      },
+      select: { id: true, productVariantId: true },
+    });
+
+    const existingMap = new Map(existingItems.map((item) => [item.productVariantId.toString(), item.id]));
+    const rowsToCreate = groupedRows.filter((row) => !existingMap.has(row.productVariantId.toString()));
+    const rowsToIncrement = groupedRows.filter((row) => existingMap.has(row.productVariantId.toString()));
+
+    if (rowsToCreate.length > 0) {
+      await tx.cartItem.createMany({
+        data: rowsToCreate.map((row) => ({
+          cartId: userCart.id,
+          productVariantId: row.productVariantId,
+          quantity: row.quantity,
+          priceSnapshot: row.priceSnapshot ?? null,
+        })),
       });
     }
-  }
 
-  // Mark guest cart abandoned
-  await prisma.cart.update({
-    where: { id: guestCart.id },
-    data: { status: CART_STATUS.ABANDONED, abandonedAt: new Date() },
-  });
+    if (rowsToIncrement.length > 0) {
+      await tx.$executeRaw`
+        UPDATE "cart_items" AS ci
+        SET "quantity" = ci."quantity" + data."quantity",
+            "updated_at" = NOW()
+        FROM (
+          VALUES ${Prisma.join(
+            rowsToIncrement.map((row) => Prisma.sql`(${existingMap.get(row.productVariantId.toString())!}, ${row.quantity})`),
+          )}
+        ) AS data("id", "quantity")
+        WHERE ci."id" = data."id"
+      `;
+    }
 
-  return prisma.cart.findFirst({
-    where: { id: userCart.id },
-    include: cartFullInclude,
+    await tx.cart.update({
+      where: { id: guestCart.id },
+      data: { status: CART_STATUS.ABANDONED, abandonedAt: new Date() },
+    });
+
+    return tx.cart.findFirst({
+      where: { id: userCart.id },
+      include: cartFullInclude,
+    });
   });
 };

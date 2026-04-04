@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware";
 import {
-  confirmPayment,
   createOrderPaymentAttempt,
+  handleRazorpayWebhook,
+  verifyRazorpayPayment,
 } from "./payments.controller";
 
 const router = Router();
@@ -62,22 +63,22 @@ const router = Router();
  *             required:
  *               - paymentProvider
  *             properties:
- *               paymentProvider:
- *                 type: string
- *                 description: Payment gateway provider (e.g., "stripe", "razorpay")
- *                 example: "stripe"
- *               paymentMethod:
- *                 type: string
- *                 description: Payment method type (e.g., "card", "upi", "netbanking")
- *                 example: "card"
- *               providerIntentRef:
- *                 type: string
- *                 description: Payment intent ID from the provider (if pre-created)
- *                 example: "pi_3N1234567890"
- *           example:
- *             paymentProvider: "stripe"
- *             paymentMethod: "card"
- *             providerIntentRef: "pi_3N1234567890"
+*               paymentProvider:
+*                 type: string
+*                 description: Payment gateway provider (currently "razorpay")
+*                 example: "razorpay"
+*               paymentMethod:
+*                 type: string
+*                 description: Payment method type (e.g., "card", "upi", "netbanking")
+*                 example: "upi"
+*               providerIntentRef:
+*                 type: string
+*                 description: Provider order/intent reference (if pre-created)
+*                 example: "order_QF2cN5k8vP3rT1"
+*           example:
+*             paymentProvider: "razorpay"
+*             paymentMethod: "upi"
+*             providerIntentRef: "order_QF2cN5k8vP3rT1"
  *     responses:
  *       201:
  *         description: Payment attempt created successfully
@@ -94,17 +95,17 @@ const router = Router();
  *                   type: string
  *                   description: Associated order ID
  *                   example: "42"
- *                 paymentProvider:
- *                   type: string
- *                   example: "stripe"
- *                 paymentMethod:
- *                   type: string
- *                   nullable: true
- *                   example: "card"
- *                 paymentIntentId:
- *                   type: string
- *                   nullable: true
- *                   example: "pi_3N1234567890"
+*                 paymentProvider:
+*                   type: string
+*                   example: "razorpay"
+*                 paymentMethod:
+*                   type: string
+*                   nullable: true
+*                   example: "upi"
+*                 paymentIntentId:
+*                   type: string
+*                   nullable: true
+*                   example: "order_QF2cN5k8vP3rT1"
  *                 idempotencyKey:
  *                   type: string
  *                   example: "550e8400-e29b-41d4-a716-446655440000"
@@ -189,55 +190,23 @@ router.post("/orders/:id/payments", requireAuth, createOrderPaymentAttempt);
 
 /**
  * @openapi
- * /api/v1/payments/{id}/confirm:
+ * /api/v1/payments/{id}/razorpay/verify:
  *   post:
  *     tags:
  *       - Payments
- *     summary: Confirm payment result (Webhook)
+ *     summary: Verify Razorpay checkout success payload
  *     description: >
- *       Called by payment gateway webhooks to confirm the result of a payment
- *       attempt. This endpoint updates the payment status and, if successful,
- *       updates the order's `totalPaid` and potentially advances the order status.
- *
- *
- *       **Authentication:** Requires `x-payment-webhook-secret` header matching
- *       the server's configured `PAYMENT_WEBHOOK_SECRET`. This is NOT a user-facing
- *       endpoint.
- *
- *
- *       **Idempotent behavior:**
- *       - If payment is already SUCCESS or FAILED, returns existing payment unchanged
- *       - If order already has a successful payment from another attempt, returns unchanged
- *       - If order is already fully paid, returns unchanged
- *
- *
- *       **On SUCCESS confirmation:**
- *       - Payment status → SUCCESS
- *       - Order `totalPaid` incremented by payment amount
- *       - If fully paid: Order `paymentStatus` → SUCCESS
- *       - If order was PLACED: Order status → CONFIRMED (auto-advance)
- *       - Inventory reservations marked as CONFIRMED
- *       - Status history entry created
- *
- *
- *       **On FAILED confirmation:**
- *       - Payment status → FAILED
- *       - `failureReason` stored if provided
- *       - Order remains unchanged
+ *       Verifies checkout signature (`order_id|payment_id`) using Razorpay secret
+ *       and marks the payment attempt successful in an idempotent transaction.
+ *       **Requires authentication.**
+ *     security:
+ *       - cookieAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: Payment attempt ID
- *         example: "15"
- *       - in: header
- *         name: x-payment-webhook-secret
- *         required: true
- *         schema:
- *           type: string
- *         description: Webhook authentication secret
  *     requestBody:
  *       required: true
  *       content:
@@ -245,123 +214,50 @@ router.post("/orders/:id/payments", requireAuth, createOrderPaymentAttempt);
  *           schema:
  *             type: object
  *             required:
- *               - status
+ *               - razorpayOrderId
+ *               - razorpayPaymentId
+ *               - razorpaySignature
  *             properties:
- *               status:
+ *               razorpayOrderId:
  *                 type: string
- *                 enum: [SUCCESS, FAILED]
- *                 description: Payment result status
- *               gatewayTransactionId:
+ *               razorpayPaymentId:
  *                 type: string
- *                 description: Transaction ID from payment gateway (required for SUCCESS)
- *                 example: "txn_3N1234567890"
- *               providerEventId:
+ *               razorpaySignature:
  *                 type: string
- *                 description: Webhook event ID from provider (for idempotency tracking)
- *                 example: "evt_3N1234567890"
- *               failureReason:
- *                 type: string
- *                 description: Reason for payment failure (for FAILED status)
- *                 example: "card_declined"
- *           examples:
- *             success:
- *               summary: Successful payment
- *               value:
- *                 status: "SUCCESS"
- *                 gatewayTransactionId: "txn_3N1234567890"
- *                 providerEventId: "evt_3N1234567890"
- *             failed:
- *               summary: Failed payment
- *               value:
- *                 status: "FAILED"
- *                 failureReason: "card_declined"
- *                 providerEventId: "evt_3N9876543210"
  *     responses:
  *       200:
- *         description: Payment confirmation processed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                   example: "15"
- *                 orderId:
- *                   type: string
- *                   example: "42"
- *                 paymentProvider:
- *                   type: string
- *                   example: "stripe"
- *                 paymentMethod:
- *                   type: string
- *                   nullable: true
- *                   example: "card"
- *                 amount:
- *                   type: string
- *                   example: "1299.99"
- *                 paymentStatus:
- *                   type: integer
- *                   description: "0=PENDING, 1=SUCCESS, 2=FAILED, 3=REFUNDED"
- *                   example: 1
- *                 gatewayTransactionId:
- *                   type: string
- *                   nullable: true
- *                   example: "txn_3N1234567890"
- *                 failureReason:
- *                   type: string
- *                   nullable: true
- *                   example: null
- *                 paidAt:
- *                   type: string
- *                   format: date-time
- *                   nullable: true
- *                 createdAt:
- *                   type: string
- *                   format: date-time
- *       400:
- *         description: >
- *           Invalid request - possible reasons:
- *           - Invalid payment ID format
- *           - Missing required fields (status, gatewayTransactionId for SUCCESS)
- *           - Invalid status value (not SUCCESS or FAILED)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             examples:
- *               missingGatewayId:
- *                 summary: Missing gateway transaction ID
- *                 value:
- *                   error: "Invalid request payload"
- *                   details: [{ "path": ["gatewayTransactionId"], "message": "gatewayTransactionId is required for SUCCESS confirmation" }]
+ *         description: Payment verified and processed
  *       401:
- *         description: Invalid or missing webhook secret
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "Invalid webhook secret"
- *       404:
- *         description: Payment attempt not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "Payment not found"
- *               code: "PAYMENT_NOT_FOUND"
+ *         description: Unauthorized or invalid signature
  *       409:
- *         description: Payment amount exceeds current outstanding (stale attempt)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             example:
- *               error: "Payment attempt amount exceeds current outstanding amount"
- *               code: "STALE_PAYMENT_ATTEMPT"
+ *         description: Stale/mismatched payment attempt
  */
-router.post("/payments/:id/confirm", confirmPayment);
+router.post("/payments/:id/razorpay/verify", requireAuth, verifyRazorpayPayment);
+
+/**
+ * @openapi
+ * /api/v1/payments/webhooks/razorpay:
+ *   post:
+ *     tags:
+ *       - Payments
+ *     summary: Razorpay webhook receiver
+ *     description: >
+ *       Verifies Razorpay webhook signature from raw request body and processes
+ *       payment success/failure idempotently using provider event dedupe.
+ *     parameters:
+ *       - in: header
+ *         name: x-razorpay-signature
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Event acknowledged
+ *       401:
+ *         description: Invalid signature
+ *       400:
+ *         description: Invalid webhook payload
+ */
+router.post("/payments/webhooks/razorpay", handleRazorpayWebhook);
 
 export default router;

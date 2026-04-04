@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { Prisma } from "../generated/prisma/client";
 import { ZodError } from "zod";
 import { AppError } from "../lib/errors/app-error";
+import { logger } from "../lib/logger";
 
 export const notFoundHandler = (req: Request, res: Response) => {
   return res.status(404).json({
@@ -18,6 +19,8 @@ export const globalErrorHandler = (
   res: Response,
   _next: NextFunction,
 ) => {
+  const log = req.log ?? logger;
+
   if (err instanceof AppError) {
     return res.status(err.status).json({
       error: err.message,
@@ -53,7 +56,7 @@ export const globalErrorHandler = (
     }
   }
 
-  req.log.error(
+  log.error(
     {
       err,
       requestId: req.requestId,

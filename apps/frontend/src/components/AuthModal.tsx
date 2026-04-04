@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faEnvelopeCircleCheck } from "@fortawesome/free-solid-svg-icons";
@@ -79,10 +80,13 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
         {/* LEFT SIDE */}
         <div className="w-1/2 relative hidden sm:block">
-          <img
-            src="/img/login.png"
-            alt="login"
-            className="w-full h-full object-cover"
+          <Image
+            src="/img/login.webp"
+            alt="Login visual"
+            fill
+            className="object-cover"
+            sizes="(max-width: 1024px) 45vw, 400px"
+            loading="lazy"
           />
         </div>
 

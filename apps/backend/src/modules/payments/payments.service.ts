@@ -1,9 +1,11 @@
 import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../lib/errors/app-error";
+import { env } from "../../config/env";
 import {
   ConfirmPaymentBody,
   CreatePaymentAttemptBody,
+  RazorpayVerifyBody,
 } from "./payments.types";
 import {
   confirmReservationsByOrder,
@@ -11,16 +13,20 @@ import {
   createPaymentAttempt,
   findOrderForUser,
   findPaymentAttemptByOrderAndIdempotencyKey,
+  findPaymentByProviderEventId,
+  findPaymentByProviderOrderId,
+  findPaymentByProviderPaymentId,
   findPaymentByIdWithOrder,
   findSuccessfulPaymentForOrder,
   updateOrderForPaymentSuccess,
   updatePayment,
 } from "./payments.repository";
 import {
-  INVENTORY_RESERVATION_STATUS,
-  ORDER_STATUS,
-  PAYMENT_STATUS,
-} from "../orders/orders.types";
+  createRazorpayOrder,
+  verifyRazorpayCheckoutSignature,
+  verifyRazorpayWebhookSignature,
+} from "./gateways/razorpay.gateway";
+import { ORDER_STATUS, PAYMENT_STATUS } from "../orders/orders.types";
 
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -59,12 +65,50 @@ const outstandingCents = (order: {
   return grand - toCents(order.totalPaid);
 };
 
-export const createPaymentForOrder = async (
+const toPaymentAttemptResponse = (payment: {
+  id: bigint;
+  orderId: bigint;
+  amount: Prisma.Decimal;
+  currency: string;
+  paymentProvider: string;
+  paymentStatus: number;
+  providerOrderId: string | null;
+  createdAt: Date;
+}) => ({
+  id: payment.id.toString(),
+  orderId: payment.orderId.toString(),
+  paymentProvider: payment.paymentProvider,
+  amount: payment.amount.toString(),
+  currency: payment.currency,
+  paymentStatus: payment.paymentStatus,
+  paymentAttemptId: payment.id.toString(),
+  razorpayOrderId: payment.providerOrderId,
+  amountPaise: toCents(payment.amount),
+  razorpayKeyId: env.RAZORPAY_KEY_ID,
+  createdAt: payment.createdAt.toISOString(),
+});
+
+type PaymentAttemptRecord = Awaited<
+  ReturnType<typeof prisma.payment.findUnique>
+>;
+
+export const createPendingPaymentAttemptForOrder = async (
   userId: string,
   orderId: bigint,
   idempotencyKey: string,
   body: CreatePaymentAttemptBody,
 ) => {
+  const paymentProvider = (
+    body.paymentProvider ?? env.PAYMENT_PROVIDER_DEFAULT
+  ).toLowerCase();
+  if (paymentProvider !== "razorpay") {
+    throw new AppError(
+      400,
+      "Only razorpay payment provider is supported",
+      "UNSUPPORTED_PAYMENT_PROVIDER",
+    );
+  }
+
   return prisma.$transaction(async (tx) => {
     const order = await findOrderForUser(tx, orderId, BigInt(userId));
     if (!order) {
@@ -72,14 +116,19 @@ export const createPaymentForOrder = async (
     }
 
     if (order.orderStatus === ORDER_STATUS.CANCELLED) {
-      throw new AppError(409, "Cannot create payment for cancelled order", "ORDER_CANCELLED");
+      throw new AppError(
+        409,
+        "Cannot create payment for cancelled order",
+        "ORDER_CANCELLED",
+      );
     }
 
-    const existingByIdempotency = await findPaymentAttemptByOrderAndIdempotencyKey(
-      tx,
-      order.id,
-      idempotencyKey,
-    );
+    const existingByIdempotency =
+      await findPaymentAttemptByOrderAndIdempotencyKey(
+        tx,
+        order.id,
+        idempotencyKey,
+      );
     if (existingByIdempotency) {
       return existingByIdempotency;
     }
@@ -91,12 +140,16 @@ export const createPaymentForOrder = async (
 
     const outstanding = outstandingCents(order);
     if (outstanding <= 0) {
-      throw new AppError(409, "Order is already fully paid", "ORDER_ALREADY_PAID");
+      throw new AppError(
+        409,
+        "Order is already fully paid",
+        "ORDER_ALREADY_PAID",
+      );
     }
 
     return createPaymentAttempt(tx, {
       order: { connect: { id: order.id } },
-      paymentProvider: body.paymentProvider,
+      paymentProvider,
       paymentMethod: body.paymentMethod ?? null,
       paymentIntentId: body.providerIntentRef ?? null,
       idempotencyKey,
@@ -104,6 +157,87 @@ export const createPaymentForOrder = async (
       paymentStatus: PAYMENT_STATUS.PENDING,
     });
   }, TX_OPTIONS);
+};
+
+const ensureRazorpayProviderOrderForPaymentRecord = async (
+  payment: NonNullable<PaymentAttemptRecord>,
+) => {
+  if (payment.paymentProvider.toLowerCase() !== "razorpay") {
+    throw new AppError(
+      400,
+      "Only razorpay payment provider is supported",
+      "UNSUPPORTED_PAYMENT_PROVIDER",
+    );
+  }
+
+  if (payment.providerOrderId) {
+    return toPaymentAttemptResponse(payment);
+  }
+
+  const receipt = `order-${payment.orderId.toString()}-pay-${payment.id.toString()}`;
+  const razorpayOrder = await createRazorpayOrder({
+    amountPaise: toCents(payment.amount),
+    currency: payment.currency,
+    receipt,
+    notes: {
+      orderId: payment.orderId.toString(),
+      paymentId: payment.id.toString(),
+    },
+  });
+
+  const updateResult = await prisma.payment.updateMany({
+    where: { id: payment.id, providerOrderId: null },
+    data: {
+      providerOrderId: razorpayOrder.id,
+      paymentIntentId: razorpayOrder.id,
+    },
+  });
+
+  if (updateResult.count === 0) {
+    const latest = await prisma.payment.findUnique({
+      where: { id: payment.id },
+    });
+    if (!latest) {
+      throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
+    }
+    return toPaymentAttemptResponse(latest);
+  }
+
+  const updatedPayment = await prisma.payment.findUnique({
+    where: { id: payment.id },
+  });
+  if (!updatedPayment) {
+    throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
+  }
+
+  return toPaymentAttemptResponse(updatedPayment);
+};
+
+export const ensureProviderOrderForPaymentAttempt = async (
+  paymentId: bigint,
+) => {
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) {
+    throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
+  }
+
+  return ensureRazorpayProviderOrderForPaymentRecord(payment);
+};
+
+export const createPaymentForOrder = async (
+  userId: string,
+  orderId: bigint,
+  idempotencyKey: string,
+  body: CreatePaymentAttemptBody,
+) => {
+  const payment = await createPendingPaymentAttemptForOrder(
+    userId,
+    orderId,
+    idempotencyKey,
+    body,
+  );
+
+  return ensureRazorpayProviderOrderForPaymentRecord(payment);
 };
 
 export const confirmPaymentAttempt = async (
@@ -120,6 +254,20 @@ export const confirmPaymentAttempt = async (
       payment.paymentStatus === PAYMENT_STATUS.SUCCESS ||
       payment.paymentStatus === PAYMENT_STATUS.FAILED
     ) {
+      if (
+        (body.providerEventId && !payment.providerEventId) ||
+        (body.providerPaymentId && !payment.providerPaymentId) ||
+        (body.providerOrderId && !payment.providerOrderId) ||
+        (body.gatewayTransactionId && !payment.gatewayTransactionId)
+      ) {
+        return updatePayment(tx, payment.id, {
+          providerEventId: body.providerEventId ?? undefined,
+          providerPaymentId: body.providerPaymentId ?? undefined,
+          providerOrderId: body.providerOrderId ?? undefined,
+          gatewayTransactionId: body.gatewayTransactionId ?? undefined,
+          providerSignature: body.providerSignature ?? undefined,
+        });
+      }
       return payment;
     }
 
@@ -128,10 +276,15 @@ export const confirmPaymentAttempt = async (
         paymentStatus: PAYMENT_STATUS.FAILED,
         failureReason: body.failureReason ?? null,
         providerEventId: body.providerEventId ?? null,
+        providerPaymentId: body.providerPaymentId ?? undefined,
+        providerOrderId: body.providerOrderId ?? undefined,
       });
     }
 
-    const existingSuccess = await findSuccessfulPaymentForOrder(tx, payment.orderId);
+    const existingSuccess = await findSuccessfulPaymentForOrder(
+      tx,
+      payment.orderId,
+    );
     if (existingSuccess && existingSuccess.id !== payment.id) {
       return payment;
     }
@@ -158,6 +311,10 @@ export const confirmPaymentAttempt = async (
       paidAt: now,
       gatewayTransactionId: body.gatewayTransactionId,
       providerEventId: body.providerEventId ?? null,
+      providerPaymentId:
+        body.providerPaymentId ?? body.gatewayTransactionId ?? undefined,
+      providerOrderId: body.providerOrderId ?? undefined,
+      providerSignature: body.providerSignature ?? undefined,
       failureReason: null,
     });
 
@@ -166,7 +323,9 @@ export const confirmPaymentAttempt = async (
 
     await updateOrderForPaymentSuccess(tx, payment.orderId, {
       totalPaid: { increment: centsToDecimal(paymentAmount) },
-      paymentStatus: fullyPaid ? PAYMENT_STATUS.SUCCESS : payment.order.paymentStatus,
+      paymentStatus: fullyPaid
+        ? PAYMENT_STATUS.SUCCESS
+        : payment.order.paymentStatus,
       orderStatus:
         payment.order.orderStatus === ORDER_STATUS.PLACED
           ? ORDER_STATUS.CONFIRMED
@@ -188,3 +347,171 @@ export const confirmPaymentAttempt = async (
   }, TX_OPTIONS);
 };
 
+export const verifyRazorpayPaymentAttempt = async (
+  userId: string,
+  paymentId: bigint,
+  body: RazorpayVerifyBody,
+) => {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    include: { order: true },
+  });
+
+  if (!payment || payment.order.userId.toString() !== userId) {
+    throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
+  }
+
+  if (!payment.providerOrderId) {
+    throw new AppError(
+      409,
+      "Payment attempt is not linked with provider order",
+      "PROVIDER_ORDER_MISSING",
+    );
+  }
+
+  if (payment.providerOrderId !== body.razorpayOrderId) {
+    throw new AppError(
+      409,
+      "Razorpay order mismatch for payment attempt",
+      "RAZORPAY_ORDER_MISMATCH",
+    );
+  }
+
+  const isValidSignature = verifyRazorpayCheckoutSignature({
+    razorpayOrderId: body.razorpayOrderId,
+    razorpayPaymentId: body.razorpayPaymentId,
+    razorpaySignature: body.razorpaySignature,
+  });
+
+  if (!isValidSignature) {
+    throw new AppError(
+      401,
+      "Invalid Razorpay signature",
+      "INVALID_RAZORPAY_SIGNATURE",
+    );
+  }
+
+  return confirmPaymentAttempt(paymentId, {
+    status: "SUCCESS",
+    gatewayTransactionId: body.razorpayPaymentId,
+    providerPaymentId: body.razorpayPaymentId,
+    providerOrderId: body.razorpayOrderId,
+    providerSignature: body.razorpaySignature,
+  });
+};
+
+export const processRazorpayWebhookEvent = async (
+  rawBody: Buffer,
+  signature: string,
+  providerEventIdHeader?: string,
+) => {
+  const isSignatureValid = verifyRazorpayWebhookSignature(rawBody, signature);
+  if (!isSignatureValid) {
+    throw new AppError(
+      401,
+      "Invalid Razorpay webhook signature",
+      "INVALID_WEBHOOK_SIGNATURE",
+    );
+  }
+
+  let payload: {
+    event?: string;
+    payload?: {
+      payment?: {
+        entity?: {
+          id?: string;
+          order_id?: string;
+          status?: string;
+          error_description?: string;
+        };
+      };
+    };
+  };
+
+  try {
+    payload = JSON.parse(rawBody.toString("utf8"));
+  } catch {
+    throw new AppError(
+      400,
+      "Invalid webhook payload",
+      "INVALID_WEBHOOK_PAYLOAD",
+    );
+  }
+
+  const event = payload.event ?? "";
+  const paymentEntity = payload.payload?.payment?.entity;
+  const providerPaymentId = paymentEntity?.id;
+  const providerOrderId = paymentEntity?.order_id;
+
+  if (!providerPaymentId && !providerOrderId) {
+    return { acknowledged: true, reason: "NO_PAYMENT_REFERENCE" as const };
+  }
+
+  const providerEventId =
+    providerEventIdHeader ??
+    `${event}:${providerPaymentId ?? "unknown"}:${providerOrderId ?? "unknown"}`;
+
+  const existingByEvent = await prisma.$transaction(
+    (tx) => findPaymentByProviderEventId(tx, providerEventId),
+    TX_OPTIONS,
+  );
+  if (existingByEvent) {
+    return { acknowledged: true, deduped: true as const };
+  }
+
+  const payment = await prisma.$transaction(async (tx) => {
+    if (providerPaymentId) {
+      const foundByProviderPaymentId = await findPaymentByProviderPaymentId(
+        tx,
+        providerPaymentId,
+      );
+      if (foundByProviderPaymentId) {
+        return foundByProviderPaymentId;
+      }
+    }
+
+    if (providerOrderId) {
+      return findPaymentByProviderOrderId(tx, providerOrderId);
+    }
+
+    return null;
+  }, TX_OPTIONS);
+
+  if (!payment) {
+    return { acknowledged: true, reason: "PAYMENT_ATTEMPT_NOT_FOUND" as const };
+  }
+
+  const isFailedEvent =
+    event === "payment.failed" || paymentEntity?.status === "failed";
+  const isSuccessEvent =
+    event === "payment.captured" ||
+    paymentEntity?.status === "captured" ||
+    event === "order.paid";
+
+  if (!isFailedEvent && !isSuccessEvent) {
+    return { acknowledged: true, reason: "IGNORED_EVENT" as const };
+  }
+
+  try {
+    await confirmPaymentAttempt(payment.id, {
+      status: isFailedEvent ? "FAILED" : "SUCCESS",
+      gatewayTransactionId: isFailedEvent ? undefined : providerPaymentId,
+      providerEventId,
+      providerPaymentId,
+      providerOrderId,
+      failureReason: isFailedEvent
+        ? paymentEntity?.error_description
+        : undefined,
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { acknowledged: true, deduped: true as const };
+    }
+    throw error;
+  }
+
+  return { acknowledged: true };
+};

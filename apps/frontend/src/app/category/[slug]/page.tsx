@@ -23,7 +23,7 @@ async function fetchCategories(): Promise<Category[]> {
 
     return (await res.json()) as Category[];
   } catch (error) {
-    console.error("[fetchCategories] Error while fetching categories:", error);
+    console.warn("[fetchCategories] backend unavailable during build");
     return [];
   }
 }
@@ -59,11 +59,9 @@ function findCategoryBySlug(categories: Category[], slug: string) {
 export async function generateStaticParams() {
   const categories = await fetchCategories();
   const slugs = collectCategorySlugs(categories);
-  console.log(`[generateStaticParams] Found ${slugs.length} category slugs`);
-  
+
   // Next.js requires at least one param for export
   if (slugs.length === 0) {
-    console.log('[generateStaticParams] No categories found, returning placeholder');
     return [{ slug: '__no_categories__' }];
   }
   

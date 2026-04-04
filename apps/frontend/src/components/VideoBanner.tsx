@@ -21,6 +21,8 @@ export default function VideoBanner() {
           
         "
         src="/video/banner.mp4"
+        poster="/img/thumb.png"
+        preload="metadata"
         autoPlay
         loop
         muted

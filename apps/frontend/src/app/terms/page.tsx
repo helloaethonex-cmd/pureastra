@@ -1,142 +1,94 @@
 export default function TermsCondition() {
   return (
     <>
-      <section  className="bg-[#FAF3E2] px-6 md:px-16 py-16 text-[#3B2F2F]">
+      <section className="bg-[#FAF3E2] px-6 md:px-16 py-16 text-[#3B2F2F]">
         <h1 className="text-3xl md:text-4xl font-['Marko_One',serif] text-center mb-10 text-[#9E6E5B]">
-          Terms & Conditions
+          Terms &amp; Conditions
         </h1>
 
         <div className="max-w-4xl mx-auto space-y-6 text-sm leading-7">
 
           <div>
-            <h2 className="font-semibold text-lg">1. Product Information</h2>
+            <h2 className="font-semibold text-lg">1. Agreement to Terms</h2>
             <p>
-              All pureastra products are described accurately to the best of our knowledge. Product images, colors, or packaging may slightly vary due to lighting, screen displays, or production updates.Ingredients are listed on every product. Customers should check for allergies or sensitivities before use.
+              By accessing or placing an order on the Pureastra website, you agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, please do not use our website or place an order.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">2. Order Acceptance & Processing</h2>
+            <h2 className="font-semibold text-lg">2. Product Information</h2>
             <p>
-             Orders are processed within 1–2 business days. Sundays and public holidays are non-working days. Once an order is placed, cancellation is not allowed, as products are processed immediately. Pureastra reserves the right to accept or decline orders in cases of stock unavailability, pricing errors, or suspicious activity.
+              All Pureastra products are described accurately to the best of our knowledge. Product images, colours, or packaging may slightly vary due to lighting, screen displays, or production updates. Ingredients are listed on every product. Customers should check for allergies or sensitivities before use.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">3. Pricing & Payments</h2>
+            <h2 className="font-semibold text-lg">3. Order Acceptance and Processing</h2>
             <p>
-              Prices are listed in Indian Rupees (₹) and include applicable taxes unless stated otherwise. Only online payments are accepted via secure, encrypted payment gateways. Customers are responsible for accurate billing and shipping information. Payment confirmation is final, no refunds are provided, except for verified damaged products.
+              Orders are processed within 1 to 2 business days. Sundays and public holidays are non-working days. Pureastra reserves the right to accept or decline orders in cases of stock unavailability, pricing errors, or suspicious activity. Once placed, orders cannot be modified or cancelled.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">4. Shipping & Delivery</h2>
+            <h2 className="font-semibold text-lg">4. Pricing and Payments</h2>
             <p>
-              Delivery timelines may vary depending on courier services, location, or unforeseen circumstances.
-              Tracking details are provided once the order is dispatched.
-              pureastra is not responsible for delays caused by courier services, weather, or natural events.
-              Customers must provide accurate delivery addresses, any delay due to wrong addresses is the customer’s responsibility.
+              Prices are listed in Indian Rupees and include applicable taxes unless stated otherwise. Only online payments are accepted through secure, encrypted payment gateways. Customers are responsible for providing accurate billing and shipping information. All sales are final once payment is confirmed.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">5. Returns & Replacements</h2>
+            <h2 className="font-semibold text-lg">5. Product Quality and Use</h2>
             <p>
-              Only damaged or defective products are eligible for replacement.
-              Customers must provide proof of damage (photo/video) via WhatsApp within 48 hours of delivery.
-              Verified damaged products will be replaced within 7–14 days.
-              Replacements will match the original product specifications.
-              No refunds or money returns are provided, replacements are the only solution. Any damage caused by mishandling after delivery will not be eligible for replacement.
+              Pureastra products are for external use only. Individual reactions may vary depending on skin type or allergies. Customers must read the ingredient list carefully and stop using the product if irritation occurs. Minor variations in texture, colour, or scent due to natural ingredients are normal and are not considered defects. Customers must follow usage instructions on the product.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">6. Product Quality & Use</h2>
+            <h2 className="font-semibold text-lg">6. Intellectual Property</h2>
             <p>
-              pureastra products are for external use only. Individual reactions may vary depending on skin type or allergies. Customers must read the ingredient list carefully and discontinue use if irritation occurs. Minor variations in texture, color, or scent due to natural ingredients or production processes are normal and not considered defects. Customers must follow usage instructions, improper use may affect performance.
+              All website content including images, designs, text, and logos are owned by Pureastra. Unauthorised use, reproduction, or distribution of any content is strictly prohibited.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">7. Intellectual Property</h2>
+            <h2 className="font-semibold text-lg">7. Customer Responsibility</h2>
             <p>
-              All website content, images, designs, and text are owned by pureastra. Unauthorized use, reproduction, or distribution of content is prohibited.
+              Customers are responsible for safe usage, storage, and handling of products. You must check products carefully upon delivery and report any damage immediately. Pureastra is not liable for damages caused by negligence, misuse, or failure to follow product guidelines.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">8. Customer Responsibility</h2>
+            <h2 className="font-semibold text-lg">8. Security and Account Safety</h2>
             <p>
-              Customers are responsible for safe usage, storage, and handling of products. Check products carefully upon delivery and report damages immediately. Pureastra is not liable for damages caused by negligence, misuse, or failure to follow product guidelines.
+              Customers are responsible for maintaining the confidentiality of their login credentials. Pureastra uses SSL encryption and secure servers to protect your information. Any suspected unauthorised access or transaction must be reported to us immediately. The use of automated scripts or hacking tools is strictly prohibited.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">9. Limitations & Liability</h2>
+            <h2 className="font-semibold text-lg">9. Limitations of Liability</h2>
             <p>
-              pureastra is not responsible for indirect, incidental, or consequential damages from product use, website access, or third-party services. Liability is limited to replacing damaged or defective products. Products purchased for resale or commercial purposes are at the customer’s risk.
+              Pureastra is not responsible for indirect, incidental, or consequential damages arising from product use, website access, or third-party services. Our liability is limited to replacing verified damaged or defective products. Products purchased for resale or commercial purposes are entirely at the customer's risk.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">10. Bulk Orders & Special Kits</h2>
+            <h2 className="font-semibold text-lg">10. Official Sales Channel</h2>
             <p>
-              Replacements and shipping policies apply to bulk or combo orders.
-              Discounts or special offers on bulk purchases are subject to terms mentioned at the time of purchase.
+              Our products are sold exclusively through our official website. We do not authorise sales through any third-party marketplace or reseller. Products purchased from unauthorised sources are not covered under any Pureastra policy.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">11. Privacy & Third-Party Services</h2>
+            <h2 className="font-semibold text-lg">11. Governing Law and Jurisdiction</h2>
             <p>
-              Customer information is securely stored and used only for order processing, delivery, and communication. Data may be shared with authorized third-party apps/services solely for payment processing, logistics, and customer support. Pureastra does not sell customer data to any third party.
+              These Terms and Conditions are governed by the laws of India. Any disputes shall fall under the jurisdiction of the courts in Karunagappally, Kollam.
             </p>
           </div>
 
           <div>
-            <h2 className="font-semibold text-lg">12. Security & Account Safety</h2>
+            <h2 className="font-semibold text-lg">12. Updates to These Terms</h2>
             <p>
-              Customers are responsible for maintaining the confidentiality of login credentials.
-              Pureastra employs SSL encryption, secure servers, and payment gateways to protect sensitive information.
-              Customers must report unauthorized transactions or suspected breaches immediately.
-              Hacking, misuse, or use of automated scripts is strictly prohibited.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">13. Payment & Fraud Protection</h2>
-            <p>
-              Orders are monitored for fraudulent activity; suspicious transactions may be delayed, canceled, or investigated. Customers must provide accurate billing, shipping, and contact information. Pureastra is not liable for unauthorized payments due to customer negligence.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">14. Cookies & Tracking</h2>
-            <p>
-              The website may use cookies and similar technologies to enhance user experience, track orders, and analyze website usage. By using our website, customers consent to cookies as described in our Privacy Policy.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">15. Data Retention & Usage</h2>
-            <p>
-             Customer data is stored securely for the duration necessary to process orders, provide services, or comply with legal obligations. Data may be anonymized for analytics, marketing insights, and improving user experience.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">16. Governing Law & Jurisdiction</h2>
-            <p>
-              These Terms & Conditions are governed by the laws of India.
-              Disputes will fall under the jurisdiction of local courts in Karunagappally, Kollam.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">17. Updates to Terms & Conditions</h2>
-            <p>
-              pureastra reserves the right to update or modify these Terms & Conditions at any time.
-              The latest version will always be displayed on the website.
+              Pureastra reserves the right to update or modify these Terms and Conditions at any time. The latest version will always be available on this page. Continued use of the website following any changes constitutes your acceptance of the revised terms.
             </p>
           </div>
 

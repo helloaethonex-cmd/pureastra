@@ -7,14 +7,26 @@ import {
   clearCart,
   mergeCart,
 } from "./cart.service";
-import { addCartItemSchema, updateCartItemSchema, mergeCartSchema } from "./cart.types";
+import {
+  addCartItemSchema,
+  updateCartItemSchema,
+  mergeCartSchema,
+  cartItemParamsSchema,
+} from "./cart.types";
+import { AppError } from "../../lib/errors/app-error";
+import { ZodError } from "zod";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const param = (req: Request, key: string): string => req.params[key] as string;
+const handleError = (req: Request, res: Response, err: unknown) => {
+  if (err instanceof AppError) {
+    return res.status(err.status).json({ error: err.message, code: err.code });
+  }
 
-const handleError = (req: Request, res: Response, err: any) => {
-  if (err?.status) return res.status(err.status).json({ error: err.message });
+  if (err instanceof ZodError) {
+    return res.status(400).json({ error: "Invalid request payload", details: err.issues });
+  }
+
   req.log.error({ err }, "Cart controller error");
   return res.status(500).json({ error: "Internal server error" });
 };
@@ -57,8 +69,10 @@ export const addItem = async (req: Request, res: Response) => {
 /** PATCH /cart/items/:itemId */
 export const patchItem = async (req: Request, res: Response) => {
   try {
+    const params = cartItemParamsSchema.parse(req.params);
     const data = updateCartItemSchema.parse(req.body);
-    const item = await updateItem(param(req, "itemId"), data);
+    const userId = req.user?.id?.toString();
+    const item = await updateItem(userId, params.itemId.toString(), data);
     res.status(200).json(item);
   } catch (err) {
     handleError(req, res, err);
@@ -68,7 +82,9 @@ export const patchItem = async (req: Request, res: Response) => {
 /** DELETE /cart/items/:itemId */
 export const deleteItem = async (req: Request, res: Response) => {
   try {
-    await removeItem(param(req, "itemId"));
+    const params = cartItemParamsSchema.parse(req.params);
+    const userId = req.user?.id?.toString();
+    await removeItem(userId, params.itemId.toString());
     res.status(200).json({ message: "Item removed from cart" });
   } catch (err) {
     handleError(req, res, err);

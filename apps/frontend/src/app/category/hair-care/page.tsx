@@ -11,7 +11,7 @@ export default function HairPage() {
           desc: "Hair growth oil",
           price: "599",
           size: "100ml",
-          img: "/img/routine-1.png",
+          img: "/img/routine-1.webp",
           rating: 4.5,
         },
       ]}

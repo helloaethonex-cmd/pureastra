@@ -1,95 +1,204 @@
+"use client";
+
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faLock,
+  faDatabase,
+  faUserShield,
+  faCookie,
+} from "@fortawesome/free-solid-svg-icons";
+
+const faqs = [
+  {
+    q: "What personal information do you collect?",
+    a: "We collect your name, email address, phone number, and delivery address when you place an order. We may also collect browsing data through cookies to improve your experience.",
+  },
+  {
+    q: "Is my payment information stored?",
+    a: "No. All payments are processed through a secure third-party payment gateway. We do not store or have access to your card or UPI details.",
+  },
+  {
+    q: "Do you share my data with third parties?",
+    a: "We only share your information with authorised partners such as courier services and payment processors — strictly for fulfilling your order. We never sell your data.",
+  },
+  {
+    q: "How long do you keep my data?",
+    a: "We retain your data for as long as needed to process your orders, provide support, and meet legal obligations. You can request deletion at any time by contacting us.",
+  },
+  {
+    q: "Can I opt out of marketing emails?",
+    a: "Yes. You can unsubscribe from our marketing communications at any time using the unsubscribe link in any email we send.",
+  },
+];
 
 export default function PrivacyPolicy() {
+  const [active, setActive] = useState<number | null>(null);
+
   return (
-    <>
+    <section className="bg-linear-to-b from-[#FAF3E2] via-[#F5EFE9] to-[#FAF3E2] px-6 md:px-16 py-20 text-[#3B2F2F]">
 
-      <section className="bg-[#FAF3E2] px-6 md:px-16 py-16 text-[#3B2F2F]">
-        <h1 className="text-3xl md:text-4xl font-['Marko_One',serif] text-center mb-10 text-[#9E6E5B]">
-          Privacy Policies
+      {/* Heading */}
+      <motion.div
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="text-center mb-14"
+      >
+        <h1 className="text-3xl md:text-5xl font-['Marko_One',serif] text-[#8B543E] mb-4">
+          Privacy Policy
         </h1>
+        <p className="max-w-2xl mx-auto text-sm md:text-base text-[#5C4A4A]">
+          Your privacy matters to us. Here is exactly how we collect, use, and protect your personal information when you shop with Pureastra.
+        </p>
+      </motion.div>
 
-        <div className="max-w-4xl mx-auto space-y-6 text-sm leading-7">
+      {/* Policy Cards */}
+      <div className="max-w-5xl mx-auto space-y-8">
+        {[
+          {
+            icon: faDatabase,
+            title: "Information We Collect",
+            points: [
+              "Name, email address, phone number, and delivery address when you place an order.",
+              "Payment details handled exclusively by our secure third-party payment gateway.",
+              "Browsing behaviour and preferences via cookies to improve your shopping experience.",
+              "Any communication you send us through email, WhatsApp, or contact forms.",
+            ],
+          },
+          {
+            icon: faLock,
+            title: "How We Use Your Information",
+            points: [
+              "To process, confirm, and deliver your orders.",
+              "To send order updates, tracking information, and support responses.",
+              "To send promotional offers if you have opted in — you can unsubscribe anytime.",
+              "To improve our website, products, and overall customer experience.",
+              "We never sell your personal information to any third party.",
+            ],
+            highlight: "Your data is used only to serve you better. We do not sell or misuse your information under any circumstances.",
+          },
+          {
+            icon: faUserShield,
+            title: "How We Protect Your Data",
+            points: [
+              "All data is stored on secure servers with restricted access.",
+              "Payments are processed through SSL-encrypted, PCI-compliant gateways.",
+              "We do not store your card numbers, UPI IDs, or banking credentials.",
+              "Access to customer data is limited to authorised personnel only.",
+            ],
+          },
+          {
+            icon: faCookie,
+            title: "Cookies and Tracking",
+            points: [
+              "We use cookies to remember your preferences and improve site performance.",
+              "Analytics tools help us understand how visitors use our website.",
+              "No personal identity is exposed through our analytics data.",
+              "You can disable cookies through your browser settings at any time.",
+            ],
+          },
+        ].map((section, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            whileHover={{ scale: 1.02 }}
+            className="relative bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-[#E6D5C3] hover:border-[#8B543E]/30 shadow-sm hover:shadow-md transition"
+          >
+            <div className="absolute inset-0 rounded-2xl opacity-0 hover:opacity-100 transition bg-linear-to-r from-[#819744]/10 via-[#8B543E]/10 to-transparent blur-xl" />
 
-          <div>
-            <h2 className="font-semibold text-lg">1. Privacy Policy</h2>
-            <p>
-              We value your privacy. All personal information provided during order placement is securely stored and used only for order processing, communication, marketing (if opted-in), and service improvement. We do not share your information with unauthorized third parties.
-            </p>
-          </div>
+            <div className="flex items-center gap-3 mb-4 relative z-10">
+              <FontAwesomeIcon icon={section.icon} className="text-[#819744] text-lg" />
+              <h2 className="text-lg font-semibold text-[#8B543E]">{section.title}</h2>
+            </div>
 
-          <div>
-            <h2 className="font-semibold text-lg">2. Shipping Policy</h2>
-            <p>Orders are processed within 1–2 business days after payment confirmation.
-                Delivery usually takes 5–7 business days, depending on location and courier service.
-                We collaborate with regional courier partners such as Blue Dart, Delhivery, and other reliable regional agencies.
-                Tracking information will be provided once the order is dispatched.
-                Customers are responsible for providing accurate delivery addresses. Any delays due to incorrect addresses are not our liability.
-            </p>
-          </div>
+            <ul className="space-y-2 text-sm leading-6 relative z-10">
+              {section.points.map((point, idx) => (
+                <li key={idx}>• {point}</li>
+              ))}
+            </ul>
 
-          <div>
-            <h2 className="font-semibold text-lg">3. Cancellation Policy</h2>
-            <p>Once an order is placed, cancellation is not allowed. Please review your order carefully before confirming.</p>
-          </div>
+            {section.highlight && (
+              <div className="mt-4 bg-[#F5EFE9] border-l-4 border-[#8B543E] p-4 rounded-md text-sm relative z-10">
+                {section.highlight}
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
 
-          <div>
-            <h2 className="font-semibold text-lg">4. Returns & Replacement Policy</h2>
-            <p>Only damaged or defective products are eligible for replacement.
-                Customers must provide proof of damage (video or photo) via WhatsApp within 48 hours of delivery.
-                Verified damaged products will be replaced within 7–14 days.
-                Replacements will match the original product specifications.
-                No refunds or money returns are provided; replacements are the only solution for damaged items.
-                Any damage caused by mishandling after delivery will not be eligible for replacement.
-            </p>
-          </div>
+      {/* FAQ */}
+      <div className="max-w-5xl mx-auto mt-20">
+        <h2 className="text-2xl md:text-3xl font-['Marko_One',serif] text-center text-[#8B543E] mb-10">
+          Frequently Asked Questions
+        </h2>
 
-          <div>
-            <h2 className="font-semibold text-lg">5. Payment Policy</h2>
-            <p>Online Payments Only: All orders must be paid through our secure online payment system. We do not accept cash, cheque, or offline payments.
-                Payment Methods: Credit/debit cards, UPI, net banking, or digital wallets available on the checkout page.
-                Final Payment: Once payment is made, it is final. No cancellations or refunds are allowed, except for verified damaged products.
-                Payment Confirmation: Customers will receive an instant confirmation after successful payment along with the order summary and invoice.
-            </p>
-          </div>
+        <div className="space-y-4">
+          {faqs.map((item, index) => {
+            const isOpen = active === index;
+            return (
+              <div
+                key={index}
+                className={`rounded-xl border transition-all duration-300 ${
+                  isOpen
+                    ? "bg-[#F5EFE9] border-[#8B543E]/40 shadow-sm"
+                    : "bg-white/60 border-[#E6D5C3] hover:shadow-sm"
+                }`}
+              >
+                <button
+                  onClick={() => setActive(isOpen ? null : index)}
+                  className="w-full flex justify-between items-center p-5"
+                >
+                  <span className="text-sm md:text-base font-medium">{item.q}</span>
+                  <span
+                    className={`text-[#819744] text-xl transition-transform duration-300 ${
+                      isOpen ? "rotate-45" : ""
+                    }`}
+                  >
+                    +
+                  </span>
+                </button>
 
-          <div>
-            <h2 className="font-semibold text-lg">6. Product Quality</h2>
-            <p>Our skincare products are manufactured to high-quality standards.
-                Minor variations in color, texture, or packaging due to natural ingredients or production processes are normal and not considered defects.
-                We are not liable for issues arising naturally from the products or from third-party websites.</p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">7. Customer Responsibility</h2>
-            <p>Please check your product carefully upon delivery.
-                Report any damages immediately via WhatsApp or customer support. Delayed complaints or damages caused after use are not eligible for replacement.
-                Ensure that you follow usage instructions provided with each product. Improper use may affect product performance and is not covered under replacement policy.
-                </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">8. Limitations & Liability</h2>
-            <p>We are not responsible for courier delays caused by weather, natural disasters, strikes, or other third-party issues.
-                Our liability is limited to replacing damaged or defective products. We are not responsible for indirect losses or damages.
-                Any product purchased for resale or commercial purposes is done at the customer’s responsibility.
-                </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">9. Bulk Orders & Special Kits (Optional)</h2>
-            <p>For bulk or combo orders, replacements and shipping policies apply to the entire order.
-            Discounts or special offers on bulk purchases are subject to terms mentioned at the time of purchase.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="font-semibold text-lg">10. Official Sales Channel</h2>
-            <p>Our products are exclusively available on our official website. We do not sell through any marketplace, third-party manufacturer, or other websites. Any product purchased elsewhere is not authorized by us and may be counterfeit</p>
-          </div>
-
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-5 text-sm text-[#5C4A4A] leading-6">
+                        {item.a}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
-      </section>
 
-    </>
+        {/* CTA */}
+        <div className="text-center mt-10">
+          <p className="text-sm text-[#6B5B5B] mb-3">
+            Have a question about your data?
+          </p>
+          <a
+            href="mailto:support@pureastra.com"
+            className="inline-block bg-[#8B543E] hover:bg-[#6f3f2d] text-white px-6 py-2 rounded-full text-sm transition"
+          >
+            Contact Support
+          </a>
+        </div>
+      </div>
+
+      <div className="text-center mt-16 text-xs text-[#7A6A6A]">
+        Last updated: {new Date().getFullYear()}
+      </div>
+    </section>
   );
 }

@@ -113,6 +113,22 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+export interface Address {
+  id: string;
+  addressType?: string | null;
+  fullName: string;
+  phone: string;
+  line1: string;
+  line2?: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CartProduct {
   id: string;
   name: string;
@@ -147,6 +163,112 @@ export interface Cart {
   items: CartItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreatedOrder {
+  id: string;
+  orderNumber: string;
+  orderStatus: number;
+  paymentStatus: number;
+  totalPaid: string;
+  createdAt: string;
+}
+
+export interface OrderDetailResponse {
+  orderNumber: string;
+  orderStatus: number;
+  paymentStatus: number;
+}
+
+export interface OrderListItem {
+  id: string;
+  orderNumber: string;
+  orderStatus: number;
+  paymentStatus: number;
+  totalPaid: string;
+  createdAt: string;
+}
+
+export interface PaginatedOrdersResponse {
+  data: OrderListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface AdminOrderListItem {
+  id: string;
+  orderNumber: string;
+  userId: string;
+  orderStatus: number;
+  paymentStatus: number;
+  totalPaid: string;
+  createdAt: string;
+}
+
+export interface AdminPaginatedOrdersResponse {
+  data: AdminOrderListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface PaymentAttempt {
+  id: string;
+  orderId: string;
+  paymentProvider: string;
+  amount: string;
+  currency: string;
+  paymentStatus: number;
+  paymentAttemptId: string;
+  razorpayOrderId: string | null;
+  amountPaise: number;
+  razorpayKeyId: string;
+  createdAt: string;
+}
+
+export interface CheckoutPreviewLineItem {
+  productVariantId: string;
+  productName: string;
+  variantName: string | null;
+  sku: string | null;
+  quantity: number;
+  unitPrice: string;
+  lineTotal: string;
+}
+
+export interface CheckoutPreviewResponse {
+  flowType: "cart" | "buy_now";
+  items: CheckoutPreviewLineItem[];
+  totals: {
+    productTotal: string;
+    shippingAmount: string;
+    taxAmount: string;
+    discountAmount: string;
+    grandTotal: string;
+    outstandingAmount: string;
+  };
+  couponStatus: "NOT_IMPLEMENTED";
+  couponDiscountAmount: "0.00";
+  couponMessage: string;
+  previewToken: string;
+  expiresAt: string;
+}
+
+export interface CheckoutConfirmResponse {
+  order: CreatedOrder;
+  payment: PaymentAttempt;
+  coupon: {
+    couponStatus: "NOT_IMPLEMENTED";
+    couponDiscountAmount: "0.00";
+    couponMessage: string;
+  };
 }
 
 export interface WishlistProduct {
@@ -320,6 +442,132 @@ export const checkAdminAccess = async (): Promise<boolean> => {
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export const getMyProfile = () => apiFetch<UserProfile>("/users/me");
+
+// ─── Addresses ────────────────────────────────────────────────────────────────
+
+export const listMyAddresses = () => apiFetch<Address[]>("/addresses");
+
+// ─── Orders + Payments (Checkout) ─────────────────────────────────────────────
+
+export const previewCheckout = (body: {
+  addressId: string;
+  note?: string;
+  couponCode?: string;
+}) =>
+  apiFetch<CheckoutPreviewResponse>("/checkout/preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const confirmCheckout = (
+  body: { previewToken: string },
+  idempotencyKey: string,
+) =>
+  apiFetch<CheckoutConfirmResponse>("/checkout/confirm", {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+export const previewBuyNowCheckout = (body: {
+  productVariantId: string;
+  quantity: number;
+  addressId: string;
+  note?: string;
+  couponCode?: string;
+}) =>
+  apiFetch<CheckoutPreviewResponse>("/checkout/buy-now/preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const confirmBuyNowCheckout = (
+  body: { previewToken: string },
+  idempotencyKey: string,
+) =>
+  apiFetch<CheckoutConfirmResponse>("/checkout/buy-now/confirm", {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+export const createOrder = (body: { addressId: string; note?: string }) =>
+  apiFetch<CreatedOrder>("/orders", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const getOrderDetail = (orderNumber: string) =>
+  apiFetch<OrderDetailResponse>(`/orders/${orderNumber}`);
+
+export const listMyOrders = (params?: { page?: number; limit?: number }) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  const suffix = q.toString();
+  return apiFetch<PaginatedOrdersResponse>(`/orders${suffix ? `?${suffix}` : ""}`);
+};
+
+export const createOrderPaymentAttempt = (
+  orderId: string,
+  body: {
+    paymentProvider?: string;
+    paymentMethod?: string;
+  },
+  idempotencyKey: string,
+) =>
+  apiFetch<PaymentAttempt>(`/orders/${orderId}/payments`, {
+    method: "POST",
+    headers: {
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+export const verifyRazorpayPayment = (
+  paymentId: string,
+  body: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  },
+) =>
+  apiFetch(`/payments/${paymentId}/razorpay/verify`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const listAdminOrders = (params?: {
+  page?: number;
+  limit?: number;
+  orderStatus?: number;
+  paymentStatus?: number;
+  search?: string;
+  sortOrder?: "asc" | "desc";
+}) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (typeof params?.orderStatus === "number") q.set("orderStatus", String(params.orderStatus));
+  if (typeof params?.paymentStatus === "number") q.set("paymentStatus", String(params.paymentStatus));
+  if (params?.search) q.set("search", params.search);
+  if (params?.sortOrder) q.set("sortOrder", params.sortOrder);
+  const suffix = q.toString();
+  return apiFetch<AdminPaginatedOrdersResponse>(`/admin/orders${suffix ? `?${suffix}` : ""}`);
+};
+
+export const updateAdminOrderStatus = (
+  orderNumber: string,
+  body: { newStatus: number; note?: string },
+) =>
+  apiFetch(`/admin/orders/${orderNumber}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 

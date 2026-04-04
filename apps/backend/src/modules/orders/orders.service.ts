@@ -15,8 +15,8 @@ import {
   createOrder,
   createOrderItems,
   createOrderStatusHistory,
-  decrementVariantStockQuantity,
-  decrementVariantStockReservedSafe,
+  decrementVariantStockQuantityBulkStrict,
+  decrementVariantStockReservedSafeBulk,
   expireReservationsAndReturnRows,
   findActiveCartByUserId,
   findAddressByIdForUser,
@@ -28,10 +28,10 @@ import {
   findOrdersForAdmin,
   findOrdersByUserId,
   incrementOrderNumberSequence,
-  incrementVariantStockReserved,
+  incrementVariantStockReservedBulk,
   markCartCheckedOut,
   TxClient,
-  updateInventoryReservationStatus,
+  updateInventoryReservationStatusByOrder,
   updateOrderStatus,
 } from "./orders.repository";
 
@@ -215,13 +215,7 @@ const createOrderInTx = async (
   );
 
   const reservedByVariant = groupQuantityByVariant(preparedItems);
-  for (const item of reservedByVariant) {
-    await incrementVariantStockReserved(
-      tx,
-      item.productVariantId,
-      item.quantity,
-    );
-  }
+  await incrementVariantStockReservedBulk(tx, reservedByVariant);
 
   await createOrderStatusHistory(tx, {
     order: { connect: { id: order.id } },
@@ -272,13 +266,7 @@ const releaseExpiredReservationsInTx = async (
     })),
   );
 
-  for (const row of decrementByVariant) {
-    await decrementVariantStockReservedSafe(
-      tx,
-      row.productVariantId,
-      row.quantity,
-    );
-  }
+  await decrementVariantStockReservedSafeBulk(tx, decrementByVariant);
 
   return expiredRows.length;
 };
@@ -363,44 +351,39 @@ const updateOrderStatusInTx = async (
 
   if (newStatus === ORDER_STATUS.SHIPPED) {
     const reservations = await findInventoryReservationsByOrderId(tx, order.id);
+    const reservableReservations = reservations.filter(
+      (r) =>
+        r.status === INVENTORY_RESERVATION_STATUS.ACTIVE ||
+        r.status === INVENTORY_RESERVATION_STATUS.CONFIRMED,
+    );
 
     const variantQuantities = groupQuantityByVariant(
-      reservations.map((r) => ({
+      reservableReservations.map((r) => ({
         productVariantId: r.productVariantId,
         quantity: r.quantity,
       })),
     );
 
-    for (const item of variantQuantities) {
-      const updateResult = await decrementVariantStockQuantity(
-        tx,
-        item.productVariantId,
-        item.quantity,
-      );
-      if (updateResult.count === 0) {
-        throw new AppError(
-          409,
-          `Insufficient stock for variant ${item.productVariantId.toString()}`,
-          "INSUFFICIENT_STOCK",
-        );
-      }
-
-      await decrementVariantStockReservedSafe(
-        tx,
-        item.productVariantId,
-        item.quantity,
+    const updatedRows = await decrementVariantStockQuantityBulkStrict(
+      tx,
+      variantQuantities,
+    );
+    if (updatedRows.length !== variantQuantities.length) {
+      throw new AppError(
+        409,
+        "Insufficient stock for one or more variants",
+        "INSUFFICIENT_STOCK",
       );
     }
 
-    for (const reservation of reservations) {
-      if (reservation.status === INVENTORY_RESERVATION_STATUS.ACTIVE) {
-        await updateInventoryReservationStatus(
-          tx,
-          reservation.id,
-          INVENTORY_RESERVATION_STATUS.CONFIRMED,
-        );
-      }
-    }
+    await decrementVariantStockReservedSafeBulk(tx, variantQuantities);
+
+    await updateInventoryReservationStatusByOrder(
+      tx,
+      order.id,
+      INVENTORY_RESERVATION_STATUS.ACTIVE,
+      INVENTORY_RESERVATION_STATUS.CONFIRMED,
+    );
   }
 
   if (
@@ -408,31 +391,30 @@ const updateOrderStatusInTx = async (
     currentStatus < ORDER_STATUS.SHIPPED
   ) {
     const reservations = await findInventoryReservationsByOrderId(tx, order.id);
+    const releasableReservations = reservations.filter(
+      (r) =>
+        r.status === INVENTORY_RESERVATION_STATUS.ACTIVE ||
+        r.status === INVENTORY_RESERVATION_STATUS.CONFIRMED,
+    );
 
     const variantQuantities = groupQuantityByVariant(
-      reservations.map((r) => ({
+      releasableReservations.map((r) => ({
         productVariantId: r.productVariantId,
         quantity: r.quantity,
       })),
     );
 
-    for (const item of variantQuantities) {
-      await decrementVariantStockReservedSafe(
-        tx,
-        item.productVariantId,
-        item.quantity,
-      );
-    }
+    await decrementVariantStockReservedSafeBulk(tx, variantQuantities);
 
-    for (const reservation of reservations) {
-      if (reservation.status === INVENTORY_RESERVATION_STATUS.ACTIVE) {
-        await updateInventoryReservationStatus(
-          tx,
-          reservation.id,
-          INVENTORY_RESERVATION_STATUS.RELEASED,
-        );
-      }
-    }
+    await updateInventoryReservationStatusByOrder(
+      tx,
+      order.id,
+      [
+        INVENTORY_RESERVATION_STATUS.ACTIVE,
+        INVENTORY_RESERVATION_STATUS.CONFIRMED,
+      ],
+      INVENTORY_RESERVATION_STATUS.RELEASED,
+    );
   }
 
   return findOrderByOrderNumber(tx, orderNumber);
@@ -509,6 +491,7 @@ export const listOrdersForUser = async (
 
   return {
     data: orders.map((order) => ({
+      id: order.id.toString(),
       orderNumber: order.orderNumber,
       totalPaid: order.totalPaid.toString(),
       orderStatus: order.orderStatus,

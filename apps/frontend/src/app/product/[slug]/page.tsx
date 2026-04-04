@@ -14,29 +14,22 @@ function requireBackendUrl() {
 async function fetchProductSlugs(): Promise<string[]> {
   try {
     const base = requireBackendUrl();
-    // Use limit=100 to avoid backend validation errors
-    console.log(`[fetchProductSlugs] Fetching from: ${base}/api/v1/products?limit=100`);
-    
+
     const res = await fetch(`${base}/api/v1/products?limit=100`, {
       cache: "force-cache",
     });
 
-    console.log(`[fetchProductSlugs] Response status: ${res.status}`);
-
     if (!res.ok) {
-      console.error(`[fetchProductSlugs] Failed with status ${res.status}`);
+      console.warn(`[fetchProductSlugs] backend responded with ${res.status}`);
       return [];
     }
 
     const data = (await res.json()) as ProductListResponse;
-    console.log(`[fetchProductSlugs] Found ${data.data?.length || 0} products`);
-    
     const slugs = data.data.map((product) => product.slug).filter(Boolean);
-    console.log(`[fetchProductSlugs] Returning ${slugs.length} valid slugs`);
-    
+
     return slugs;
   } catch (error) {
-    console.error('[fetchProductSlugs] Error:', error);
+    console.warn("[fetchProductSlugs] backend unavailable during build");
     return [];
   }
 }
@@ -54,25 +47,31 @@ async function fetchProductBySlug(slug: string): Promise<Product | null> {
 
     return (await res.json()) as Product;
   } catch (error) {
-    console.error(`[fetchProductBySlug] Error for slug "${slug}":`, error);
+    console.warn(
+      `[fetchProductBySlug] backend unavailable for slug "${slug}" during build`,
+    );
     return null;
   }
 }
 
 export async function generateStaticParams() {
-  return products.map((p) => ({
-    slug: p.slug,
-  }));
+  const slugs = await fetchProductSlugs();
+
+  // Next.js requires at least one param for export, so return a placeholder if empty
+  if (slugs.length === 0) {
+    return [{ slug: "__no_products__" }];
+  }
+
+  return slugs.map((slug) => ({ slug }));
 }
 
-export default async function Page({
-  params,
-}: {
+export const dynamicParams = false;
+
+export default async function Page(props: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params; 
-
-  const product = products.find((p) => p.slug === slug);
+  const params = await props.params;
+  const product = await fetchProductBySlug(params.slug);
 
   if (!product) {
     return (

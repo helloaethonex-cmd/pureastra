@@ -490,6 +490,10 @@ model Payment {
   paymentMethod   String? @map("payment_method") @db.VarChar(30)
   paymentProvider String  @map("payment_provider") @db.VarChar(50)
 
+  providerOrderId   String? @map("provider_order_id") @db.VarChar(255)
+  providerPaymentId String? @map("provider_payment_id") @db.VarChar(255)
+  providerSignature String? @map("provider_signature")
+
   paymentIntentId String? @map("payment_intent_id") @db.VarChar(255)
   idempotencyKey  String? @map("idempotency_key") @db.VarChar(100)
   providerEventId String? @map("provider_event_id") @db.VarChar(255)
@@ -511,6 +515,8 @@ model Payment {
   @@index([orderId])
   @@index([paymentStatus])
   @@index([providerEventId])
+  @@index([providerOrderId])
+  @@index([providerPaymentId])
   @@unique([orderId, idempotencyKey])
   @@map("payments")
 }

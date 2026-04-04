@@ -8,7 +8,7 @@ export default function OffersPage() {
       desc: "Special discounted combo pack",
       price: "899",
       size: "200ml",
-      img: "/img/banner-1.png",
+      img: "/img/banner-1.webp",
       rating: 4.6,
     },
     {
@@ -17,7 +17,7 @@ export default function OffersPage() {
       desc: "Complete skincare routine kit",
       price: "1299",
       size: "Full Kit",
-      img: "/img/banner-2.png",
+      img: "/img/banner-2.webp",
       rating: 4.7,
     },
   ];

@@ -20,6 +20,27 @@ export const requireAuth = async (
   next();
 };
 
+export const optionalAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const session = await auth.api.getSession({
+      headers: req.headers as any,
+    });
+
+    if (session) {
+      req.user = session.user;
+      req.session = session.session;
+    }
+  } catch {
+    // Best-effort auth hydration for mixed guest/auth routes.
+  }
+
+  next();
+};
+
 export const requireRole = (roleName: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;

@@ -6,6 +6,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeftLong, faPlus, faMinus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "@/store/auth.store";
 import { useCart, useClearCart, useRemoveCartItem, useUpdateCartItem } from "@/hooks/useCart";
+import { useCheckout } from "@/hooks/useCheckout";
+import { useRouter } from "next/navigation";
 
 const toPriceNumber = (value: number | string | null | undefined) => {
   const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
@@ -14,6 +16,7 @@ const toPriceNumber = (value: number | string | null | undefined) => {
 
 
 export default function OrderPage() {
+  const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const isAuthenticated = Boolean(user);
 
@@ -21,6 +24,7 @@ export default function OrderPage() {
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveCartItem();
   const clearCart = useClearCart();
+  const checkout = useCheckout();
 
   const increase = (itemId: string, quantity: number) => {
     updateItem.mutate({ itemId, quantity: quantity + 1 });
@@ -96,7 +100,7 @@ export default function OrderPage() {
 
               {items.map((item) => {
                 const product = item.productVariant.product;
-                const itemImage = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.png";
+                const itemImage = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.webp";
                 const itemName = product?.name || "Product";
                 const itemPrice = toPriceNumber(item.priceSnapshot ?? item.productVariant.price);
 
@@ -216,12 +220,24 @@ export default function OrderPage() {
             <div className="mt-10 space-y-2 text-[#5E2B15]"></div>
             {/* CHECKOUT */}
             <div className="mt-6">
-              <Link
-                href="/shipping"
-                className="block w-full bg-[#819744] text-center text-white py-3 font-semibold hover:bg-[#6f873a] transition"
+              <button
+                onClick={() =>
+                  checkout.mutate(undefined, {
+                    onSuccess: ({ orderNumber }) => {
+                      router.push(`/order-history?order=${encodeURIComponent(orderNumber)}`);
+                    },
+                  })
+                }
+                disabled={checkout.isPending}
+                className="block w-full bg-[#819744] text-center text-white py-3 font-semibold hover:bg-[#6f873a] transition disabled:opacity-70"
               >
-                Proceed to checkout
-              </Link>
+                {checkout.isPending ? "Processing payment..." : "Proceed to checkout"}
+              </button>
+              {checkout.isError ? (
+                <p className="mt-3 text-sm text-red-600 text-center">
+                  {(checkout.error as Error)?.message ?? "Checkout failed"}
+                </p>
+              ) : null}
             </div>
             
           </>

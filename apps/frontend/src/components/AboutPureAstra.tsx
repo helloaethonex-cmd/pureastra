@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
+
 export default function AboutPureAstra() {
   return (
     <section className="relative bg-[#E9E2D8] px-[60px] py-[80px] overflow-hidden
-      before:content-[''] before:absolute before:inset-0 before:bg-[url('/img/leaf-shadow.png')] before:bg-no-repeat before:bg-left-top before:bg-cover before:opacity-35 before:z-0
+      before:content-[''] before:absolute before:inset-0 before:bg-[url('/img/leaf-shadow.webp')] before:bg-no-repeat before:bg-left-top before:bg-cover before:opacity-35 before:z-0
       after:content-[''] after:absolute after:top-0 after:left-0 after:inset-0 after:w-[55%] after:h-full after:z-[1]">
       <div className="relative z-[2] grid grid-cols-[1.2fr_1fr] items-center gap-[60px] max-md:grid-cols-1 max-md:text-center">
         {/* LEFT CONTENT */}
@@ -46,11 +48,16 @@ export default function AboutPureAstra() {
         <div className="relative flex justify-center items-end">
           {/* Background circle */}
           <div className="absolute w-[420px] h-[420px] rounded-full top-0 z-0" />
-          <img
-            src="/img/why.png"
-            alt="Why PureAstra"
-            className="relative z-[2] w-full max-w-[380px] object-cover mt-[40px] transition-transform duration-300 hover:scale-105"
-          />
+          <div className="relative z-[2] w-full max-w-[380px] h-[420px] mt-[40px] transition-transform duration-300 hover:scale-105">
+            <Image
+              src="/img/why.webp"
+              alt="Why PureAstra"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 90vw, 380px"
+              loading="lazy"
+            />
+          </div>
         </div>
       </div>
     </section>

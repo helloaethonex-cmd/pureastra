@@ -14,8 +14,13 @@ export const updateCartItemSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
 });
 
+export const cartItemParamsSchema = z.object({
+  itemId: z.coerce.bigint(),
+});
+
 export type AddCartItemInput = z.infer<typeof addCartItemSchema>;
 export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
+export type CartItemParamsInput = z.infer<typeof cartItemParamsSchema>;
 
 // ─── Merge Guest Cart ─────────────────────────────────────────────────────────
 

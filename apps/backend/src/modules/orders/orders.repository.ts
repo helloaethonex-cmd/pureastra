@@ -75,6 +75,27 @@ export const incrementVariantStockReserved = (
   });
 };
 
+export const incrementVariantStockReservedBulk = (
+  tx: TxClient,
+  rows: Array<{ productVariantId: bigint; quantity: number }>,
+) => {
+  if (rows.length === 0) return Promise.resolve();
+
+  return tx.$executeRaw(
+    Prisma.sql`
+      UPDATE "product_variants" AS pv
+      SET "stock_reserved" = pv."stock_reserved" + data."quantity",
+          "updated_at" = NOW()
+      FROM (
+        VALUES ${Prisma.join(
+          rows.map((row) => Prisma.sql`(${row.productVariantId}, ${row.quantity})`),
+        )}
+      ) AS data("product_variant_id", "quantity")
+      WHERE pv."id" = data."product_variant_id"
+    `,
+  );
+};
+
 export const createOrderStatusHistory = (
   tx: TxClient,
   data: Prisma.OrderStatusHistoryCreateInput,
@@ -166,6 +187,21 @@ export const updateInventoryReservationStatus = (
   });
 };
 
+export const updateInventoryReservationStatusByOrder = (
+  tx: TxClient,
+  orderId: bigint,
+  fromStatus: number | number[],
+  toStatus: number,
+) => {
+  return tx.inventoryReservation.updateMany({
+    where: {
+      orderId,
+      status: Array.isArray(fromStatus) ? { in: fromStatus } : fromStatus,
+    },
+    data: { status: toStatus },
+  });
+};
+
 export const findExpiredReservationsBatch = (
   tx: TxClient,
   activeStatus: number,
@@ -219,6 +255,53 @@ export const decrementVariantStockReservedSafe = (
       stockReserved: { decrement: quantity },
     },
   });
+};
+
+export const decrementVariantStockReservedSafeBulk = (
+  tx: TxClient,
+  rows: Array<{ productVariantId: bigint; quantity: number }>,
+) => {
+  if (rows.length === 0) return Promise.resolve();
+
+  return tx.$executeRaw(
+    Prisma.sql`
+      UPDATE "product_variants" AS pv
+      SET "stock_reserved" = GREATEST(pv."stock_reserved" - data."quantity", 0),
+          "updated_at" = NOW()
+      FROM (
+        VALUES ${Prisma.join(
+          rows.map((row) => Prisma.sql`(${row.productVariantId}, ${row.quantity})`),
+        )}
+      ) AS data("product_variant_id", "quantity")
+      WHERE pv."id" = data."product_variant_id"
+    `,
+  );
+};
+
+export const decrementVariantStockQuantityBulkStrict = (
+  tx: TxClient,
+  rows: Array<{ productVariantId: bigint; quantity: number }>,
+) => {
+  if (rows.length === 0) {
+    return Promise.resolve([] as Array<{ id: bigint }>);
+  }
+
+  return tx.$queryRaw<Array<{ id: bigint }>>(
+    Prisma.sql`
+      UPDATE "product_variants" AS pv
+      SET "stock_quantity" = pv."stock_quantity" - data."quantity",
+          "updated_at" = NOW()
+      FROM (
+        VALUES ${Prisma.join(
+          rows.map((row) => Prisma.sql`(${row.productVariantId}, ${row.quantity})`),
+        )}
+      ) AS data("product_variant_id", "quantity")
+      WHERE pv."id" = data."product_variant_id"
+        AND pv."stock_quantity" IS NOT NULL
+        AND pv."stock_quantity" >= data."quantity"
+      RETURNING pv."id"
+    `,
+  );
 };
 
 export type AdminListOrdersFilters = {
@@ -287,6 +370,7 @@ export const findOrdersByUserId = async (
     tx.order.findMany({
       where: { userId },
       select: {
+        id: true,
         orderNumber: true,
         totalPaid: true,
         orderStatus: true,

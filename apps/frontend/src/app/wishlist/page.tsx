@@ -64,7 +64,7 @@ export default function WishlistPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
 
               {items.map((item) => {
-                const image = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.png";
+                const image = item.productVariant.images?.[0]?.imageUrl || "/img/facewash.webp";
                 const price = toNumber(item.productVariant.price);
                 const name = item.productVariant.product.name;
                 const slug = item.productVariant.product.slug;
