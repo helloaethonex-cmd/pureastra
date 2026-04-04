@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -87,8 +88,7 @@ export default function Testimonial() {
               <div className="flex gap-3 items-center">
 
                 {/* IMAGE */}
-                <img
-                  src={item.image}
+                <div
                   className="
                     absolute 
                     -left-5 sm:-left-6 md:-left-7.5 
@@ -98,10 +98,18 @@ export default function Testimonial() {
                     md:w-23.75 md:h-23.75 
                     rounded-full 
                     border-[4px] md:border-[6px] border-[#f5efe6] 
-                    object-cover
+                    overflow-hidden
                   "
-                  alt={item.name}
-                />
+                >
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 64px, (max-width: 1024px) 80px, 95px"
+                    loading="lazy"
+                  />
+                </div>
 
                 <div>
                   <h5 className="text-base sm:text-lg md:text-[22px] text-[#819744] font-['Roboto_Serif',serif] mb-1 font-semibold">

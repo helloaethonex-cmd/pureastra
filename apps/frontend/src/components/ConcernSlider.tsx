@@ -1,10 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/pagination";
 
 import { Autoplay, Pagination } from "swiper/modules";
+
+const banners = [
+  { src: "/img/banner-1.png", alt: "Banner 1" },
+  { src: "/img/banner-2.png", alt: "Banner 2" },
+  { src: "/img/banner-3.png", alt: "Banner 3" },
+];
 
 export default function ConcernSlider() {
   return (
@@ -20,17 +27,20 @@ export default function ConcernSlider() {
         modules={[Autoplay, Pagination]}
         className="h-screen max-h-[600px] w-full max-md:h-[300px]"
       >
-        <SwiperSlide>
-          <img src="/img/banner-1.png" alt="banner1" className="w-full h-full object-top object-cover transition-transform duration-500" />
-        </SwiperSlide>
-
-        <SwiperSlide>
-          <img src="/img/banner-2.png" alt="banner2" className="w-full h-full object-top object-cover transition-transform duration-500" />
-        </SwiperSlide>
-
-        <SwiperSlide>
-          <img src="/img/banner-3.png" alt="banner3" className="w-full h-full object-top object-cover transition-transform duration-500" />
-        </SwiperSlide>
+        {banners.map((banner, index) => (
+          <SwiperSlide key={banner.src}>
+            <div className="relative w-full h-full">
+              <Image
+                src={banner.src}
+                alt={banner.alt}
+                fill
+                className="object-top object-cover transition-transform duration-500"
+                sizes="100vw"
+                priority={index === 0}
+              />
+            </div>
+          </SwiperSlide>
+        ))}
       </Swiper>
     </div>
   );

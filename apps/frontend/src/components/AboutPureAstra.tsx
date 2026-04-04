@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 export default function AboutPureAstra() {
   return (
     <section className="relative bg-[#E9E2D8] px-[60px] py-[80px] overflow-hidden
@@ -46,11 +48,16 @@ export default function AboutPureAstra() {
         <div className="relative flex justify-center items-end">
           {/* Background circle */}
           <div className="absolute w-[420px] h-[420px] rounded-full top-0 z-0" />
-          <img
-            src="/img/why.png"
-            alt="Why PureAstra"
-            className="relative z-[2] w-full max-w-[380px] object-cover mt-[40px] transition-transform duration-300 hover:scale-105"
-          />
+          <div className="relative z-[2] w-full max-w-[380px] h-[420px] mt-[40px] transition-transform duration-300 hover:scale-105">
+            <Image
+              src="/img/why.png"
+              alt="Why PureAstra"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 90vw, 380px"
+              loading="lazy"
+            />
+          </div>
         </div>
       </div>
     </section>

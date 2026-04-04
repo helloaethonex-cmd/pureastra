@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
@@ -79,12 +80,15 @@ export default function ShopConcern() {
       </div>
 
       {/* BACKGROUND SECTION */}
-      <div
-        className="relative rounded-2xl overflow-hidden py-8 sm:py-10 md:py-12 px-2 sm:px-4 md:px-6 bg-cover bg-center"
-        style={{
-          backgroundImage: "url('/img/shopbyconcern-banner.png')",
-        }}
-      >
+      <div className="relative rounded-2xl overflow-hidden py-8 sm:py-10 md:py-12 px-2 sm:px-4 md:px-6">
+        <Image
+          src="/img/shopbyconcern-banner.png"
+          alt="Shop by concern background"
+          fill
+          className="object-cover"
+          sizes="100vw"
+          loading="lazy"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/20"></div>
 
         <motion.div
@@ -124,10 +128,14 @@ export default function ShopConcern() {
                 border border-[#e6d5c3]
                 shadow-md
               ">
-                <img
+                <Image
                   src={item.img}
                   alt={item.name}
+                  width={85}
+                  height={85}
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  sizes="(max-width: 768px) 65px, (max-width: 1024px) 75px, 85px"
                 />
               </div>
 

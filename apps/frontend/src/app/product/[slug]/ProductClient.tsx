@@ -129,10 +129,13 @@ export default function ProductClient({ product }: { product: Product }) {
 
         {/* RIGHT IMAGE (CIRCLE) */}
         <div className="w-[70px] h-[70px] md:w-[90px] md:h-[90px] bg-white rounded-full flex items-center justify-center shadow-md">
-          <img
+          <Image
             src="/img/thumb.png"
             alt="product"
+            width={54}
+            height={54}
             className="w-[60%] h-[60%] object-contain"
+            loading="lazy"
           />
         </div>
       </div>

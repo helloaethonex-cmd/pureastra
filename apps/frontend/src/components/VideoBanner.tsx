@@ -6,6 +6,8 @@ export default function VideoBanner() {
       <video
         className="w-full h-full object-cover"
         src="/video/banner.mp4"
+        poster="/img/thumb.png"
+        preload="metadata"
         autoPlay
         loop
         muted

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import { Navigation } from "swiper/modules";
@@ -57,11 +58,16 @@ export default function Transformation() {
                 shadow-[0_8px_20px_rgba(0,0,0,0.08)]
                 flex flex-col transition-transform duration-300 hover:-translate-y-1
               ">
-                <img
-                  src={item.before}
-                  alt="before"
-                  className="w-full h-[70%] md:h-[313px] object-cover"
-                />
+                <div className="relative w-full h-[70%] md:h-[313px]">
+                  <Image
+                    src={item.before}
+                    alt="Before result"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 160px, (max-width: 1024px) 220px, 284px"
+                    loading="lazy"
+                  />
+                </div>
                 <div className="flex-1 flex items-center justify-center">
                   <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
                     Dull Skin
@@ -92,11 +98,16 @@ export default function Transformation() {
                 shadow-[0_8px_20px_rgba(0,0,0,0.08)]
                 flex flex-col transition-transform duration-300 hover:-translate-y-1
               ">
-                <img
-                  src={item.after}
-                  alt="after"
-                  className="w-full h-[70%] md:h-[313px] object-cover"
-                />
+                <div className="relative w-full h-[70%] md:h-[313px]">
+                  <Image
+                    src={item.after}
+                    alt="After result"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 160px, (max-width: 1024px) 220px, 284px"
+                    loading="lazy"
+                  />
+                </div>
                 <div className="flex-1 flex items-center justify-center">
                   <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
                     Radiant Skin
