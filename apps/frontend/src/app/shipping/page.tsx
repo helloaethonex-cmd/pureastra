@@ -62,9 +62,10 @@ export default function ShippingPolicy() {
       title: "Shipping & Delivery",
       icon: faTruck,
       content: [
-        "Delivery timelines vary based on location.",
+        "Orders are delivered within 5–7 business days.",
+        "Delivery timelines may vary slightly based on your location.",
         "Tracking details are shared after dispatch.",
-        "Delays due to courier/weather are not our responsibility.",
+        "Delays due to courier or weather conditions are not our responsibility.",
         "Incorrect address may cause delivery issues.",
       ],
       highlight:
@@ -95,7 +96,7 @@ export default function ShippingPolicy() {
         <h1 className="text-3xl md:text-5xl font-['Marko_One',serif] text-[#8B543E] mb-4">
           Shipping & Delivery
         </h1>
-        <p className="max-w-2xl mx-auto text-sm md:text-base text-[#5C4A4A]">
+        <p className="max-w-2xl mx-auto text-sm md:text-base font-['Poppins']text-[#5C4A4A]">
           We are committed to delivering your orders safely, quickly, and efficiently.
         </p>
       </motion.div>

@@ -43,9 +43,23 @@ export default function Footer() {
 
             {/* Social Icons */}
             <div className="mt-5 flex gap-3.75 [&>svg]:text-lg [&>svg]:cursor-pointer">
-              <FontAwesomeIcon icon={faFacebookF} />
+              <a
+                href="https://www.facebook.com/share/1CPTr3QAcQ/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer hover:scale-110 transition"
+              >
+                <FontAwesomeIcon icon={faFacebookF} />
+              </a>
+              <a
+                href="https://www.instagram.com/pureastra.in?igsh=aWExMTVwamJraWNx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer hover:scale-110 transition"
+              >
+                <FontAwesomeIcon icon={faInstagram} />
+              </a>
               <FontAwesomeIcon icon={faXTwitter} />
-              <FontAwesomeIcon icon={faInstagram} />
               <FontAwesomeIcon icon={faPinterest} />
               <FontAwesomeIcon icon={faYoutube} />
             </div>
