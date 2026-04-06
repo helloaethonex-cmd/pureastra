@@ -2,7 +2,6 @@
   return this.toString();
 };
 
-import "dotenv/config";
 import { Server } from "http";
 import app from "./app";
 import { prisma } from "./lib/prisma";

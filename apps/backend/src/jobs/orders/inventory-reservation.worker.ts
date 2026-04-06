@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { QueueEvents, Worker } from "bullmq";
 import { env } from "../../config/env";
 import { redisConnectionOptions } from "../../lib/redis/connection";
