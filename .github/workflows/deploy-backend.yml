@@ -102,5 +102,5 @@ jobs:
             export GHCR_TOKEN="${{ secrets.GHCR_TOKEN }}"
             export BACKEND_IMAGE="ghcr.io/${{ github.repository }}/backend"
             export BACKEND_IMAGE="$(echo "$BACKEND_IMAGE" | tr '[:upper:]' '[:lower:]')"
-            export BACKEND_TAG="main"
+            export BACKEND_TAG="${GITHUB_SHA::12}"
             bash "${APP_DIR}/infra/scripts/deploy-backend.sh"
