@@ -42,6 +42,11 @@ BACKEND_IMAGE=${BACKEND_IMAGE}
 BACKEND_TAG=${BACKEND_TAG}
 EOF
 
+echo "[deploy] pruning stale docker artifacts before pull"
+docker container prune -f >/dev/null 2>&1 || true
+docker image prune -af >/dev/null 2>&1 || true
+docker builder prune -af >/dev/null 2>&1 || true
+
 echo "[deploy] pulling latest backend image"
 docker compose -f "${COMPOSE_FILE}" pull backend worker
 
