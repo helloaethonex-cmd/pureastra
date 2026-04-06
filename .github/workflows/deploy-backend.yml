@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/deploy-backend.yml"
       - "apps/backend/**"
       - "infra/**"
       - "pnpm-lock.yaml"
@@ -38,6 +39,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm -C apps/backend exec prisma generate
 
       - name: Build backend
         run: pnpm -C apps/backend run build
