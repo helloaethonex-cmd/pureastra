@@ -54,7 +54,7 @@ echo "[deploy] starting redis first"
 docker compose -f "${COMPOSE_FILE}" up -d redis
 
 echo "[deploy] applying prisma migrations (one-off container)"
-docker compose -f "${COMPOSE_FILE}" run --rm backend npx prisma migrate deploy
+docker compose -f "${COMPOSE_FILE}" run --rm backend npx prisma migrate deploy --config prisma.config.mjs
 
 echo "[deploy] starting backend and worker"
 docker compose -f "${COMPOSE_FILE}" up -d backend worker

@@ -29,6 +29,7 @@ RUN pnpm install --frozen-lockfile --prod --filter backend...
 
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
+COPY --from=builder /app/apps/backend/prisma.config.mjs ./apps/backend/prisma.config.mjs
 COPY --from=builder /app/apps/backend/src/generated ./apps/backend/src/generated
 
 WORKDIR /app/apps/backend
