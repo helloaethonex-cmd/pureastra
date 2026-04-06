@@ -4,7 +4,7 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/srv/pureastra}"
 COMPOSE_FILE="${COMPOSE_FILE:-infra/docker-compose.yml}"
 BRANCH="${BRANCH:-main}"
-BACKEND_IMAGE="${BACKEND_IMAGE:-}"
+BACKEND_IMAGE="${BACKEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/backend}"
 BACKEND_TAG="${BACKEND_TAG:-main}"
 GHCR_USERNAME="${GHCR_USERNAME:-}"
 GHCR_TOKEN="${GHCR_TOKEN:-}"
@@ -22,11 +22,6 @@ git pull --ff-only origin "${BRANCH}"
 echo "[deploy] ensuring backend env file exists"
 if [ ! -f "apps/backend/.env" ]; then
   echo "[deploy] missing apps/backend/.env"
-  exit 1
-fi
-
-if [ -z "${BACKEND_IMAGE}" ]; then
-  echo "[deploy] BACKEND_IMAGE is required"
   exit 1
 fi
 

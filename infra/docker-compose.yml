@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE}:${BACKEND_TAG:-main}
+    image: ${BACKEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/backend}:${BACKEND_TAG:-main}
     container_name: pureastra_backend
     env_file:
       - ../apps/backend/.env
@@ -38,7 +38,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE}:${BACKEND_TAG:-main}
+    image: ${BACKEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/backend}:${BACKEND_TAG:-main}
     container_name: pureastra_worker
     env_file:
       - ../apps/backend/.env
