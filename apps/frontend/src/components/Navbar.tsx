@@ -132,18 +132,24 @@ export default function Navbar() {
             </Link>
 
               {/* User */}
-              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md">
-                <FontAwesomeIcon
-                  icon={faUser}
+              <div
+                className="relative"
+                onMouseLeave={() => setIsUserMenuOpen(false)}
+              >
+                <button
                   onClick={handleUserIconClick}
-                  className="text-[#5E2B15] cursor-pointer transition-transform hover:scale-110"
-                  title={user ? user.name : "Login / Sign Up"}
-                />
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md"
+                >
+                  <FontAwesomeIcon
+                    icon={faUser}
+                    className="text-[#5E2B15] cursor-pointer transition-transform hover:scale-110"
+                    title={user ? user.name : "Login / Sign Up"}
+                  />
+                </button>
 
                 {user && isUserMenuOpen && (
                   <div
-                    className="absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
-                    onMouseLeave={() => setIsUserMenuOpen(false)}
+                    className="absolute right-0 top-11 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
                   >
                     <p className="px-4 py-1 text-xs text-gray-400 truncate">
                       {user.email}
@@ -176,13 +182,13 @@ export default function Navbar() {
                         setIsUserMenuOpen(false);
                         signOut.mutate();
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
                     >
                       {signOut.isPending ? "Signing out..." : "Sign Out"}
                     </div>
                   </div>
                 )}
-              </button>
+              </div>
 
             <Link href="/cart">
               <button className="relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#819744] text-white hover:bg-[#6f8438] transition">

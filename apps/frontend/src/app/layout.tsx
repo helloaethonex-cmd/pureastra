@@ -6,6 +6,7 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
+import { Toaster } from "react-hot-toast";
 
 config.autoAddCss = false;
 
@@ -23,6 +24,10 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <Providers>
+          <Toaster
+            position="top-center"
+            toastOptions={{ duration: 5000 }}
+          />
           <Navbar />
           {children}
           <Footer />

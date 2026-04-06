@@ -1,4 +1,5 @@
 "use client";
+import toast from "react-hot-toast";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -62,22 +63,23 @@ export default function ProductCard({ active, product }: ProductCardProps) {
 
   const handleAddToCart = () => {
     if (!user) {
-      alert("Please sign in to add items to your cart.");
+      toast.error("Please sign in to add items to your cart.");
       return;
     }
 
     if (!activeVariant?.id) {
-      alert("No purchasable variant available.");
+      toast.error("No purchasable variant available.");
       return;
     }
 
     addCartItem.mutate(
       { productVariantId: activeVariant.id, quantity: 1 },
       {
+        onSuccess: () => toast.success("Added to cart!"),
         onError: (error) => {
           const message =
             error instanceof Error ? error.message : "Failed to add to cart";
-          alert(message);
+          toast.error(message);
         },
       },
     );
@@ -85,21 +87,22 @@ export default function ProductCard({ active, product }: ProductCardProps) {
 
   const handleAddToWishlist = () => {
     if (!user) {
-      alert("Please sign in to add items to your wishlist.");
+      toast.error("Please sign in to add items to your wishlist.");
       return;
     }
 
     if (!activeVariant?.id) {
-      alert("No wishlist-eligible variant available.");
+      toast.error("No wishlist-eligible variant available.");
       return;
     }
 
     if (isWishlisted) {
       removeWishlistItem.mutate(activeVariant.id, {
+        onSuccess: () => toast.success("Removed from wishlist"),
         onError: (error) => {
           const message =
             error instanceof Error ? error.message : "Failed to update wishlist";
-          alert(message);
+          toast.error(message);
         },
       });
       return;
@@ -108,10 +111,11 @@ export default function ProductCard({ active, product }: ProductCardProps) {
     addWishlistItem.mutate(
       { productVariantId: activeVariant.id },
       {
+        onSuccess: () => toast.success("Added to wishlist!"),
         onError: (error) => {
           const message =
             error instanceof Error ? error.message : "Failed to add to wishlist";
-          alert(message);
+          toast.error(message);
         },
       },
     );
