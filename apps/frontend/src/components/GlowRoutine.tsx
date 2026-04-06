@@ -87,7 +87,7 @@ export default function GlowRoutine() {
 
       </div>
 
-      {/* ================= DESKTOP VIEW (UNCHANGED) ================= */}
+      {/* ================= DESKTOP VIEW ================= */}
       <div className="hidden md:block relative">
 
         <div className="absolute left-1/2 top-0 bottom-0 w-[6px] -translate-x-1/2 rounded-[10px] 

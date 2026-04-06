@@ -46,6 +46,16 @@ async function main() {
         title: "Why Us",
         tagline:
           "Toxin-free | Fragrance-free | Paraben-free | Sulfate-free | SLS-free | pH balanced",
+        unitsSold: "1,000+ Units Sold in 7 Days",
+        rating: "4.8/5 Rating",
+        cta: "Try It Once. You'll Reorder.",
+        badges: [
+          { text: "Brightens", iconKey: "sun" },
+          { text: "Refresh", iconKey: "bolt" },
+          { text: "Gentle", iconKey: "droplet" },
+          { text: "Non-Drying", iconKey: "check" },
+          { text: "pH Balanced", iconKey: "leaf" },
+        ],
         items: [
           { text: "Crafted with pure, real ingredients" },
           { text: "Free from parabens, sulfates, and harsh additives" },
@@ -150,6 +160,26 @@ async function main() {
           "Tangerine Extract",
           "Panthenol",
           "Allantoin",
+        ],
+        cardItems: [
+          { title: "Vitamin C", desc: "Even, radiant skin" },
+          { title: "Tangerine Extract", desc: "Refresh & energize" },
+          { title: "Papaya Extract", desc: "Tan-free & clear" },
+          { title: "Vitamin E", desc: "Glow & protect" },
+          { title: "Sodium PCA", desc: "Plump & hydrated" },
+          { title: "Glycerine", desc: "Smooth & nourished" },
+        ],
+      },
+    },
+    {
+      sectionType: "CUSTOM",
+      title: "Results",
+      position: 0,
+      content: {
+        stats: [
+          "Week 1: 60% feel hydrated & soft",
+          "Week 2: 75% notice reduced dullness",
+          "Week 3: 95% see brighter skin",
         ],
       },
     },
