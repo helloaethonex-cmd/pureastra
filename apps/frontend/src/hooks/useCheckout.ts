@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   confirmCheckout,
   getOrderDetail,
@@ -26,7 +26,7 @@ const ensureRazorpayLoaded = async () => {
   }
 
   await new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector(`script[src=\"${RAZORPAY_CHECKOUT_SCRIPT}\"]`);
+    const existing = document.querySelector(`script[src="${RAZORPAY_CHECKOUT_SCRIPT}"]`);
     if (existing) {
       existing.addEventListener("load", () => resolve(), { once: true });
       existing.addEventListener("error", () => reject(new Error("Failed to load Razorpay checkout")), {
@@ -62,28 +62,41 @@ const waitForPaymentConfirmation = async (orderNumber: string) => {
   throw new Error("Payment verification is still processing. Please check your order history shortly.");
 };
 
+// ── Fetch saved addresses ─────────────────────────────────────────────────────
+
+export const useMyAddresses = (enabled = true) =>
+  useQuery({
+    queryKey: ["addresses"],
+    queryFn: listMyAddresses,
+    enabled,
+    staleTime: 1000 * 60 * 2,
+  });
+
+// ── Fetch real checkout preview from the backend ──────────────────────────────
+
+export const useCheckoutPreview = (addressId: string | null, enabled: boolean) =>
+  useQuery({
+    queryKey: ["checkoutPreview", addressId],
+    queryFn: () => previewCheckout({ addressId: addressId! }),
+    enabled: Boolean(addressId) && enabled,
+    staleTime: 0,
+    retry: false,
+  });
+
+// ── Confirm + open Razorpay ───────────────────────────────────────────────────
+
 export const useCheckout = () => {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ addressId }: { addressId: string }) => {
       await ensureRazorpayLoaded();
 
-      const addresses = await listMyAddresses();
-      const selectedAddress = addresses.find((address) => address.isDefault) ?? addresses[0];
-
-      if (!selectedAddress) {
-        throw new Error("Please add a delivery address before checkout");
-      }
-
-      const checkoutPreview = await previewCheckout({
-        addressId: selectedAddress.id,
-      });
+      const checkoutPreview = await previewCheckout({ addressId });
 
       const checkoutResult = await confirmCheckout(
-        {
-          previewToken: checkoutPreview.previewToken,
-        },
+        { previewToken: checkoutPreview.previewToken },
         generateIdempotencyKey(),
       );
 
@@ -139,6 +152,9 @@ export const useCheckout = () => {
 
         razorpay.open();
       });
+
+      // Invalidate cart so it refetches as empty after checkout
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
 
       return {
         orderNumber: order.orderNumber,

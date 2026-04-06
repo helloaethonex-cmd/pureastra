@@ -79,7 +79,7 @@ export const incrementVariantStockReservedBulk = (
           "updated_at" = NOW()
       FROM (
         VALUES ${Prisma.join(
-          rows.map((row) => Prisma.sql`(${row.productVariantId}, ${row.quantity})`),
+          rows.map((row) => Prisma.sql`(${row.productVariantId}::bigint, ${row.quantity}::int)`),
         )}
       ) AS data("product_variant_id", "quantity")
       WHERE pv."id" = data."product_variant_id"

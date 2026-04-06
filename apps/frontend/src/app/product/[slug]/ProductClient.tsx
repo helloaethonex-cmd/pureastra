@@ -39,7 +39,7 @@ import { useProducts } from "@/hooks/useProducts";
 
 function getSection(
   sections: ProductContentSection[],
-  type: string
+  type: string,
 ): ProductContentSection | undefined {
   return sections.find((s) => s.sectionType === type);
 }
@@ -52,22 +52,23 @@ function BenefitsSection({
   section: ProductContentSection | undefined;
 }) {
   const content = section?.content as any;
+  console.log("content", content);
   const items: { title: string; desc: string }[] = content?.items ?? [
     {
-      title: "[static] Brightens and Evens Tone",
-      desc: "[static] Vitamin C helps naturally brighten your skin and reduce uneven tone",
+      title: "Brightens and Evens Tone",
+      desc: "Vitamin C helps naturally brighten your skin and reduce uneven tone",
     },
     {
-      title: "[static] Hydrates and Plumps",
-      desc: "[static] Sodium PCA and Glycerin deeply hydrate and lock in moisture for soft, supple skin",
+      title: "Hydrates and Plumps",
+      desc: "Sodium PCA and Glycerin deeply hydrate and lock in moisture for soft, supple skin",
     },
     {
-      title: "[static] Refreshes and Boosts Glow",
-      desc: "[static] Tangerine Extract enhances radiance while Papaya rejuvenates and refreshes",
+      title: "Refreshes and Boosts Glow",
+      desc: "Tangerine Extract enhances radiance while Papaya rejuvenates and refreshes",
     },
     {
-      title: "[static] Controls Oiliness and Dryness",
-      desc: "[static] Balanced ingredients help maintain hydration and regulate excess oil",
+      title: "Controls Oiliness and Dryness",
+      desc: "Balanced ingredients help maintain hydration and regulate excess oil",
     },
   ];
 
@@ -97,7 +98,14 @@ function BenefitsSection({
 
 // ─── Ingredients Grid Section ─────────────────────────────────────────────────
 
-const defaultIngredientIcons = [faSun, faBolt, faLeaf, faCheckCircle, faDroplet, faDroplet];
+const defaultIngredientIcons = [
+  faSun,
+  faBolt,
+  faLeaf,
+  faCheckCircle,
+  faDroplet,
+  faDroplet,
+];
 
 function IngredientsGridSection({
   section,
@@ -115,7 +123,9 @@ function IngredientsGridSection({
 
   return (
     <div className="mt-10">
-      <h3 className="text-[#819744] font-bold text-[22px] mb-6">INGREDIENTS:</h3>
+      <h3 className="text-[#819744] font-bold text-[22px] mb-6">
+        INGREDIENTS:
+      </h3>
 
       {/* Card grid view */}
       {cardItems.length > 0 && (
@@ -128,7 +138,9 @@ function IngredientsGridSection({
             >
               <div className="w-[36px] h-[36px] rounded-full bg-[#EBF1DC] flex items-center justify-center shrink-0">
                 <FontAwesomeIcon
-                  icon={defaultIngredientIcons[i % defaultIngredientIcons.length]}
+                  icon={
+                    defaultIngredientIcons[i % defaultIngredientIcons.length]
+                  }
                   className="text-[#819744]"
                 />
               </div>
@@ -170,9 +182,9 @@ function ResultsSection({
 }) {
   const content = section?.content as any;
   const stats: string[] = content?.stats ?? [
-    "[static] Week 1: 60% feel hydrated & soft",
-    "[static] Week 2: 75% notice reduced dullness",
-    "[static] Week 3: 95% see brighter skin",
+    "Week 1: 60% feel hydrated & soft",
+    "Week 2: 75% notice reduced dullness",
+    "Week 3: 95% see brighter skin",
   ];
 
   return (
@@ -200,19 +212,26 @@ function HighlightsSection({
   const content = section?.content as any;
   const tagline: string =
     content?.tagline ??
-    "[static] Toxin-free | Fragrance-free | Paraben-free | Sulfate-free | SLS-free | pH balanced";
-  const whyUsTitle: string = content?.title ?? "[static] Why Us";
+    "Toxin-free | Fragrance-free | Paraben-free | Sulfate-free | SLS-free | pH balanced";
+  const whyUsTitle: string = content?.title ?? "Why Us";
 
-  const iconsMap = [faLeaf, faSkullCrossbones, faHandHoldingHeart, faGlobe, faPaw];
+  const iconsMap = [
+    faLeaf,
+    faSkullCrossbones,
+    faHandHoldingHeart,
+    faGlobe,
+    faPaw,
+  ];
   const defaultItems = [
-    "[static] Crafted with pure, real ingredients",
-    "[static] Free from parabens, sulfates, and harsh additives",
-    "[static] A portion of every purchase supports cancer patients",
-    "[static] Committed to people, society, and the planet",
-    "[static] Never tested on animals",
+    "Crafted with pure, real ingredients",
+    "Free from parabens, sulfates, and harsh additives",
+    "A portion of every purchase supports cancer patients",
+    "Committed to people, society, and the planet",
+    "Never tested on animals",
   ];
 
-  const items: { text: string }[] = content?.items ?? defaultItems.map((t) => ({ text: t }));
+  const items: { text: string }[] =
+    content?.items ?? defaultItems.map((t) => ({ text: t }));
 
   return (
     <div className="bg-[#EBF1DC] py-16 text-center">
@@ -246,10 +265,15 @@ function HighlightsSection({
               whileHover={{ scale: 1.1 }}
               className="flex flex-col items-center text-white cursor-pointer"
             >
-              <motion.div whileHover={{ rotate: 5 }} className="text-[50px] mb-4">
+              <motion.div
+                whileHover={{ rotate: 5 }}
+                className="text-[50px] mb-4"
+              >
                 <FontAwesomeIcon icon={iconsMap[i] ?? faLeaf} />
               </motion.div>
-              <p className="max-w-[160px] font-['Roboto_Flex'] font-bold text-sm">{item.text}</p>
+              <p className="max-w-[160px] font-['Roboto_Flex'] font-bold text-sm">
+                {item.text}
+              </p>
             </motion.div>
           ))}
         </div>
@@ -267,11 +291,21 @@ function SuitableForSection({
 }) {
   const content = section?.content as any;
   const fields: { label: string; value: string }[] = content?.fields ?? [
-    { label: "[static] Skin Type", value: "[static] All skin types, including sensitive, dry, oily, and combination skin" },
-    { label: "[static] Texture", value: "[static] Smooth gel, gentle on skin" },
-    { label: "[static] Age", value: "[static] Ideal for teenagers (15+) and adults" },
-    { label: "[static] Special Conditions", value: "[static] Safe for use during pregnancy" },
-    { label: "[static] Gender", value: "[static] Suitable for all genders" },
+    {
+      label: "Skin Type",
+      value:
+        "All skin types, including sensitive, dry, oily, and combination skin",
+    },
+    { label: "Texture", value: "Smooth gel, gentle on skin" },
+    {
+      label: "Age",
+      value: "Ideal for teenagers (15+) and adults",
+    },
+    {
+      label: "Special Conditions",
+      value: "Safe for use during pregnancy",
+    },
+    { label: "Gender", value: "Suitable for all genders" },
   ];
 
   return (
@@ -307,9 +341,9 @@ function UsageInstructionSection({
 }) {
   const content = section?.content as any;
   const steps: string[] = content?.steps ?? [
-    "[static] Always patch test before first use, especially if you have sensitive skin.",
-    "[static] Store in a cool, dry place away from direct sunlight.",
-    "[static] Handle with care—natural ingredients may separate slightly, which is normal.",
+    "Always patch test before first use, especially if you have sensitive skin.",
+    "Store in a cool, dry place away from direct sunlight.",
+    "Handle with care—natural ingredients may separate slightly, which is normal.",
   ];
   const stepIcons = [faClipboardCheck, faSnowflake, faLeaf];
 
@@ -349,11 +383,11 @@ function BeforeAfterSection({
   section: ProductContentSection | undefined;
 }) {
   const content = section?.content as any;
-  const beforeLabel: string = content?.beforeLabel ?? "[static] Dull Skin";
-  const afterLabel: string = content?.afterLabel ?? "[static] Radiant Skin";
+  const beforeLabel: string = content?.beforeLabel ?? "Dull Skin";
+  const afterLabel: string = content?.afterLabel ?? "Radiant Skin";
   const beforeImg: string = content?.beforeImage ?? "/img/before1.webp";
   const afterImg: string = content?.afterImage ?? "/img/after1.webp";
-  const caption: string = content?.caption ?? "[static] Brighter skin in just 2 weeks";
+  const caption: string = content?.caption ?? "Brighter skin in just 2 weeks";
 
   return (
     <motion.div
@@ -378,7 +412,9 @@ function BeforeAfterSection({
             <Image src={beforeImg} alt="before" fill className="object-cover" />
           </div>
           <div className="h-[55px] flex items-center justify-center bg-[#FAF3E2]">
-            <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">{beforeLabel}</p>
+            <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+              {beforeLabel}
+            </p>
           </div>
         </motion.div>
 
@@ -398,12 +434,16 @@ function BeforeAfterSection({
             <Image src={afterImg} alt="after" fill className="object-cover" />
           </div>
           <div className="h-[55px] flex items-center justify-center bg-[#FAF3E2]">
-            <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">{afterLabel}</p>
+            <p className="text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+              {afterLabel}
+            </p>
           </div>
         </motion.div>
       </div>
 
-      <p className="mt-6 text-[#819744] text-[24px] font-['Roboto_Flex'] font-bold">{caption}</p>
+      <p className="mt-6 text-[#819744] text-[24px] font-['Roboto_Flex'] font-bold">
+        {caption}
+      </p>
     </motion.div>
   );
 }
@@ -420,12 +460,12 @@ function FaqSection({
   const content = section?.content as any;
   const faqs: { q: string; a: string }[] = content?.items ?? [
     {
-      q: "[static] Is this product safe for sensitive skin?",
-      a: "[static] Yes! Our formula is dermatologically tested and gentle enough for sensitive skin.",
+      q: "Is this product safe for sensitive skin?",
+      a: "Yes! Our formula is dermatologically tested and gentle enough for sensitive skin.",
     },
     {
-      q: "[static] Is this product vegan and cruelty-free?",
-      a: "[static] Yes! It is 100% vegan, cruelty-free, and never tested on animals.",
+      q: "Is this product vegan and cruelty-free?",
+      a: "Yes! It is 100% vegan, cruelty-free, and never tested on animals.",
     },
   ];
 
@@ -444,7 +484,9 @@ function FaqSection({
             onClick={() => setActiveIndex(activeIndex === i ? null : i)}
             className="w-full flex justify-between items-center px-6 py-4 text-left"
           >
-            <span className="font-semibold text-[#5E2B16] text-[16px]">{item.q}</span>
+            <span className="font-semibold text-[#5E2B16] text-[16px]">
+              {item.q}
+            </span>
             <FontAwesomeIcon
               icon={activeIndex === i ? faMinus : faPlus}
               className="text-[#819744]"
@@ -476,14 +518,18 @@ export default function ProductClient({ product }: { product: Product }) {
   const [activeImg, setActiveImg] = useState(0);
   const [tab, setTab] = useState("desc");
   const [activeVariantId, setActiveVariantId] = useState<string | null>(
-    product.variants[0]?.id ?? null
+    product.variants[0]?.id ?? null,
   );
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
 
   // Related products from same category
   const categoryId = product.categories?.[0]?.category?.id;
-  const { data: relatedData } = useProducts({ categoryId, limit: 4, isActive: true });
+  const { data: relatedData } = useProducts({
+    categoryId,
+    limit: 4,
+    isActive: true,
+  });
   const relatedProducts = (relatedData?.data ?? [])
     .filter((p) => p.id !== product.id)
     .slice(0, 3);
@@ -497,7 +543,8 @@ export default function ProductClient({ product }: { product: Product }) {
   const activeVariant = product.variants.find((v) => v.id === activeVariantId);
 
   // Compute price display
-  const activePrice = activeVariant?.price != null ? Number(activeVariant.price) : null;
+  const activePrice =
+    activeVariant?.price != null ? Number(activeVariant.price) : null;
 
   // Content sections
   const sections = product.contentSections ?? [];
@@ -511,15 +558,20 @@ export default function ProductClient({ product }: { product: Product }) {
 
   // Quick info badges — from HIGHLIGHTS or HIGHLIGHTS.badges
   const highlightsContent = highlightsSection?.content as any;
-  const quickBadges: { text: string; iconKey?: string }[] = highlightsContent?.badges ?? [
-    { text: "[static] Brightens", iconKey: "sun" },
-    { text: "[static] Refresh", iconKey: "bolt" },
-    { text: "[static] Gentle", iconKey: "droplet" },
-    { text: "[static] Non-Drying", iconKey: "check" },
-    { text: "[static] pH Balanced", iconKey: "leaf" },
-  ];
+  const quickBadges: { text: string; iconKey?: string }[] =
+    highlightsContent?.badges ?? [
+      { text: "Brightens", iconKey: "sun" },
+      { text: "Refresh", iconKey: "bolt" },
+      { text: "Gentle", iconKey: "droplet" },
+      { text: "Non-Drying", iconKey: "check" },
+      { text: "pH Balanced", iconKey: "leaf" },
+    ];
   const badgeIconMap: Record<string, any> = {
-    sun: faSun, bolt: faBolt, droplet: faDroplet, check: faCheckCircle, leaf: faLeaf,
+    sun: faSun,
+    bolt: faBolt,
+    droplet: faDroplet,
+    check: faCheckCircle,
+    leaf: faLeaf,
   };
 
   // Suitability tag for the "Best suited for:" line
@@ -540,10 +592,11 @@ export default function ProductClient({ product }: { product: Product }) {
       {
         onSuccess: () => toast.success("Item added to cart!"),
         onError: (error) => {
-          const message = error instanceof Error ? error.message : "Failed to add to cart";
+          const message =
+            error instanceof Error ? error.message : "Failed to add to cart";
           toast.error(message);
         },
-      }
+      },
     );
   };
 
@@ -568,7 +621,6 @@ export default function ProductClient({ product }: { product: Product }) {
 
       {/* ── TOP: IMAGE + DETAILS ── */}
       <div className="px-6 md:px-12 py-10 grid grid-cols-2 gap-10 max-md:grid-cols-1">
-
         {/* LEFT — Images */}
         <div>
           <motion.div
@@ -618,7 +670,9 @@ export default function ProductClient({ product }: { product: Product }) {
         {/* RIGHT — Details */}
         <div className="pt-2">
           {/* Title */}
-          <h2 className="text-[30px] font-bold text-[#5E2B16] mb-2">{product.name}</h2>
+          <h2 className="text-[30px] font-bold text-[#5E2B16] mb-2">
+            {product.name}
+          </h2>
 
           {/* Rating */}
           <div className="flex items-center gap-2 mb-4">
@@ -627,18 +681,24 @@ export default function ProductClient({ product }: { product: Product }) {
                 <FontAwesomeIcon key={i} icon={faStar} />
               ))}
             </div>
-            <span className="text-sm text-[#8B5E3C] font-semibold">[static] Customer reviews</span>
+            <span className="text-sm text-[#8B5E3C] font-semibold">
+              Customer reviews
+            </span>
           </div>
 
           {/* Quick Info */}
           <div className="space-y-2 mb-4">
             <p className="text-green-700 font-semibold text-[14px] flex items-center gap-2">
               <FontAwesomeIcon icon={faShoppingBag} />
-              {(highlightsContent as any)?.unitsSold ?? "[static] 1,000+ Units Sold in 7 Days"}
+              {(highlightsContent as any)?.unitsSold ??
+                "1,000+ Units Sold in 7 Days"}
             </p>
             <p className="text-[14px] text-[#8B5E3C] flex items-center gap-2">
-              <FontAwesomeIcon icon={faStarHalfStroke} className="text-yellow-500" />
-              {(highlightsContent as any)?.rating ?? "[static] 4.8/5 Rating"}
+              <FontAwesomeIcon
+                icon={faStarHalfStroke}
+                className="text-yellow-500"
+              />
+              {(highlightsContent as any)?.rating ?? "4.8/5 Rating"}
             </p>
 
             {/* Feature badges */}
@@ -658,8 +718,12 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             <p className="text-[#5E2B16] font-semibold flex items-center gap-2">
-              <FontAwesomeIcon icon={faCheckCircle} className="text-green-600" />
-              {(highlightsContent as any)?.cta ?? "[static] Try It Once. You'll Reorder."}
+              <FontAwesomeIcon
+                icon={faCheckCircle}
+                className="text-green-600"
+              />
+              {(highlightsContent as any)?.cta ??
+                "Try It Once. You'll Reorder."}
             </p>
           </div>
 
@@ -670,7 +734,8 @@ export default function ProductClient({ product }: { product: Product }) {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-[14px] text-[#5E2B16] leading-6 mb-6 max-w-[500px]"
           >
-            {product.description ?? "[static] A thoughtfully crafted product by Pureastra."}
+            {product.description ??
+              "A thoughtfully crafted product by Pureastra."}
           </motion.p>
 
           {/* Variants / Size */}
@@ -701,8 +766,12 @@ export default function ProductClient({ product }: { product: Product }) {
           {activePrice != null && (
             <div className="mb-4">
               <div className="flex items-center gap-3">
-                <p className="text-[28px] font-bold text-[#5E2B16]">₹{activePrice}</p>
-                <p className="text-sm text-[#8B5E3C]">(MRP Inclusive of all taxes)</p>
+                <p className="text-[28px] font-bold text-[#5E2B16]">
+                  ₹{activePrice}
+                </p>
+                <p className="text-sm text-[#8B5E3C]">
+                  (MRP Inclusive of all taxes)
+                </p>
               </div>
             </div>
           )}
@@ -763,7 +832,9 @@ export default function ProductClient({ product }: { product: Product }) {
             <button
               onClick={() => setTab("desc")}
               className={`pb-2 font-semibold ${
-                tab === "desc" ? "text-[#5E2B16] border-b-2 border-[#5E2B16]" : "text-gray-500"
+                tab === "desc"
+                  ? "text-[#5E2B16] border-b-2 border-[#5E2B16]"
+                  : "text-gray-500"
               }`}
             >
               Description
@@ -771,7 +842,9 @@ export default function ProductClient({ product }: { product: Product }) {
             <button
               onClick={() => setTab("reviews")}
               className={`pb-2 font-semibold ${
-                tab === "reviews" ? "text-[#5E2B16] border-b-2 border-[#5E2B16]" : "text-gray-500"
+                tab === "reviews"
+                  ? "text-[#5E2B16] border-b-2 border-[#5E2B16]"
+                  : "text-gray-500"
               }`}
             >
               Reviews
@@ -781,7 +854,8 @@ export default function ProductClient({ product }: { product: Product }) {
           <div className="text-sm text-gray-600 leading-6 space-y-3">
             {tab === "desc" ? (
               <p className="text-[14px] text-[#5E2B16] leading-6">
-                {product.description ?? "[static] No description available for this product."}
+                {product.description ??
+                  "No description available for this product."}
               </p>
             ) : (
               <p>No reviews yet</p>
@@ -799,7 +873,7 @@ export default function ProductClient({ product }: { product: Product }) {
           {/* LEFT: Benefits + Ingredients grid + Results */}
           <div>
             <h3 className="text-[#819744] font-['Roboto_Flex'] font-bold text-[24px] mb-6">
-              {benefitsSection?.title ?? "[static] BENEFITS:"}
+              {benefitsSection?.title ?? "BENEFITS:"}
             </h3>
             <BenefitsSection section={benefitsSection} />
             <IngredientsGridSection section={ingredientsSection} />
@@ -858,8 +932,11 @@ export default function ProductClient({ product }: { product: Product }) {
                 item.images[0]?.imageUrl ??
                 "/img/facewash.webp";
               const minPrice = item.variants.reduce(
-                (min, v) => (v.price != null && Number(v.price) < min ? Number(v.price) : min),
-                Infinity
+                (min, v) =>
+                  v.price != null && Number(v.price) < min
+                    ? Number(v.price)
+                    : min,
+                Infinity,
               );
               return (
                 <Link key={item.id} href={`/product/${item.slug}`}>
@@ -885,7 +962,10 @@ export default function ProductClient({ product }: { product: Product }) {
                       whileTap={{ scale: 0.9 }}
                       className="absolute top-4 right-4 w-[38px] h-[38px] bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-lg"
                     >
-                      <FontAwesomeIcon icon={faCartShopping} className="text-[#5E2B16]" />
+                      <FontAwesomeIcon
+                        icon={faCartShopping}
+                        className="text-[#5E2B16]"
+                      />
                     </motion.div>
                     <motion.div
                       initial={{ opacity: 0 }}
@@ -931,28 +1011,38 @@ export default function ProductClient({ product }: { product: Product }) {
               <FontAwesomeIcon icon={faGlobe} className="text-[#819744] mt-1" />
               <div>
                 <p className="font-semibold">Country of Origin</p>
-                <p>[static] India</p>
+                <p>India</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <FontAwesomeIcon icon={faBuilding} className="text-[#819744] mt-1" />
+              <FontAwesomeIcon
+                icon={faBuilding}
+                className="text-[#819744] mt-1"
+              />
               <div>
                 <p className="font-semibold">Marketed By</p>
-                <p>{product.brand ?? "[static] PureAstra"}</p>
+                <p>{product.brand ?? "PureAstra"}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <FontAwesomeIcon icon={faIndustry} className="text-[#819744] mt-1" />
+              <FontAwesomeIcon
+                icon={faIndustry}
+                className="text-[#819744] mt-1"
+              />
               <div>
                 <p className="font-semibold">Manufactured By</p>
-                <p>[static] PureAstra Labs</p>
+                <p>PureAstra Labs</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <FontAwesomeIcon icon={faBox} className="text-[#819744] mt-1" />
               <div>
                 <p className="font-semibold">Quantity</p>
-                <p>{activeVariant?.variantName ?? product.variants[0]?.variantName ?? "—"}</p>
+                <p>
+                  {activeVariant?.variantName ??
+                    product.variants[0]?.variantName ??
+                    "—"}
+                </p>
               </div>
             </div>
           </div>

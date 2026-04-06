@@ -6,13 +6,7 @@ import {
   faEnvelope,
   faPhone,
 } from "@fortawesome/free-solid-svg-icons";
-import {
-  faFacebookF,
-  faInstagram,
-  faPinterest,
-  faXTwitter,
-  faYoutube,
-} from "@fortawesome/free-brands-svg-icons";
+import { faFacebookF, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
 
 export default function Footer() {
@@ -62,9 +56,6 @@ export default function Footer() {
               >
                 <FontAwesomeIcon icon={faInstagram} />
               </a>
-              <FontAwesomeIcon icon={faXTwitter} />
-              <FontAwesomeIcon icon={faPinterest} />
-              <FontAwesomeIcon icon={faYoutube} />
             </div>
           </div>
 

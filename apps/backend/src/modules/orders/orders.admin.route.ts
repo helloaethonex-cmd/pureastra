@@ -94,7 +94,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/", requireAuth, requireRole("ADMIN"), listOrders);
+router.get("/", requireAuth, requireRole("admin"), listOrders);
 
 /**
  * @openapi
@@ -189,7 +189,7 @@ router.get("/", requireAuth, requireRole("ADMIN"), listOrders);
 router.patch(
   "/:orderNumber/status",
   requireAuth,
-  requireRole("ADMIN"),
+  requireRole("admin"),
   updateOrderStatus,
 );
 
