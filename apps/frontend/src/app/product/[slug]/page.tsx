@@ -1,4 +1,5 @@
 import type { Product, ProductListResponse } from "@/services/api";
+import { products } from "@/data/products";
 import ProductClient from "./ProductClient";
 
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -46,7 +47,9 @@ async function fetchProductBySlug(slug: string): Promise<Product | null> {
 
     return (await res.json()) as Product;
   } catch (error) {
-    console.warn(`[fetchProductBySlug] backend unavailable for slug "${slug}" during build`);
+    console.warn(
+      `[fetchProductBySlug] backend unavailable for slug "${slug}" during build`,
+    );
     return null;
   }
 }
@@ -56,21 +59,23 @@ export async function generateStaticParams() {
 
   // Next.js requires at least one param for export, so return a placeholder if empty
   if (slugs.length === 0) {
-    return [{ slug: '__no_products__' }];
+    return [{ slug: "__no_products__" }];
   }
-  
+
   return slugs.map((slug) => ({ slug }));
 }
 
 export const dynamicParams = false;
 
-export default async function Page(props: { params: Promise<{ slug: string }> }) {
+export default async function Page(props: {
+  params: Promise<{ slug: string }>;
+}) {
   const params = await props.params;
   const product = await fetchProductBySlug(params.slug);
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF3E2] text-lg text-[#5E2B16]">
+      <div className="min-h-screen flex items-center justify-center text-lg">
         Product not found
       </div>
     );

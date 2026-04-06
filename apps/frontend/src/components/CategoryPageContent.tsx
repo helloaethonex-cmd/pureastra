@@ -1,4 +1,5 @@
 "use client";
+import toast from "react-hot-toast";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -19,11 +20,13 @@ import { type Category } from "@/services/api";
 interface CategoryPageContentProps {
   categoryName: string;
   categoryId?: string;
+  categorySlug?: string; // alternative to categoryId — resolved at runtime via useCategories
 }
 
 export default function CategoryPageContent({
-  categoryName,
-  categoryId,
+  categoryName: categoryNameProp,
+  categoryId: categoryIdProp,
+  categorySlug,
 }: CategoryPageContentProps) {
   const [openProduct, setOpenProduct] = useState(true);
   const [openPrice, setOpenPrice] = useState(true);
@@ -34,6 +37,13 @@ export default function CategoryPageContent({
   const addCartItem = useAddCartItem();
 
   const { data: categoriesData } = useCategories();
+
+  // Resolve categoryId from slug if not provided directly
+  const resolvedCategory = categorySlug
+    ? categoriesData?.find((c) => c.slug === categorySlug)
+    : undefined;
+  const categoryId = categoryIdProp ?? resolvedCategory?.id;
+  const categoryName = resolvedCategory?.name ?? categoryNameProp;
 
   const { data, isLoading, isError } = useProducts({
     categoryId,
@@ -47,22 +57,22 @@ export default function CategoryPageContent({
 
   const handleAddToCart = (productVariantId?: string) => {
     if (!user) {
-      alert("Please sign in to add items to your cart.");
+      toast.error("Please sign in to add items to your cart.");
       return;
     }
 
     if (!productVariantId) {
-      alert("No purchasable variant available.");
+      toast.error("No purchasable variant available.");
       return;
     }
 
     addCartItem.mutate(
       { productVariantId, quantity: 1 },
       {
-        onSuccess: () => alert("Item added to cart"),
+        onSuccess: () => toast.success("Item added to cart"),
         onError: (error) => {
           const message = error instanceof Error ? error.message : "Failed to add to cart";
-          alert(message);
+          toast.error(message);
         },
       }
     );

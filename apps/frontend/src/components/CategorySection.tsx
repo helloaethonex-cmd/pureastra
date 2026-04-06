@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import ProductCard from "./ProductCard";
 import { useCategories, useProducts } from "@/hooks/useProducts";
+import { motion } from "framer-motion";
+
+const categories = ["Face Care", "Body Care", "Hair Care"];
 
 export default function CategorySection() {
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -30,9 +33,13 @@ export default function CategorySection() {
     <section className="bg-[#E9E2D8] px-[16px] md:px-[24px] lg:px-[40px] py-[40px] md:py-[50px]">
       
       {/* TITLE */}
-      <h2 className="text-center text-[24px] md:text-[28px] lg:text-[32px] text-[#8B5E4A] font-['Marko_One',serif] mb-5">
+      <motion.h2
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        className="text-center text-[24px] md:text-[28px] lg:text-[32px] text-[#8B5E4A] font-['Marko_One',serif] mb-5"
+      >
         Shop By Category
-      </h2>
+      </motion.h2>
 
       {/* CATEGORY PILLS */}
       <div className="flex justify-center gap-5 mb-[30px]">

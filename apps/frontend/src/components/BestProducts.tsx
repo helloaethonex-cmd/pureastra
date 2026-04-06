@@ -16,6 +16,7 @@ export default function BestProducts() {
     limit: 12,
     isActive: true,
   });
+
   const products = data?.data ?? [];
 
   return (
@@ -25,44 +26,42 @@ export default function BestProducts() {
         Best Of Pureastra
       </h2>
 
-      {/* MOBILE + TABLET GRID */}
+      {/* MOBILE + TABLET */}
       {isLoading ? (
-        <div className="mt-4 px-4 md:px-6 text-[#5E2B15]">
-          Loading products...
-        </div>
+        <div className="mt-4 text-[#5E2B15]">Loading products...</div>
       ) : isError || products.length === 0 ? (
-        <div className="mt-4 px-4 md:px-6 text-[#5E2B15]">
+        <div className="mt-4 text-[#5E2B15]">
           Products unavailable right now.
         </div>
       ) : (
         <div className="mt-4 px-4 md:px-6 lg:hidden">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {products.map((product) => (
+            {products.map((product: any) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         </div>
       )}
 
-      {/* DESKTOP SWIPER (UNCHANGED) */}
+      {/* DESKTOP */}
       {isLoading ? (
-        <div className="mt-8 px-10 text-[#5E2B15]">Loading products...</div>
+        <div className="mt-8 text-[#5E2B15]">Loading products...</div>
       ) : isError || products.length === 0 ? (
-        <div className="mt-8 px-10 text-[#5E2B15]">
+        <div className="mt-8 text-[#5E2B15]">
           Products unavailable right now.
         </div>
       ) : (
-        <div className="mt-4 px-10 items-center hidden lg:flex">
+        <div className="mt-4 px-10 hidden lg:flex">
           <Swiper
             slidesPerView={3}
             spaceBetween={50}
             centeredSlides={true}
             loop={products.length > 3}
-            autoplay={{ delay: 4000, disableOnInteraction: false }}
+            autoplay={{ delay: 4000 }}
             navigation={{ nextEl: ".next-btn", prevEl: ".prev-btn" }}
             modules={[Autoplay, Navigation]}
           >
-            {products.map((product) => (
+            {products.map((product: any) => (
               <SwiperSlide key={product.id}>
                 <ProductCard product={product} />
               </SwiperSlide>
@@ -71,12 +70,12 @@ export default function BestProducts() {
         </div>
       )}
 
-      {/* Arrows (only desktop) */}
+      {/* Arrows */}
       <div className="mt-3 justify-center gap-3 hidden lg:flex">
-        <button className="prev-btn w-10 h-10 rounded-full border-none bg-[#f3eee7] flex items-center justify-center text-[#5E2B15] text-base transition-all duration-200 cursor-pointer hover:bg-[#ddd]">
+        <button className="prev-btn w-10 h-10 rounded-full bg-[#f3eee7] flex items-center justify-center">
           <FontAwesomeIcon icon={faChevronLeft} />
         </button>
-        <button className="next-btn w-10 h-10 rounded-full border-none bg-[#f3eee7] flex items-center justify-center text-[#5E2B15] text-base transition-all duration-200 cursor-pointer hover:bg-[#ddd]">
+        <button className="next-btn w-10 h-10 rounded-full bg-[#f3eee7] flex items-center justify-center">
           <FontAwesomeIcon icon={faChevronRight} />
         </button>
       </div>

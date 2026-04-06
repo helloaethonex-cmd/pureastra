@@ -132,18 +132,24 @@ export default function Navbar() {
             </Link>
 
               {/* User */}
-              <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md">
-                <FontAwesomeIcon
-                  icon={faUser}
+              <div
+                className="relative"
+                onMouseLeave={() => setIsUserMenuOpen(false)}
+              >
+                <button
                   onClick={handleUserIconClick}
-                  className="text-[#5E2B15] cursor-pointer transition-transform hover:scale-110"
-                  title={user ? user.name : "Login / Sign Up"}
-                />
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md"
+                >
+                  <FontAwesomeIcon
+                    icon={faUser}
+                    className="text-[#5E2B15] cursor-pointer transition-transform hover:scale-110"
+                    title={user ? user.name : "Login / Sign Up"}
+                  />
+                </button>
 
                 {user && isUserMenuOpen && (
                   <div
-                    className="absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
-                    onMouseLeave={() => setIsUserMenuOpen(false)}
+                    className="absolute right-0 top-11 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
                   >
                     <p className="px-4 py-1 text-xs text-gray-400 truncate">
                       {user.email}
@@ -176,13 +182,13 @@ export default function Navbar() {
                         setIsUserMenuOpen(false);
                         signOut.mutate();
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
                     >
                       {signOut.isPending ? "Signing out..." : "Sign Out"}
                     </div>
                   </div>
                 )}
-              </button>
+              </div>
 
             <Link href="/cart">
               <button className="relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-[#819744] text-white hover:bg-[#6f8438] transition">
@@ -251,32 +257,63 @@ export default function Navbar() {
       />
 
       {/* SIDEBAR */}
+      {/* ================= MOBILE GLASS MENU ================= */}
+
       <div
-        className={`fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-white z-50 shadow-lg transform transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-0 z-50 transition-all duration-300 ${
+          isOpen ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
       >
-        {/* HEADER */}
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="font-semibold text-lg">Menu</h2>
+        {/* BACKGROUND BLUR */}
+        <div
+          className="absolute inset-0 bg-[#FAF3E2]/70 backdrop-blur-md z-40"
+          onClick={() => setIsOpen(false)}
+        />
+
+        {/* RIGHT BROWN OVERLAY (OVERLAPPING) */}
+        <div
+          className={`absolute top-0 right-0 h-full w-[80px]
+          bg-gradient-to-b from-[#5E2B15]/50 to-[#5E2B15]/40
+          backdrop-blur-xl z-50
+          transition-transform duration-500 ${
+            isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        />
+
+        {/* CLOSE BUTTON */}
+        <div className="absolute top-4 right-4 z-[60]">
           <button onClick={() => setIsOpen(false)}>
-            <FontAwesomeIcon icon={faXmark} />
+            <FontAwesomeIcon icon={faXmark} className="text-white text-xl" />
           </button>
         </div>
 
         {/* MENU ITEMS */}
-        <div className="flex flex-col p-4 gap-4">
-          {staticMenuItems.map((item, index) => (
-            <Link
-              key={index}
-              href={item.path}
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 text-[#5E2B16] font-medium hover:text-[#819744] transition"
-            >
-              <FontAwesomeIcon icon={item.icon} />
-              {item.name}
-            </Link>
-          ))}
+        <div className="absolute top-[110px] left-[36px] w-[320px] z-[40] flex flex-col gap-4">
+
+          {[...staticMenuItems, ...(categories?.filter((c) => !c.parentId) || [])].map(
+            (item: any, index) => {
+              const name = item.name;
+              const path = item.path || `/category/${item.slug}`;
+              const isActive = index === 0;
+
+              return (
+                <Link
+                  key={index}
+                  href={path}
+                  onClick={() => setIsOpen(false)}
+                  className={`h-[56px] w-[325px] flex items-center justify-center rounded-full text-[15px] font-medium transition-all duration-300
+                  ${
+                    isActive
+                      ? "bg-gradient-to-r from-[#5E2B15] via-[#5E2B15] to-[#5E2B15]/45 text-white shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
+                      : "bg-white/20 text-[#5E2B15] backdrop-blur-md hover:bg-white/50"
+                  }`}
+                >
+                  {name}
+                </Link>
+              );
+            }
+          )}
+
         </div>
       </div>
 

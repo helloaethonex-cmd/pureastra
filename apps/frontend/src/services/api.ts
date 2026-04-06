@@ -3,8 +3,8 @@ const BASE = process.env.NEXT_PUBLIC_BACKEND_URL + "/api/v1";
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...init?.headers },
     ...init,
+    headers: { "Content-Type": "application/json", ...init?.headers },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -174,10 +174,54 @@ export interface CreatedOrder {
   createdAt: string;
 }
 
+export interface OrderDetailItem {
+  productName: string;
+  variantName: string | null;
+  sku: string | null;
+  quantity: number;
+  price: string;
+}
+
+export interface OrderDetailPayment {
+  amount: string;
+  status: number;
+  method: string | null;
+  createdAt: string;
+}
+
+export interface OrderDetailStatusHistory {
+  oldStatus: number | null;
+  newStatus: number;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface OrderShippingAddress {
+  name: string;
+  phone: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
 export interface OrderDetailResponse {
   orderNumber: string;
   orderStatus: number;
   paymentStatus: number;
+  productTotal: string;
+  shippingAmount: string;
+  taxAmount: string;
+  discountAmount: string;
+  totalPaid: string;
+  shippingAddress: OrderShippingAddress;
+  placedAt: string | null;
+  createdAt: string;
+  items: OrderDetailItem[];
+  payments: OrderDetailPayment[];
+  statusHistory: OrderDetailStatusHistory[];
 }
 
 export interface OrderListItem {
@@ -447,6 +491,23 @@ export const getMyProfile = () => apiFetch<UserProfile>("/users/me");
 
 export const listMyAddresses = () => apiFetch<Address[]>("/addresses");
 
+export const createAddress = (body: {
+  addressType?: "SHIPPING" | "BILLING" | "BOTH";
+  fullName: string;
+  phone: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country?: string;
+  isDefault?: boolean;
+}) =>
+  apiFetch<Address>("/addresses", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
 // ─── Orders + Payments (Checkout) ─────────────────────────────────────────────
 
 export const previewCheckout = (body: {
@@ -504,6 +565,9 @@ export const createOrder = (body: { addressId: string; note?: string }) =>
 export const getOrderDetail = (orderNumber: string) =>
   apiFetch<OrderDetailResponse>(`/orders/${orderNumber}`);
 
+// Alias for explicit full-detail fetching
+export const getFullOrderDetail = getOrderDetail;
+
 export const listMyOrders = (params?: { page?: number; limit?: number }) => {
   const q = new URLSearchParams();
   if (params?.page) q.set("page", String(params.page));
@@ -557,7 +621,18 @@ export const listAdminOrders = (params?: {
   if (params?.search) q.set("search", params.search);
   if (params?.sortOrder) q.set("sortOrder", params.sortOrder);
   const suffix = q.toString();
-  return apiFetch<AdminPaginatedOrdersResponse>(`/admin/orders${suffix ? `?${suffix}` : ""}`);
+  return apiFetch<{
+    data: Array<{
+      id: string;
+      orderNumber: string;
+      userId: string;
+      orderStatus: number;
+      paymentStatus: number;
+      totalPaid: string;
+      createdAt: string;
+    }>;
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  }>(`/admin/orders${suffix ? `?${suffix}` : ""}`);
 };
 
 export const updateAdminOrderStatus = (

@@ -53,7 +53,8 @@ const sections = [
       "Tracking information will be shared once your order is dispatched.",
       "Pureastra is not responsible for delays caused by courier partners, weather, or natural events.",
     ],
-    highlight: "Make sure your delivery address and phone number are accurate to avoid any delays.",
+    highlight:
+      "Make sure your delivery address and phone number are accurate to avoid any delays.",
   },
   {
     title: "Delivery Address",
@@ -82,7 +83,6 @@ export default function ShippingPolicy() {
 
   return (
     <section className="bg-linear-to-b from-[#FAF3E2] via-[#F5EFE9] to-[#FAF3E2] px-6 md:px-16 py-20 text-[#3B2F2F]">
-
       {/* Heading */}
       <motion.div
         initial={{ opacity: 0, y: -30 }}
@@ -93,8 +93,9 @@ export default function ShippingPolicy() {
         <h1 className="text-3xl md:text-5xl font-['Marko_One',serif] text-[#8B543E] mb-4">
           Shipping Policy
         </h1>
-        <p className="max-w-2xl mx-auto text-sm md:text-base text-[#5C4A4A]">
-          We are committed to delivering your orders safely and quickly. Here is everything you need to know about how we ship.
+        <p className="max-w-2xl mx-auto text-sm md:text-base font-['Poppins']text-[#5C4A4A]">
+          We are committed to delivering your orders safely and quickly. Here is
+          everything you need to know about how we ship.
         </p>
       </motion.div>
 
@@ -113,8 +114,13 @@ export default function ShippingPolicy() {
             <div className="absolute inset-0 rounded-2xl opacity-0 hover:opacity-100 transition bg-linear-to-r from-[#819744]/10 via-[#8B543E]/10 to-transparent blur-xl" />
 
             <div className="flex items-center gap-3 mb-4 relative z-10">
-              <FontAwesomeIcon icon={section.icon} className="text-[#819744] text-lg" />
-              <h2 className="text-lg font-semibold text-[#8B543E]">{section.title}</h2>
+              <FontAwesomeIcon
+                icon={section.icon}
+                className="text-[#819744] text-lg"
+              />
+              <h2 className="text-lg font-semibold text-[#8B543E]">
+                {section.title}
+              </h2>
             </div>
 
             <ul className="space-y-2 text-sm leading-6 relative z-10">
@@ -156,7 +162,9 @@ export default function ShippingPolicy() {
                   onClick={() => setActive(isOpen ? null : index)}
                   className="w-full flex justify-between items-center p-5"
                 >
-                  <span className="text-sm md:text-base font-medium">{item.q}</span>
+                  <span className="text-sm md:text-base font-medium">
+                    {item.q}
+                  </span>
                   <span
                     className={`text-[#819744] text-xl transition-transform duration-300 ${
                       isOpen ? "rotate-45" : ""

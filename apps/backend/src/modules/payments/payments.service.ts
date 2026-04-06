@@ -26,10 +26,7 @@ import {
   verifyRazorpayCheckoutSignature,
   verifyRazorpayWebhookSignature,
 } from "./gateways/razorpay.gateway";
-import {
-  ORDER_STATUS,
-  PAYMENT_STATUS,
-} from "../orders/orders.types";
+import { ORDER_STATUS, PAYMENT_STATUS } from "../orders/orders.types";
 
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -91,7 +88,9 @@ const toPaymentAttemptResponse = (payment: {
   createdAt: payment.createdAt.toISOString(),
 });
 
-type PaymentAttemptRecord = Awaited<ReturnType<typeof prisma.payment.findUnique>>;
+type PaymentAttemptRecord = Awaited<
+  ReturnType<typeof prisma.payment.findUnique>
+>;
 
 export const createPendingPaymentAttemptForOrder = async (
   userId: string,
@@ -99,7 +98,9 @@ export const createPendingPaymentAttemptForOrder = async (
   idempotencyKey: string,
   body: CreatePaymentAttemptBody,
 ) => {
-  const paymentProvider = (body.paymentProvider ?? env.PAYMENT_PROVIDER_DEFAULT).toLowerCase();
+  const paymentProvider = (
+    body.paymentProvider ?? env.PAYMENT_PROVIDER_DEFAULT
+  ).toLowerCase();
   if (paymentProvider !== "razorpay") {
     throw new AppError(
       400,
@@ -115,14 +116,19 @@ export const createPendingPaymentAttemptForOrder = async (
     }
 
     if (order.orderStatus === ORDER_STATUS.CANCELLED) {
-      throw new AppError(409, "Cannot create payment for cancelled order", "ORDER_CANCELLED");
+      throw new AppError(
+        409,
+        "Cannot create payment for cancelled order",
+        "ORDER_CANCELLED",
+      );
     }
 
-    const existingByIdempotency = await findPaymentAttemptByOrderAndIdempotencyKey(
-      tx,
-      order.id,
-      idempotencyKey,
-    );
+    const existingByIdempotency =
+      await findPaymentAttemptByOrderAndIdempotencyKey(
+        tx,
+        order.id,
+        idempotencyKey,
+      );
     if (existingByIdempotency) {
       return existingByIdempotency;
     }
@@ -134,7 +140,11 @@ export const createPendingPaymentAttemptForOrder = async (
 
     const outstanding = outstandingCents(order);
     if (outstanding <= 0) {
-      throw new AppError(409, "Order is already fully paid", "ORDER_ALREADY_PAID");
+      throw new AppError(
+        409,
+        "Order is already fully paid",
+        "ORDER_ALREADY_PAID",
+      );
     }
 
     return createPaymentAttempt(tx, {
@@ -149,7 +159,9 @@ export const createPendingPaymentAttemptForOrder = async (
   }, TX_OPTIONS);
 };
 
-const ensureRazorpayProviderOrderForPaymentRecord = async (payment: NonNullable<PaymentAttemptRecord>) => {
+const ensureRazorpayProviderOrderForPaymentRecord = async (
+  payment: NonNullable<PaymentAttemptRecord>,
+) => {
   if (payment.paymentProvider.toLowerCase() !== "razorpay") {
     throw new AppError(
       400,
@@ -182,14 +194,18 @@ const ensureRazorpayProviderOrderForPaymentRecord = async (payment: NonNullable<
   });
 
   if (updateResult.count === 0) {
-    const latest = await prisma.payment.findUnique({ where: { id: payment.id } });
+    const latest = await prisma.payment.findUnique({
+      where: { id: payment.id },
+    });
     if (!latest) {
       throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
     }
     return toPaymentAttemptResponse(latest);
   }
 
-  const updatedPayment = await prisma.payment.findUnique({ where: { id: payment.id } });
+  const updatedPayment = await prisma.payment.findUnique({
+    where: { id: payment.id },
+  });
   if (!updatedPayment) {
     throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
   }
@@ -197,7 +213,9 @@ const ensureRazorpayProviderOrderForPaymentRecord = async (payment: NonNullable<
   return toPaymentAttemptResponse(updatedPayment);
 };
 
-export const ensureProviderOrderForPaymentAttempt = async (paymentId: bigint) => {
+export const ensureProviderOrderForPaymentAttempt = async (
+  paymentId: bigint,
+) => {
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!payment) {
     throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
@@ -263,7 +281,10 @@ export const confirmPaymentAttempt = async (
       });
     }
 
-    const existingSuccess = await findSuccessfulPaymentForOrder(tx, payment.orderId);
+    const existingSuccess = await findSuccessfulPaymentForOrder(
+      tx,
+      payment.orderId,
+    );
     if (existingSuccess && existingSuccess.id !== payment.id) {
       return payment;
     }
@@ -302,7 +323,9 @@ export const confirmPaymentAttempt = async (
 
     await updateOrderForPaymentSuccess(tx, payment.orderId, {
       totalPaid: { increment: centsToDecimal(paymentAmount) },
-      paymentStatus: fullyPaid ? PAYMENT_STATUS.SUCCESS : payment.order.paymentStatus,
+      paymentStatus: fullyPaid
+        ? PAYMENT_STATUS.SUCCESS
+        : payment.order.paymentStatus,
       orderStatus:
         payment.order.orderStatus === ORDER_STATUS.PLACED
           ? ORDER_STATUS.CONFIRMED
@@ -361,7 +384,11 @@ export const verifyRazorpayPaymentAttempt = async (
   });
 
   if (!isValidSignature) {
-    throw new AppError(401, "Invalid Razorpay signature", "INVALID_RAZORPAY_SIGNATURE");
+    throw new AppError(
+      401,
+      "Invalid Razorpay signature",
+      "INVALID_RAZORPAY_SIGNATURE",
+    );
   }
 
   return confirmPaymentAttempt(paymentId, {
@@ -380,7 +407,11 @@ export const processRazorpayWebhookEvent = async (
 ) => {
   const isSignatureValid = verifyRazorpayWebhookSignature(rawBody, signature);
   if (!isSignatureValid) {
-    throw new AppError(401, "Invalid Razorpay webhook signature", "INVALID_WEBHOOK_SIGNATURE");
+    throw new AppError(
+      401,
+      "Invalid Razorpay webhook signature",
+      "INVALID_WEBHOOK_SIGNATURE",
+    );
   }
 
   let payload: {
@@ -400,7 +431,11 @@ export const processRazorpayWebhookEvent = async (
   try {
     payload = JSON.parse(rawBody.toString("utf8"));
   } catch {
-    throw new AppError(400, "Invalid webhook payload", "INVALID_WEBHOOK_PAYLOAD");
+    throw new AppError(
+      400,
+      "Invalid webhook payload",
+      "INVALID_WEBHOOK_PAYLOAD",
+    );
   }
 
   const event = payload.event ?? "";
@@ -446,7 +481,8 @@ export const processRazorpayWebhookEvent = async (
     return { acknowledged: true, reason: "PAYMENT_ATTEMPT_NOT_FOUND" as const };
   }
 
-  const isFailedEvent = event === "payment.failed" || paymentEntity?.status === "failed";
+  const isFailedEvent =
+    event === "payment.failed" || paymentEntity?.status === "failed";
   const isSuccessEvent =
     event === "payment.captured" ||
     paymentEntity?.status === "captured" ||
@@ -463,7 +499,9 @@ export const processRazorpayWebhookEvent = async (
       providerEventId,
       providerPaymentId,
       providerOrderId,
-      failureReason: isFailedEvent ? paymentEntity?.error_description : undefined,
+      failureReason: isFailedEvent
+        ? paymentEntity?.error_description
+        : undefined,
     });
   } catch (error) {
     if (

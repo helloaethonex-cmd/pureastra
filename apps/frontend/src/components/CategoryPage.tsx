@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -42,7 +43,7 @@ export default function CategoryPage({
       : products.filter((p) => p.type === activeFilter);
 
   const handleAddToCart = (product: Product) => {
-    alert(`${product.name} added to cart`);
+    toast.success(`${product.name} added to cart`);
   };
 
   return (

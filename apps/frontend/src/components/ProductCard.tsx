@@ -1,4 +1,5 @@
 "use client";
+import toast from "react-hot-toast";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -62,22 +63,23 @@ export default function ProductCard({ active, product }: ProductCardProps) {
 
   const handleAddToCart = () => {
     if (!user) {
-      alert("Please sign in to add items to your cart.");
+      toast.error("Please sign in to add items to your cart.");
       return;
     }
 
     if (!activeVariant?.id) {
-      alert("No purchasable variant available.");
+      toast.error("No purchasable variant available.");
       return;
     }
 
     addCartItem.mutate(
       { productVariantId: activeVariant.id, quantity: 1 },
       {
+        onSuccess: () => toast.success("Added to cart!"),
         onError: (error) => {
           const message =
             error instanceof Error ? error.message : "Failed to add to cart";
-          alert(message);
+          toast.error(message);
         },
       },
     );
@@ -85,21 +87,22 @@ export default function ProductCard({ active, product }: ProductCardProps) {
 
   const handleAddToWishlist = () => {
     if (!user) {
-      alert("Please sign in to add items to your wishlist.");
+      toast.error("Please sign in to add items to your wishlist.");
       return;
     }
 
     if (!activeVariant?.id) {
-      alert("No wishlist-eligible variant available.");
+      toast.error("No wishlist-eligible variant available.");
       return;
     }
 
     if (isWishlisted) {
       removeWishlistItem.mutate(activeVariant.id, {
+        onSuccess: () => toast.success("Removed from wishlist"),
         onError: (error) => {
           const message =
             error instanceof Error ? error.message : "Failed to update wishlist";
-          alert(message);
+          toast.error(message);
         },
       });
       return;
@@ -108,10 +111,11 @@ export default function ProductCard({ active, product }: ProductCardProps) {
     addWishlistItem.mutate(
       { productVariantId: activeVariant.id },
       {
+        onSuccess: () => toast.success("Added to wishlist!"),
         onError: (error) => {
           const message =
             error instanceof Error ? error.message : "Failed to add to wishlist";
-          alert(message);
+          toast.error(message);
         },
       },
     );
@@ -161,7 +165,9 @@ export default function ProductCard({ active, product }: ProductCardProps) {
 
       {/* NORMAL DETAILS */}
       <div
-        className={`absolute bottom-0 z-3 flex w-full flex-col justify-end border-t border-white/15 bg-black/15 px-4.5 py-4 text-white backdrop-blur-md transition-opacity duration-300 group-hover:opacity-0 ${active ? "show" : ""}`}
+        className={`absolute bottom-0 z-3 flex w-full flex-col justify-end border-t border-white/15 bg-black/15 px-4.5 py-4 text-white backdrop-blur-md transition-opacity duration-300 group-hover:opacity-0 ${
+          active ? "show" : ""
+        }`}
       >
         <h5 className="text-[18px] font-semibold mb-1 font-['Roboto_Serif',serif]">
           {product.name}
@@ -185,12 +191,13 @@ export default function ProductCard({ active, product }: ProductCardProps) {
         <h4 className="mb-4.5 translate-y-5 text-left text-[26px] font-semibold opacity-0 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
           {product.name}
         </h4>
+
         <div className="flex w-full flex-col items-start gap-3 opacity-0 translate-y-5 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100">
           {hoverTags.map((tag, idx) => (
             <span
               key={tag}
               className="translate-y-5 rounded-[20px] bg-white/25 px-4 py-2 text-[14px] opacity-0 transition duration-400 ease-in-out group-hover:translate-y-0 group-hover:opacity-100"
-              style={{ transitionDelay: `${(idx + 1) * 0.2}s` }}
+              style={{ transitionDelay: `${(idx + 1) * 0.15}s` }}
             >
               {tag}
             </span>

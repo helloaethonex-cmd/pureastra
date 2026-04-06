@@ -25,7 +25,14 @@ export default function ConcernSlider() {
         }}
         pagination={{ clickable: true }}
         modules={[Autoplay, Pagination]}
-        className="h-screen max-h-[600px] w-full max-md:h-[300px]"
+        //  RESPONSIVE HEIGHT FIX
+        className="
+          w-full 
+          h-[220px] 
+          sm:h-[260px] 
+          md:h-[350px] 
+          lg:h-screen lg:max-h-[600px]
+        "
       >
         {banners.map((banner, index) => (
           <SwiperSlide key={banner.src}>

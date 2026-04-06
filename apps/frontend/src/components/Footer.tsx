@@ -6,13 +6,7 @@ import {
   faEnvelope,
   faPhone,
 } from "@fortawesome/free-solid-svg-icons";
-import {
-  faFacebookF,
-  faInstagram,
-  faPinterest,
-  faXTwitter,
-  faYoutube,
-} from "@fortawesome/free-brands-svg-icons";
+import { faFacebookF, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
 
 export default function Footer() {
@@ -46,11 +40,22 @@ export default function Footer() {
 
             {/* Social Icons */}
             <div className="mt-5 flex gap-3.75 [&>svg]:text-lg [&>svg]:cursor-pointer">
-              <FontAwesomeIcon icon={faFacebookF} />
-              <FontAwesomeIcon icon={faXTwitter} />
-              <FontAwesomeIcon icon={faInstagram} />
-              <FontAwesomeIcon icon={faPinterest} />
-              <FontAwesomeIcon icon={faYoutube} />
+              <a
+                href="https://www.facebook.com/share/1CPTr3QAcQ/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer hover:scale-110 transition"
+              >
+                <FontAwesomeIcon icon={faFacebookF} />
+              </a>
+              <a
+                href="https://www.instagram.com/pureastra.in?igsh=aWExMTVwamJraWNx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer hover:scale-110 transition"
+              >
+                <FontAwesomeIcon icon={faInstagram} />
+              </a>
             </div>
           </div>
 
