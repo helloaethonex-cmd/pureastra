@@ -44,10 +44,13 @@ export BACKEND_TAG
 echo "[deploy] pulling latest backend image"
 docker compose -f "${COMPOSE_FILE}" pull backend worker
 
-echo "[deploy] starting backend stack"
-docker compose -f "${COMPOSE_FILE}" up -d redis backend worker
+echo "[deploy] starting redis first"
+docker compose -f "${COMPOSE_FILE}" up -d redis
 
-echo "[deploy] applying prisma migrations"
-docker compose -f "${COMPOSE_FILE}" exec -T backend npx prisma migrate deploy
+echo "[deploy] applying prisma migrations (one-off container)"
+docker compose -f "${COMPOSE_FILE}" run --rm backend npx prisma migrate deploy
+
+echo "[deploy] starting backend and worker"
+docker compose -f "${COMPOSE_FILE}" up -d backend worker
 
 echo "[deploy] deployment complete"
