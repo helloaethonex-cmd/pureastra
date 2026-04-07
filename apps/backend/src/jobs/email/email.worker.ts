@@ -1,9 +1,17 @@
+import * as Sentry from "@sentry/node";
 import { QueueEvents, Worker } from "bullmq";
 import { env } from "../../config/env";
 import { logger } from "../../lib/logger";
 import { sendMail } from "../../lib/mailer/mailer";
 import { redisConnectionOptions } from "../../lib/redis/connection";
 import { EmailJobPayload } from "./email.types";
+
+Sentry.init({
+  dsn: env.SENTRY_DSN,
+  tracesSampleRate: 0.1,
+  environment: env.NODE_ENV,
+  enabled: !!env.SENTRY_DSN,
+});
 
 const worker = new Worker<EmailJobPayload>(
   env.EMAIL_QUEUE_NAME,
@@ -23,26 +31,42 @@ const queueEvents = new QueueEvents(env.EMAIL_QUEUE_NAME, {
 });
 
 worker.on("completed", (job) => {
-  logger.info({
-    queue: env.EMAIL_QUEUE_NAME,
-    jobId: job.id,
-  }, "Email job completed");
+  logger.info(
+    {
+      queue: env.EMAIL_QUEUE_NAME,
+      jobId: job.id,
+    },
+    "Email job completed",
+  );
 });
 
 worker.on("failed", (job, error) => {
-  logger.error({
-    queue: env.EMAIL_QUEUE_NAME,
-    jobId: job?.id,
-    attemptsMade: job?.attemptsMade,
-    err: error,
-  }, "Email job failed");
+  logger.error(
+    {
+      queue: env.EMAIL_QUEUE_NAME,
+      jobId: job?.id,
+      attemptsMade: job?.attemptsMade,
+      err: error,
+    },
+    "Email job failed",
+  );
+
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.EMAIL_QUEUE_NAME,
+      jobId: job?.id,
+    },
+  });
 });
 
 queueEvents.on("stalled", ({ jobId }) => {
-  logger.error({
-    queue: env.EMAIL_QUEUE_NAME,
-    jobId,
-  }, "Email job stalled");
+  logger.error(
+    {
+      queue: env.EMAIL_QUEUE_NAME,
+      jobId,
+    },
+    "Email job stalled",
+  );
 });
 
 async function shutdown(signal: string) {
@@ -62,7 +86,21 @@ process.on("SIGTERM", () => {
   void shutdown("SIGTERM");
 });
 
-logger.info({
-  queue: env.EMAIL_QUEUE_NAME,
-  concurrency: env.EMAIL_WORKER_CONCURRENCY,
-}, "Email worker started");
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: reason }, "Unhandled promise rejection in email worker");
+  Sentry.captureException(reason);
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error({ err: error }, "Uncaught exception in email worker");
+  Sentry.captureException(error);
+  void shutdown("uncaughtException");
+});
+
+logger.info(
+  {
+    queue: env.EMAIL_QUEUE_NAME,
+    concurrency: env.EMAIL_WORKER_CONCURRENCY,
+  },
+  "Email worker started",
+);

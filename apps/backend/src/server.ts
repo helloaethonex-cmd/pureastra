@@ -2,6 +2,7 @@
   return this.toString();
 };
 
+import * as Sentry from "@sentry/node";
 import { Server } from "http";
 import app from "./app";
 import { prisma } from "./lib/prisma";
@@ -61,9 +62,11 @@ process.on("SIGTERM", () => {
 
 process.on("unhandledRejection", (reason) => {
   logger.error({ err: reason }, "Unhandled promise rejection");
+  Sentry.captureException(reason);
 });
 
 process.on("uncaughtException", (error) => {
   logger.error({ err: error }, "Uncaught exception");
+  Sentry.captureException(error);
   void shutdown("uncaughtException");
 });
