@@ -37,9 +37,9 @@ services:
       retries: 10
     restart: unless-stopped
 
-  worker:
+  worker-inventory:
     image: ${BACKEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/backend}:${BACKEND_TAG:-main}
-    container_name: pureastra_worker
+    container_name: pureastra_worker_inventory
     env_file:
       - ../apps/backend/.env
     environment:
@@ -50,6 +50,21 @@ services:
       redis:
         condition: service_healthy
     command: ["node", "dist/jobs/orders/inventory-reservation.worker.js"]
+    restart: unless-stopped
+
+  worker-email:
+    image: ${BACKEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/backend}:${BACKEND_TAG:-main}
+    container_name: pureastra_worker_email
+    env_file:
+      - ../apps/backend/.env
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["node", "dist/jobs/email/email.worker.js"]
     restart: unless-stopped
 
 volumes:

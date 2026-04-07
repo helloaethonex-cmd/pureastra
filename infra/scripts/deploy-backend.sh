@@ -46,7 +46,7 @@ echo "[deploy] cleaning stopped containers"
 docker container prune -f >/dev/null 2>&1 || true
 
 echo "[deploy] pulling latest backend image"
-docker compose -f "${COMPOSE_FILE}" pull backend worker
+docker compose -f "${COMPOSE_FILE}" pull backend worker-inventory worker-email
 
 echo "[deploy] starting redis first"
 docker compose -f "${COMPOSE_FILE}" up -d redis
@@ -54,8 +54,8 @@ docker compose -f "${COMPOSE_FILE}" up -d redis
 echo "[deploy] applying prisma migrations (one-off container)"
 docker compose -f "${COMPOSE_FILE}" run --rm backend npx prisma migrate deploy --config prisma.config.mjs
 
-echo "[deploy] deploying backend and worker"
-docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans backend worker
+echo "[deploy] deploying backend and workers"
+docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans backend worker-inventory worker-email
 
 echo "[deploy] cleaning dangling images only"
 docker image prune -f >/dev/null 2>&1 || true
