@@ -14,22 +14,16 @@ import {
   notFoundHandler,
 } from "./middlewares/error-handler";
 
-const app = express();
-app.disable("x-powered-by");
-
 Sentry.init({
   dsn: env.SENTRY_DSN,
   tracesSampleRate: 0.1,
   environment: env.NODE_ENV,
   enabled: !!env.SENTRY_DSN,
-  integrations: [
-    Sentry.httpIntegration(),
-    Sentry.expressIntegration(),
-    nodeProfilingIntegration(),
-  ],
+  integrations: [nodeProfilingIntegration()],
 });
 
-Sentry.setupExpressErrorHandler(app);
+const app = express();
+app.disable("x-powered-by");
 
 app.use(
   cors({
@@ -61,6 +55,9 @@ app.use(
 );
 
 app.use("/api/v1/", routes);
+
+// Sentry error handler MUST be after routes but before custom error handlers
+Sentry.setupExpressErrorHandler(app);
 
 app.use(notFoundHandler);
 app.use(globalErrorHandler);

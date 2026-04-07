@@ -19,6 +19,30 @@ router.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+/**
+ * @swagger
+ * /api/v1/debug-sentry:
+ *   get:
+ *     summary: Test Sentry error tracking (Development only)
+ *     description: Throws an intentional error to verify Sentry is capturing exceptions. Remove in production.
+ *     tags:
+ *       - Debug
+ *     responses:
+ *       500:
+ *         description: Intentional error thrown for Sentry testing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
+router.get("/debug-sentry", (req, res) => {
+  throw new Error("Sentry test error - This is intentional!");
+});
+
 // Customer routes
 router.use("/users", usersRoute);
 router.use("/products", productsRoute);
