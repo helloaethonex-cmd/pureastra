@@ -273,8 +273,8 @@ export default function Navbar() {
         {/* RIGHT BROWN OVERLAY (OVERLAPPING) */}
         <div
           className={`absolute top-0 right-0 h-full w-[80px]
-          bg-gradient-to-b from-[#5E2B15]/50 to-[#5E2B15]/40
-          backdrop-blur-xl z-50
+          bg-gradient-to-b from-[#5E2B15]
+          backdrop-blur-xl z-20
           transition-transform duration-500 ${
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
@@ -288,8 +288,9 @@ export default function Navbar() {
         </div>
 
         {/* MENU ITEMS */}
-        <div className="absolute top-[110px] left-[36px] w-[320px] z-[40] flex flex-col gap-4">
-
+        {/* <div className="absolute top-[110px] left-[36px] w-[320px] z-[40] flex flex-col gap-4"> */}
+{/* <div className="absolute top-[110px] left-0 w-full px-6 z-[40] flex flex-col gap-4 items-left"> */}
+<div className="absolute top-[110px] left-0 w-full px-6 z-[40] flex flex-col gap-6 items-start">
           {[...staticMenuItems, ...(categories?.filter((c) => !c.parentId) || [])].map(
             (item: any, index) => {
               const name = item.name;
@@ -301,10 +302,11 @@ export default function Navbar() {
                   key={index}
                   href={path}
                   onClick={() => setIsOpen(false)}
-                  className={`h-[56px] w-[325px] flex items-center justify-center rounded-full text-[15px] font-medium transition-all duration-300
+                  // className={`h-[56px] w-[325px] flex items-center justify-center rounded-full text-[15px] font-medium transition-all duration-300
+                   className={`h-[56px] w-full max-w-[320px] flex items-center justify-center text-center rounded-full text-[15px] font-medium transition-all duration-300
                   ${
                     isActive
-                      ? "bg-gradient-to-r from-[#5E2B15] via-[#5E2B15] to-[#5E2B15]/45 text-white shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
+                      ? "bg-gradient-to-r from-[#5E2B15] via-[#5E2B15] to-[#5E2B15]/85 text-white shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
                       : "bg-white/20 text-[#5E2B15] backdrop-blur-md hover:bg-white/50"
                   }`}
                 >
