@@ -42,10 +42,8 @@ BACKEND_IMAGE=${BACKEND_IMAGE}
 BACKEND_TAG=${BACKEND_TAG}
 EOF
 
-echo "[deploy] pruning stale docker artifacts before pull"
+echo "[deploy] cleaning stopped containers"
 docker container prune -f >/dev/null 2>&1 || true
-docker image prune -af >/dev/null 2>&1 || true
-docker builder prune -af >/dev/null 2>&1 || true
 
 echo "[deploy] pulling latest backend image"
 docker compose -f "${COMPOSE_FILE}" pull backend worker
@@ -56,11 +54,10 @@ docker compose -f "${COMPOSE_FILE}" up -d redis
 echo "[deploy] applying prisma migrations (one-off container)"
 docker compose -f "${COMPOSE_FILE}" run --rm backend npx prisma migrate deploy --config prisma.config.mjs
 
-echo "[deploy] starting backend and worker"
-docker compose -f "${COMPOSE_FILE}" up -d backend worker
+echo "[deploy] deploying backend and worker"
+docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans backend worker
 
-echo "[deploy] pruning dangling docker artifacts"
+echo "[deploy] cleaning dangling images only"
 docker image prune -f >/dev/null 2>&1 || true
-docker builder prune -f >/dev/null 2>&1 || true
 
 echo "[deploy] deployment complete"
