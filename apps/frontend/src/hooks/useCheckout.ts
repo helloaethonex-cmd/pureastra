@@ -2,9 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  confirmBuyNowCheckout,
   confirmCheckout,
   getOrderDetail,
   listMyAddresses,
+  previewBuyNowCheckout,
   previewCheckout,
   verifyRazorpayPayment,
 } from "@/services/api";
@@ -156,6 +158,95 @@ export const useCheckout = () => {
       // Invalidate cart so it refetches as empty after checkout
       await queryClient.invalidateQueries({ queryKey: ["cart"] });
 
+      return {
+        orderNumber: order.orderNumber,
+      };
+    },
+  });
+};
+
+// ── Buy Now: skip cart, go straight to Razorpay ───────────────────────────────
+
+export const useBuyNowCheckout = () => {
+  const { user } = useAuthStore();
+
+  return useMutation({
+    mutationFn: async ({
+      productVariantId,
+      quantity,
+      addressId,
+    }: {
+      productVariantId: string;
+      quantity: number;
+      addressId: string;
+    }) => {
+      await ensureRazorpayLoaded();
+
+      const checkoutPreview = await previewBuyNowCheckout({
+        productVariantId,
+        quantity,
+        addressId,
+      });
+
+      const checkoutResult = await confirmBuyNowCheckout(
+        { previewToken: checkoutPreview.previewToken },
+        generateIdempotencyKey(),
+      );
+
+      const { order, payment: paymentAttempt } = checkoutResult;
+
+      if (!paymentAttempt.razorpayOrderId) {
+        throw new Error("Payment provider order was not created");
+      }
+
+      const RazorpayCheckout = window.Razorpay;
+      if (!RazorpayCheckout) {
+        throw new Error("Razorpay checkout not available");
+      }
+      const razorpayOrderId = paymentAttempt.razorpayOrderId;
+
+      await new Promise<void>((resolve, reject) => {
+        const razorpay = new RazorpayCheckout({
+          key: paymentAttempt.razorpayKeyId,
+          amount: paymentAttempt.amountPaise,
+          currency: paymentAttempt.currency,
+          order_id: razorpayOrderId,
+          name: "Pureastra",
+          description: `Order ${order.orderNumber}`,
+          prefill: {
+            name: user?.name,
+            email: user?.email,
+          },
+          notes: {
+            orderNumber: order.orderNumber,
+            paymentAttemptId: paymentAttempt.paymentAttemptId,
+          },
+          handler: async (response) => {
+            try {
+              await verifyRazorpayPayment(paymentAttempt.paymentAttemptId, {
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              });
+
+              await waitForPaymentConfirmation(order.orderNumber);
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          },
+          modal: {
+            ondismiss: () => reject(new Error("Payment cancelled")),
+          },
+          theme: {
+            color: "#819744",
+          },
+        });
+
+        razorpay.open();
+      });
+
+      // Buy-now does NOT touch the cart — no invalidation needed.
       return {
         orderNumber: order.orderNumber,
       };
