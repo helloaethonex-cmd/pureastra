@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/node";
-import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import express from "express";
 import cors from "cors";
 import routes from "./routes";
@@ -14,13 +13,6 @@ import {
   notFoundHandler,
 } from "./middlewares/error-handler";
 
-Sentry.init({
-  dsn: env.SENTRY_DSN,
-  tracesSampleRate: 0.1,
-  environment: env.NODE_ENV,
-  enabled: !!env.SENTRY_DSN,
-  integrations: [nodeProfilingIntegration()],
-});
 
 const app = express();
 app.disable("x-powered-by");

@@ -29,7 +29,7 @@ services:
         condition: service_healthy
     ports:
       - "5050:5050"
-    command: ["node", "dist/server.js"]
+    command: ["node", "--require", "./dist/instrument.js", "dist/server.js"]
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:5050/api/v1/health || exit 1"]
       interval: 15s
@@ -49,7 +49,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    command: ["node", "dist/jobs/orders/inventory-reservation.worker.js"]
+    command: ["node", "--require", "./dist/instrument.js", "dist/jobs/orders/inventory-reservation.worker.js"]
     restart: unless-stopped
 
   worker-email:
@@ -64,7 +64,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    command: ["node", "dist/jobs/email/email.worker.js"]
+    command: ["node", "--require", "./dist/instrument.js", "dist/jobs/email/email.worker.js"]
     restart: unless-stopped
 
 volumes:
