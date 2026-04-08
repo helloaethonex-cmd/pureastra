@@ -865,6 +865,28 @@ export default function ProductClient({ product }: { product: Product }) {
     );
   };
 
+  const handleBuyNow = () => {
+    if (!user) {
+      toast.error("Please sign in to continue.");
+      return;
+    }
+    if (!activeVariant?.id) {
+      toast.error("Please select a valid variant.");
+      return;
+    }
+    addCartItem.mutate(
+      { productVariantId: activeVariant.id, quantity: qty },
+      {
+        onSuccess: () => router.push("/checkout"),
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : "Failed to add to cart";
+          toast.error(message);
+        },
+      },
+    );
+  };
+
   return (
     <>
     <section className="bg-[#FAF3E2]">
@@ -1077,7 +1099,7 @@ export default function ProductClient({ product }: { product: Product }) {
             <button
               onClick={handleAddToCart}
               disabled={addCartItem.isPending}
-              className="flex h-[42px] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex h-[42px] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <span className="bg-[#E5EAD9] text-[#5E2B16] px-6 flex items-center font-semibold text-[14px] tracking-wide">
                 {addCartItem.isPending ? "ADDING..." : "ADD TO CART"}
@@ -1088,21 +1110,12 @@ export default function ProductClient({ product }: { product: Product }) {
             </button>
 
             <button
-              onClick={() => {
-                if (!user) {
-                  toast.error("Please sign in to continue.");
-                  return;
-                }
-                if (!activeVariant?.id) {
-                  toast.error("Please select a variant.");
-                  return;
-                }
-                setShowBuyNow(true);
-              }}
-              className="bg-[#819744] text-white px-5 h-[42px] rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition"
+              onClick={handleBuyNow}
+              disabled={addCartItem.isPending}
+              className="bg-[#819744] text-white px-5 h-10.5 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition disabled:opacity-60 cursor-pointer"
             >
               <FontAwesomeIcon icon={faBolt} />
-              Buy Now
+              {addCartItem.isPending ? "Adding..." : "Buy Now"}
             </button>
           </div>
 

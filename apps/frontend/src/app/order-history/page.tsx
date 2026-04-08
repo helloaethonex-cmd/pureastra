@@ -14,6 +14,7 @@ import {
   faReceipt,
   faSpinner,
   faShoppingBag,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { useMyOrders, useOrderDetail } from "@/hooks/useOrders";
 
@@ -254,39 +255,45 @@ function OrderCard({ order, highlight }: {
   highlight: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-xl border-2 p-5 shadow-sm transition-all ${
-      highlight ? "border-[#819744] shadow-[0_0_0_3px_rgba(129,151,68,0.15)]" : "border-transparent hover:border-[#D6C9B6]"
-    }`}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs text-[#9a7a65] uppercase tracking-wide mb-0.5">Order Number</p>
-          <p className="font-bold text-[#5E2B15] font-mono">{order.orderNumber}</p>
-          <p className="text-xs text-[#9a7a65] mt-1">
-            {new Date(order.createdAt).toLocaleDateString("en-IN", {
-              day: "numeric", month: "short", year: "numeric",
-            })}
-          </p>
+    <Link href={`/order-history?order=${order.orderNumber}`}>
+      <div className={`bg-white rounded-xl border-2 p-5 shadow-sm transition-all cursor-pointer ${
+        highlight ? "border-[#819744] shadow-[0_0_0_3px_rgba(129,151,68,0.15)]" : "border-transparent hover:border-[#D6C9B6] hover:shadow-md"
+      }`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs text-[#9a7a65] uppercase tracking-wide mb-0.5">Order Number</p>
+            <p className="font-bold text-[#5E2B15] font-mono">{order.orderNumber}</p>
+            <p className="text-xs text-[#9a7a65] mt-1">
+              {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                day: "numeric", month: "short", year: "numeric",
+              })}
+            </p>
+          </div>
+          <div className="text-right flex flex-col items-end gap-2">
+            <span className={paymentBadgeStyle(order.paymentStatus)}>
+              {PAYMENT_STATUS_LABEL[order.paymentStatus] ?? "Unknown"}
+            </span>
+            <p className="font-bold text-[#3d2b1a]">₹{Number(order.totalPaid).toFixed(2)}</p>
+          </div>
         </div>
-        <div className="text-right flex flex-col items-end gap-2">
-          <span className={paymentBadgeStyle(order.paymentStatus)}>
-            {PAYMENT_STATUS_LABEL[order.paymentStatus] ?? "Unknown"}
-          </span>
-          <p className="font-bold text-[#3d2b1a]">₹{Number(order.totalPaid).toFixed(2)}</p>
-        </div>
-      </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        <FontAwesomeIcon
-          icon={faCircle}
-          className={`text-xs ${statusColor(order.orderStatus, order.paymentStatus)}`}
-        />
-        <span className="text-sm font-medium text-[#5E2B15]">
-          {ORDER_STATUS_LABEL[order.orderStatus] ?? "Unknown"}
-        </span>
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FontAwesomeIcon
+              icon={faCircle}
+              className={`text-xs ${statusColor(order.orderStatus, order.paymentStatus)}`}
+            />
+            <span className="text-sm font-medium text-[#5E2B15]">
+              {ORDER_STATUS_LABEL[order.orderStatus] ?? "Unknown"}
+            </span>
+          </div>
+          <FontAwesomeIcon icon={faChevronRight} className="text-xs text-[#C4B59E]" />
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
+
 
 // ── Main page content ─────────────────────────────────────────────────────────
 function OrderHistoryPageContent() {
@@ -322,7 +329,7 @@ function OrderHistoryPageContent() {
           <h2 className="text-lg font-semibold text-[#5E2B15] mb-4">Your Orders</h2>
         )}
         {focusOrderNumber && orders.length > 1 && (
-          <h2 className="text-base font-semibold text-[#7B6A58] mb-4 mt-2">All Orders</h2>
+          <h2 className="text-base font-semibold text-[#7B6A58] mb-4 mt-2">Other Orders</h2>
         )}
 
         {isLoading ? (
@@ -346,7 +353,7 @@ function OrderHistoryPageContent() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className=" flex flex-col gap-4">
             {sortedOrders
               .filter((o) => o.orderNumber !== focusOrderNumber)
               .map((order) => (
