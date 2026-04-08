@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config({ path: "env" });
+dotenv.config({ path: ".env" });
 import { z } from "zod";
 import pino from "pino";
 
@@ -24,61 +24,93 @@ const envBoolean = z.preprocess((value) => {
   return value;
 }, z.boolean());
 
-export const envSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
-  PORT: z.coerce.number().int().positive().default(5050),
+export const envSchema = z
+  .object({
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
+    PORT: z.coerce.number().int().positive().default(5050),
 
-  DATABASE_URL: z.url(),
-  DIRECT_URL: z.url().optional(),
+    DATABASE_URL: z.url(),
+    DIRECT_URL: z.url().optional(),
 
-  REDIS_URL: z.url().optional(),
-  REDIS_HOST: z.string().min(1).optional(),
-  REDIS_PORT: z.coerce.number().int().positive().optional(),
-  REDIS_USERNAME: z.string().min(1).optional(),
-  REDIS_PASSWORD: z.string().min(1).optional(),
-  REDIS_DB: z.coerce.number().int().nonnegative().default(0),
-  REDIS_TLS: envBoolean.default(false),
+    REDIS_URL: z.url().optional(),
+    REDIS_HOST: z.string().min(1).optional(),
+    REDIS_PORT: z.coerce.number().int().positive().optional(),
+    REDIS_USERNAME: z.string().min(1).optional(),
+    REDIS_PASSWORD: z.string().min(1).optional(),
+    REDIS_DB: z.coerce.number().int().nonnegative().default(0),
+    REDIS_TLS: envBoolean.default(false),
 
-  EMAIL_QUEUE_NAME: z.string().min(1).default("email"),
-  EMAIL_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
-  ORDER_RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(15),
-  ORDER_RESERVATION_RELEASE_BATCH_SIZE: z.coerce.number().int().positive().default(100),
-  ORDER_RESERVATION_RELEASE_MAX_BATCHES: z.coerce.number().int().positive().default(50),
-  ORDER_RESERVATION_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
-  ORDER_RESERVATION_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(1),
-  CHECKOUT_PREVIEW_TTL_SECONDS: z.coerce.number().int().positive().default(600),
-  CHECKOUT_IDEMPOTENCY_TTL_SECONDS: z.coerce.number().int().positive().default(86400),
-  PAYMENT_PROVIDER_DEFAULT: z.string().trim().min(1).default("razorpay"),
-  RAZORPAY_KEY_ID: z.string().trim().min(1),
-  RAZORPAY_KEY_SECRET: z.string().trim().min(1),
-  RAZORPAY_WEBHOOK_SECRET: z.string().trim().min(1),
+    EMAIL_QUEUE_NAME: z.string().min(1).default("email"),
+    EMAIL_WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
+    ORDER_RESERVATION_TTL_MINUTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(15),
+    ORDER_RESERVATION_RELEASE_BATCH_SIZE: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(100),
+    ORDER_RESERVATION_RELEASE_MAX_BATCHES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(50),
+    ORDER_RESERVATION_SWEEP_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60000),
+    ORDER_RESERVATION_WORKER_CONCURRENCY: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(1),
+    CHECKOUT_PREVIEW_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(600),
+    CHECKOUT_IDEMPOTENCY_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(86400),
+    PAYMENT_PROVIDER_DEFAULT: z.string().trim().min(1).default("razorpay"),
+    RAZORPAY_KEY_ID: z.string().trim().min(1),
+    RAZORPAY_KEY_SECRET: z.string().trim().min(1),
+    RAZORPAY_WEBHOOK_SECRET: z.string().trim().min(1),
 
-  BETTER_AUTH_SECRET: z.string().min(32),
-  BETTER_AUTH_URL: z.url(),
-  BETTER_AUTH_TRUSTED_ORIGINS: z.string().min(1),
+    BETTER_AUTH_SECRET: z.string().min(32),
+    BETTER_AUTH_URL: z.url(),
+    BETTER_AUTH_TRUSTED_ORIGINS: z.string().min(1),
 
-  AUTH_VERIFY_EMAIL_CALLBACK_URL: z.url(),
-  AUTH_RESET_PASSWORD_CALLBACK_URL: z.url(),
+    AUTH_VERIFY_EMAIL_CALLBACK_URL: z.url(),
+    AUTH_RESET_PASSWORD_CALLBACK_URL: z.url(),
 
-  GOOGLE_CLIENT_ID: z.string().min(1),
-  GOOGLE_CLIENT_SECRET: z.string().min(1),
+    GOOGLE_CLIENT_ID: z.string().min(1),
+    GOOGLE_CLIENT_SECRET: z.string().min(1),
 
-  SMTP_HOST: z.string().min(1),
-  SMTP_PORT: z.coerce.number().int().positive(),
-  SMTP_USER: z.string().min(1),
-  SMTP_PASS: z.string().min(1),
-  SMTP_FROM: z.string().min(1),
-}).superRefine((value, ctx) => {
-  if (!value.REDIS_URL && (!value.REDIS_HOST || !value.REDIS_PORT)) {
-    ctx.addIssue({
-      code: "custom",
-      message: "Provide REDIS_URL or both REDIS_HOST and REDIS_PORT",
-      path: ["REDIS_URL"],
-    });
-  }
-});
+    SMTP_HOST: z.string().min(1),
+    SMTP_PORT: z.coerce.number().int().positive(),
+    SMTP_USER: z.string().min(1),
+    SMTP_PASS: z.string().min(1),
+    SMTP_FROM: z.string().min(1),
+
+    SENTRY_DSN: z.url().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.REDIS_URL && (!value.REDIS_HOST || !value.REDIS_PORT)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Provide REDIS_URL or both REDIS_HOST and REDIS_PORT",
+        path: ["REDIS_URL"],
+      });
+    }
+  });
 
 const parsed = envSchema.safeParse(process.env);
 

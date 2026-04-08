@@ -1,4 +1,4 @@
-import "dotenv/config";
+import * as Sentry from "@sentry/node";
 import { QueueEvents, Worker } from "bullmq";
 import { env } from "../../config/env";
 import { redisConnectionOptions } from "../../lib/redis/connection";
@@ -11,6 +11,13 @@ import {
   scheduleExpireInventoryReservations,
 } from "./inventory-reservation.queue";
 import { InventoryReservationJobPayload } from "./inventory-reservation.types";
+
+Sentry.init({
+  dsn: env.SENTRY_DSN,
+  tracesSampleRate: 0.1,
+  environment: env.NODE_ENV,
+  enabled: !!env.SENTRY_DSN,
+});
 
 const worker = new Worker<InventoryReservationJobPayload>(
   INVENTORY_RESERVATION_QUEUE_NAME,
@@ -51,6 +58,14 @@ worker.on("failed", (job, error) => {
     },
     "Inventory reservation expiry job failed",
   );
+
+  Sentry.captureException(error, {
+    tags: {
+      queue: INVENTORY_RESERVATION_QUEUE_NAME,
+      jobName: job?.name,
+      jobId: job?.id,
+    },
+  });
 });
 
 queueEvents.on("stalled", ({ jobId }) => {
@@ -79,6 +94,20 @@ process.on("SIGINT", () => {
 
 process.on("SIGTERM", () => {
   void shutdown("SIGTERM");
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error(
+    { err: reason },
+    "Unhandled promise rejection in inventory worker",
+  );
+  Sentry.captureException(reason);
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error({ err: error }, "Uncaught exception in inventory worker");
+  Sentry.captureException(error);
+  void shutdown("uncaughtException");
 });
 
 async function start() {

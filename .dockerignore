@@ -1,0 +1,37 @@
+.git
+.github
+.pnpm-store
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/.turbo
+**/.cache
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env
+**/.env
+**/.env.local
+**/.env.*.local
+README.md
+BACKLOG.md
+infra/scripts
+
+# Testing
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+**/test
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Reduce context size
+packages/*
+!packages/*/package.json

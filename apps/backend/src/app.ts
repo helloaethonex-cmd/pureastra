@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import express from "express";
 import cors from "cors";
 import routes from "./routes";
@@ -5,9 +7,20 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/better-auth";
-import { trustedOrigins } from "./config/env";
+import { env, trustedOrigins } from "./config/env";
 import { requestLogger } from "./middlewares/request-logger";
-import { globalErrorHandler, notFoundHandler } from "./middlewares/error-handler";
+import {
+  globalErrorHandler,
+  notFoundHandler,
+} from "./middlewares/error-handler";
+
+Sentry.init({
+  dsn: env.SENTRY_DSN,
+  tracesSampleRate: 0.1,
+  environment: env.NODE_ENV,
+  enabled: !!env.SENTRY_DSN,
+  integrations: [nodeProfilingIntegration()],
+});
 
 const app = express();
 app.disable("x-powered-by");
@@ -20,7 +33,10 @@ app.use(
 );
 
 app.use(requestLogger);
-app.use("/api/v1/payments/webhooks/razorpay", express.raw({ type: "application/json" }));
+app.use(
+  "/api/v1/payments/webhooks/razorpay",
+  express.raw({ type: "application/json" }),
+);
 app.use(express.json());
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
@@ -39,6 +55,10 @@ app.use(
 );
 
 app.use("/api/v1/", routes);
+
+// Sentry error handler MUST be after routes but before custom error handlers
+Sentry.setupExpressErrorHandler(app);
+
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 

@@ -13,6 +13,8 @@ export default defineConfig({
   },
   datasource: {
     // Prisma CLI / Migrate should use a direct DB connection (not pooler)
-    url: process.env["DIRECT_URL"],
+    // Fall back to DATABASE_URL so containerized migrate deploy does not fail
+    // when only the pooled URL is present in the runtime env.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });
