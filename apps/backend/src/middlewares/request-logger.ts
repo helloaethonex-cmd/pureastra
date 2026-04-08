@@ -26,14 +26,32 @@ const httpLogger = pinoHttp({
     res.setHeader("x-request-id", requestId);
     return requestId;
   },
-  customLogLevel: (_req, res, err) => {
+  // pino-http v11 types only declare 3 args but runtime supports 4 (responseTime).
+  // Cast to any to bypass the stale type definition.
+  customLogLevel: ((_req: any, res: any, err: any, responseTime: number) => {
     if (res.statusCode >= 500 || err) return "error";
     if (res.statusCode === 429) return "warn";
-    if (res.statusCode >= 400) return "info";
-    return "info";
-  },
+    if (res.statusCode >= 400) return "warn";
+    if (responseTime > 3000) return "warn"; // slow request — log even on success
+    return "silent";
+  }) as any,
   autoLogging: {
-    ignore: (req) => req.method === "OPTIONS" || req.url === "/api/v1/health",
+    ignore: (req) => {
+      const url = req.url ?? "";
+
+      // Skip preflight and health checks
+      if (req.method === "OPTIONS") return true;
+      if (url === "/api/v1/health") return true;
+
+      // Silently drop all scanner/bot probes.
+      // Anything not under a known valid prefix is guaranteed noise:
+      // PHP exploits, path traversal, Docker API scans, ThinkPHP RCE, etc.
+      const isKnownPath =
+        url.startsWith("/api/") ||
+        url.startsWith("/docs");
+
+      return !isKnownPath;
+    },
   },
 });
 
