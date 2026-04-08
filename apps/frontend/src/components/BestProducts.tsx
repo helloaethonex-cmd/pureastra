@@ -35,8 +35,8 @@ export default function BestProducts() {
         </div>
       ) : (
         <div className="mt-4 px-4 md:px-6 lg:hidden">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {products.map((product: any) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {products.slice(0, 3).map((product: any) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -50,6 +50,7 @@ export default function Navbar() {
 
  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { user } = useAuthStore();
   const signOut = useSignOut();
@@ -78,6 +79,25 @@ export default function Navbar() {
       setIsAuthModalOpen(true);
     }
   }
+
+  // Close user menu when clicking/tapping outside
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+
+    function handleOutside(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node | null;
+      if (userMenuRef.current && target && !userMenuRef.current.contains(target)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [isUserMenuOpen]);
 
   return (
     <>
@@ -132,10 +152,7 @@ export default function Navbar() {
             </Link>
 
               {/* User */}
-              <div
-                className="relative"
-                onMouseLeave={() => setIsUserMenuOpen(false)}
-              >
+              <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={handleUserIconClick}
                   className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] hover:scale-105 transition hover:shadow-md"

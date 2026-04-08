@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
@@ -522,6 +523,7 @@ export default function ProductClient({ product }: { product: Product }) {
   );
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
+  const router = useRouter();
 
   // Related products from same category
   const categoryId = product.categories?.[0]?.category?.id;
@@ -591,6 +593,28 @@ export default function ProductClient({ product }: { product: Product }) {
       { productVariantId: activeVariant.id, quantity: qty },
       {
         onSuccess: () => toast.success("Item added to cart!"),
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : "Failed to add to cart";
+          toast.error(message);
+        },
+      },
+    );
+  };
+
+  const handleBuyNow = () => {
+    if (!user) {
+      toast.error("Please sign in to continue.");
+      return;
+    }
+    if (!activeVariant?.id) {
+      toast.error("Please select a valid variant.");
+      return;
+    }
+    addCartItem.mutate(
+      { productVariantId: activeVariant.id, quantity: qty },
+      {
+        onSuccess: () => router.push("/checkout"),
         onError: (error) => {
           const message =
             error instanceof Error ? error.message : "Failed to add to cart";
@@ -811,7 +835,7 @@ export default function ProductClient({ product }: { product: Product }) {
             <button
               onClick={handleAddToCart}
               disabled={addCartItem.isPending}
-              className="flex h-[42px] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex h-[42px] cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <span className="bg-[#E5EAD9] text-[#5E2B16] px-6 flex items-center font-semibold text-[14px] tracking-wide">
                 {addCartItem.isPending ? "ADDING..." : "ADD TO CART"}
@@ -821,9 +845,13 @@ export default function ProductClient({ product }: { product: Product }) {
               </span>
             </button>
 
-            <button className="bg-[#819744] text-white px-5 h-[42px] rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition">
+            <button
+              onClick={handleBuyNow}
+              disabled={addCartItem.isPending}
+              className="bg-[#819744] text-white px-5 h-10.5 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition disabled:opacity-60 cursor-pointer"
+            >
               <FontAwesomeIcon icon={faBolt} />
-              Buy Now
+              {addCartItem.isPending ? "Adding..." : "Buy Now"}
             </button>
           </div>
 
