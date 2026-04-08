@@ -18,6 +18,8 @@
 body {
   background-color: #FFFAED;
   font-family: 'Poppins', sans-serif;
+  width: 100%;
+  overflow-x: hidden !important;
 }
 
 /* ─── SWIPER LIBRARY OVERRIDES ──────────────────────────────────────────────

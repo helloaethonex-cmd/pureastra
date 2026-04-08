@@ -83,7 +83,7 @@ export default function CategorySection() {
       {/* RESPONSIVE GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[15px] md:gap-[20px] lg:gap-[25px]">
         {productsLoading ? (
-          [...Array(6)].map((_, index) => (
+          [...Array()].map((_, index) => (
             <div
               key={index}
               className="h-[280px] w-full rounded-[25px] bg-[#D9D9D9] animate-pulse"
@@ -94,7 +94,7 @@ export default function CategorySection() {
             No products found for this section.
           </div>
         ) : (
-          products.map((product) => (
+          products.slice(0, 3).map((product) => (
             <ProductCard key={product.id} product={product} />
           ))
         )}

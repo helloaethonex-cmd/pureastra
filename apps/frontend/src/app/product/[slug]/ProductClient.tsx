@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCartShopping,
@@ -788,7 +787,6 @@ export default function ProductClient({ product }: { product: Product }) {
   const [showBuyNow, setShowBuyNow] = useState(false);
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
-  const router = useRouter();
 
   // Related products from same category
   const categoryId = product.categories?.[0]?.category?.id;
