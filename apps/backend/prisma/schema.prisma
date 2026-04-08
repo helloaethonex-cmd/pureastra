@@ -50,6 +50,7 @@ model User {
   addresses Address[]
   orders    Order[]
   wishlistItems WishlistItem[]
+  reviews       Review[]
 
   @@map("users")
 }
@@ -194,6 +195,10 @@ model Product {
   categories ProductCategory[]
   images     ProductImage[]
   contentSections ProductContentSection[]
+
+  reviews              Review[]
+  productReviewMetrics ProductReviewMetric[]
+  reviewSummary        ProductReviewSummary?
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -430,6 +435,7 @@ model Order {
   payments              Payment[]
   statusHistory         OrderStatusHistory[]
   inventoryReservations InventoryReservation[]
+  reviews               Review[]
 
   @@index([userId])
   @@map("orders")
@@ -536,4 +542,121 @@ model WishlistItem {
   @@index([userId, createdAt])
   @@index([productVariantId])
   @@map("wishlist_items")
+}
+
+//
+// ========================================================
+// REVIEW SYSTEM
+// ========================================================
+//
+
+enum MetricUnit {
+  PERCENT // 0-100%
+  RATING  // e.g. 1-5 scale
+}
+
+model Review {
+  id        BigInt  @id @default(autoincrement())
+  userId    BigInt  @map("user_id")
+  productId BigInt  @map("product_id")
+  orderId   BigInt? @map("order_id")
+
+  rating  Int
+  title   String? @db.VarChar(255)
+  comment String?
+
+  isVerifiedPurchase Boolean @default(false) @map("is_verified_purchase")
+  isApproved         Boolean @default(true) @map("is_approved")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  images          ReviewImage[]
+  metricResponses ReviewMetricResponse[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, productId])
+  @@index([productId, isApproved])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model ReviewImage {
+  id       BigInt @id @default(autoincrement())
+  reviewId BigInt @map("review_id")
+  imageUrl String @map("image_url") @db.VarChar(500)
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([reviewId])
+  @@map("review_images")
+}
+
+model ReviewMetric {
+  id   BigInt @id @default(autoincrement())
+  name String @unique @db.VarChar(100)
+  icon String? @db.VarChar(50)
+
+  minValue Int        @default(0)   @map("min_value")
+  maxValue Int        @default(100) @map("max_value")
+  unit     MetricUnit @default(PERCENT)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  productMappings ProductReviewMetric[]
+  responses       ReviewMetricResponse[]
+
+  @@map("review_metrics")
+}
+
+model ProductReviewMetric {
+  id           BigInt @id @default(autoincrement())
+  productId    BigInt @map("product_id")
+  metricId     BigInt @map("metric_id")
+  displayOrder Int    @default(0) @map("display_order")
+
+  product Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  metric  ReviewMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([productId, metricId])
+  @@index([productId, displayOrder])
+  @@map("product_review_metrics")
+}
+
+model ReviewMetricResponse {
+  id       BigInt @id @default(autoincrement())
+  reviewId BigInt @map("review_id")
+  metricId BigInt @map("metric_id")
+  value    Int
+
+  review Review       @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  metric ReviewMetric @relation(fields: [metricId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([reviewId, metricId])
+  @@index([metricId])
+  @@map("review_metric_responses")
+}
+
+model ProductReviewSummary {
+  productId BigInt @id @map("product_id")
+
+  totalReviews Int     @default(0) @map("total_reviews")
+  avgRating    Decimal @default(0) @map("avg_rating") @db.Decimal(4, 2)
+
+  metricAverages Json? @map("metric_averages")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("product_review_summaries")
 }

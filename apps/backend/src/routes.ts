@@ -9,9 +9,11 @@ import paymentsRoute from "./modules/payments/payments.route";
 import uploadRoute from "./modules/upload/upload.route";
 import wishlistRoute from "./modules/wishlist/wishlist.route";
 import checkoutRoute from "./modules/checkout/checkout.route";
+import reviewsRoute from "./modules/reviews/reviews.route";
 
 // Admin routes
 import ordersAdminRoute from "./modules/orders/orders.admin.route";
+import reviewsAdminRoute from "./modules/reviews/reviews.admin.route";
 
 const router = Router();
 
@@ -54,8 +56,10 @@ router.use("/", paymentsRoute);
 router.use("/upload", uploadRoute);
 router.use("/wishlist", wishlistRoute);
 router.use("/checkout", checkoutRoute);
+router.use("/reviews", reviewsRoute);
 
 // Admin routes
 router.use("/admin/orders", ordersAdminRoute);
+router.use("/admin/reviews", reviewsAdminRoute);
 
 export default router;
