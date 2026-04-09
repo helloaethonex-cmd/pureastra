@@ -51,13 +51,13 @@ export default function BestProducts() {
             }}
             breakpoints={{
               0: {
-                slidesPerView: 1, // 📱 Mobile
+                slidesPerView: 1, 
               },
               640: {
-                slidesPerView: 2, // 📲 Tablet
+                slidesPerView: 2, 
               },
               1024: {
-                slidesPerView: 3, // 💻 Desktop
+                slidesPerView: 3, 
                 spaceBetween: 40,
               },
             }}

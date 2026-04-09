@@ -26,7 +26,7 @@ import {
   faShoppingBag,
   faIndustry,
   faBox,
-  faBuilding,
+  faBuilding, faBalanceScale, faSeedling
 } from "@fortawesome/free-solid-svg-icons";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -73,6 +73,10 @@ function BenefitsSection({
     {
       title: "Controls Oiliness and Dryness",
       desc: "Balanced ingredients help maintain hydration and regulate excess oil",
+    },
+    {
+     title: "Removes Tan & Dullness",
+     desc: "Papaya enzymes gently exfoliate dead skin while Vitamin C and Tangerine Extract help fade tan and restore a fresh, natural glow"
     },
   ];
 
@@ -1087,6 +1091,7 @@ export default function ProductClient({ product }: { product: Product }) {
               </span>
             </button>
 
+            
             <button
               onClick={() => {
                 if (!user) {
@@ -1106,40 +1111,199 @@ export default function ProductClient({ product }: { product: Product }) {
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-10 border-b mb-4">
-            <button
-              onClick={() => setTab("desc")}
-              className={`pb-2 font-semibold ${
-                tab === "desc"
-                  ? "text-[#5E2B16] border-b-2 border-[#5E2B16]"
-                  : "text-gray-500"
-              }`}
-            >
-              Description
-            </button>
-            <button
-              onClick={() => setTab("reviews")}
-              className={`pb-2 font-semibold ${
-                tab === "reviews"
-                  ? "text-[#5E2B16] border-b-2 border-[#5E2B16]"
-                  : "text-gray-500"
-              }`}
-            >
-              Reviews
-            </button>
+          {/* TABS */}
+          <div className="border-b mb-4 overflow-x-auto">
+            <div className="flex gap-6 md:gap-10 min-w-max">
+
+              <button
+                onClick={() => setTab("desc")}
+                className={`pb-2 font-semibold text-[14px] md:text-[16px] whitespace-nowrap ${
+                  tab === "desc"
+                    ? "text-[#3B7509] border-b-2 border-[#5E2B16]"
+                    : "text-gray-500"
+                }`}
+              >
+                Description
+              </button>
+
+              <button
+                onClick={() => setTab("reviews")}
+                className={`pb-2 font-semibold text-[14px] md:text-[16px] whitespace-nowrap ${
+                  tab === "reviews"
+                    ? "text-[#3B7509] border-b-2 border-[#5E2B16]"
+                    : "text-gray-500"
+                }`}
+              >
+                Reviews
+              </button>
+
+            </div>
           </div>
 
-          <div className="text-sm text-gray-600 leading-6 space-y-3">
-            {tab === "desc" ? (
-              <p className="text-[14px] text-[#5E2B16] leading-6">
-                {product.description ??
-                  "No description available for this product."}
-              </p>
-            ) : (
-              <p>No reviews yet</p>
+          {/* TAB CONTENT */}
+          <div className="space-y-4">
+
+            {/* DESCRIPTION */}
+            {tab === "desc" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[15px] leading-5 md:leading-6 max-w-full md:max-w-[600px]"
+              >
+                Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C,
+                natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle,
+                toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula
+                cleanses effectively while keeping your skin balanced, refreshed, and nourished.
+              </motion.div>
             )}
+
+            {/* REVIEWS */}
+            {tab === "reviews" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+
+                {/* RATING */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[18px] md:text-[22px] font-bold">4.3</span>
+                  <FontAwesomeIcon icon={faStar} className="text-green-600" />
+                  <span className="bg-green-100 text-green-700 px-2 py-[2px] rounded text-xs md:text-sm">
+                    Very Good
+                  </span>
+                </div>
+
+                <p className="text-[12px] md:text-[14px] text-gray-500 mb-4">
+                  based on 42,213 ratings by Verified Buyers
+                </p>
+
+                {/* IMAGE STRIP */}
+                <div className="flex gap-2 overflow-x-auto mb-5 scroll-smooth">
+                  {[1,2,3,4].map((_, i) => (
+                    <div
+                      key={i}
+                      className="min-w-[80px] md:min-w-[100px] h-[80px] md:h-[100px] bg-gray-200 rounded-lg"
+                    />
+                  ))}
+                </div>
+
+                {/* REVIEW SLIDER */}
+                <div className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2">
+
+                  {[1,2,3,4].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      whileHover={{ scale: 1.03 }}
+                      className="snap-start min-w-[85%] sm:min-w-[48%] md:min-w-[350px] 
+                      bg-[#F5F0E6] p-4 rounded-xl shadow-sm space-y-3"
+                    >
+
+                      {/* HEADER */}
+                       <div className="flex justify-between items-center">
+                        {/* STAR RATING */}
+                        <div className="flex items-center gap-1 text-[#819744] text-[13px] md:text-[14px]">
+                          {[...Array(5)].map((_, i) => (
+                            <FontAwesomeIcon key={i} icon={faStar} />
+                          ))}
+                        </div>
+                        
+                        <span className="text-[10px] md:text-xs text-[#8B5E3C]">
+                          6 Month ago
+                        </span>
+                      </div>
+
+                      {/* PROGRESS BARS */}
+                      <div className="space-y-2 text-[11px] md:text-[12px]">
+
+                        {/* Brightening */}
+                        <div>
+                          <div className="flex justify-between items-center text-[#5E2B16] mb-1">
+                            <div className="flex items-center gap-1">
+                              <FontAwesomeIcon icon={faSun} className="text-[#819744]" />
+                              <span>Brightening</span>
+                            </div>
+                            <span>85%</span>
+                          </div>
+                          <div className="w-full bg-white/60 rounded-full h-2">
+                            <div className="bg-[#819744] h-2 rounded-full w-[85%]" />
+                          </div>
+                        </div>
+
+                        {/* Hydration */}
+                        <div>
+                          <div className="flex justify-between items-center text-[#5E2B16] mb-1">
+                            <div className="flex items-center gap-1">
+                              <FontAwesomeIcon icon={faDroplet} className="text-[#5C8D89]" />
+                              <span>Hydration</span>
+                            </div>
+                            <span>70%</span>
+                          </div>
+                          <div className="w-full bg-white/60 rounded-full h-2">
+                            <div className="bg-[#A5B67A] h-2 rounded-full w-[70%]" />
+                          </div>
+                        </div>
+
+                        {/* Sebum Balance */}
+                        <div>
+                          <div className="flex justify-between items-center text-[#5E2B16] mb-1">
+                            <div className="flex items-center gap-1">
+                              <FontAwesomeIcon icon={faBalanceScale} className="text-[#A67C52]" />
+                              <span>Sebum Balance</span>
+                            </div>
+                            <span>65%</span>
+                          </div>
+                          <div className="w-full bg-white/60 rounded-full h-2">
+                            <div className="bg-[#C3CF9A] h-2 rounded-full w-[65%]" />
+                          </div>
+                        </div>
+
+                      </div>
+
+                      {/* STATUS + RATING */}
+                      <div className="flex justify-between items-center text-[11px] md:text-[12px]">
+
+                        {/* VERIFIED */}
+                        <div className="flex items-center gap-2 text-[#819744] font-semibold">
+                          <FontAwesomeIcon icon={faCheckCircle} />
+                          Verified
+                        </div>
+
+                        {/* STARS */}
+                        <div className="flex text-[#819744]">
+                          {[...Array(5)].map((_, i) => (
+                            <FontAwesomeIcon key={i} icon={faStar} />
+                          ))}
+                        </div>
+
+                      </div>
+
+                      {/* CUSTOMER */}
+                      <div className="text-[11px] md:text-[13px] text-[#5E2B16]">
+                        <p className="font-semibold">Diya Nair</p>
+                        <p className="text-[#8B5E3C] text-[10px] md:text-[12px]">
+                          Alappuzha
+                        </p>
+                      </div>
+
+                      {/* REVIEW TEXT */}
+                      <p className="text-[12px] md:text-[14px] text-[#5E2B16] italic leading-5">
+                        Lightweight and absorbs quickly. Perfect for daily use.
+                      </p>
+
+                    </motion.div>
+                  ))}
+
+                </div>
+
+              </motion.div>
+            )}
+
           </div>
+
+         
+          
         </div>
       </div>
 
@@ -1300,7 +1464,7 @@ export default function ProductClient({ product }: { product: Product }) {
               />
               <div>
                 <p className="font-semibold">Marketed By</p>
-                <p>{product.brand ?? "PureAstra"}</p>
+                <p>{product.brand ?? "Pureastra"}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -1310,7 +1474,7 @@ export default function ProductClient({ product }: { product: Product }) {
               />
               <div>
                 <p className="font-semibold">Manufactured By</p>
-                <p>PureAstra Labs</p>
+                <p>Pureastra Labs</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
