@@ -170,3 +170,24 @@ export const listPayoutsSchema = z.object({
 });
 
 export type ListPayoutsInput = z.infer<typeof listPayoutsSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — Link influencer to a User account
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const linkUserSchema = z.object({
+  userId: z.coerce.bigint().positive(),
+});
+
+export type LinkUserInput = z.infer<typeof linkUserSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — Analytics query params
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const analyticsQuerySchema = z.object({
+  topLimit: z.coerce.number().int().min(1).max(50).default(10),
+});
+
+export type AnalyticsQueryInput = z.infer<typeof analyticsQuerySchema>;
+

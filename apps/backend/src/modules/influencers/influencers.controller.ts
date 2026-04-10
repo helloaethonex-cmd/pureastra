@@ -14,6 +14,9 @@ import {
   adminRecordPayout,
   adminListPayoutsForInfluencer,
   adminUpdatePayoutStatus,
+  adminLinkInfluencerUser,
+  getInfluencerDashboard,
+  getAdminAnalytics,
   validateReferralCode,
 } from "./influencers.service";
 import {
@@ -27,6 +30,8 @@ import {
   recordPayoutSchema,
   listPayoutsSchema,
   updatePayoutStatusSchema,
+  linkUserSchema,
+  analyticsQuerySchema,
   validateRefSchema,
 } from "./influencers.types";
 
@@ -201,3 +206,52 @@ export const validateRef = async (req: Request, res: Response) => {
     return handleError(req, res, err);
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INFLUENCER DASHBOARD (user-facing)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getMyDashboard = async (req: Request, res: Response) => {
+  try {
+    const result = await getInfluencerDashboard(req.user!.id);
+    return res.status(200).json(result);
+  } catch (err) {
+    return handleError(req, res, err);
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — Analytics
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getAnalytics = async (req: Request, res: Response) => {
+  try {
+    const input = analyticsQuerySchema.parse(req.query);
+    const result = await getAdminAnalytics(input);
+    return res.status(200).json(result);
+  } catch (err) {
+    return handleError(req, res, err);
+  }
+};
+
+export const linkUser = async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const input = linkUserSchema.parse(req.body);
+    const result = await adminLinkInfluencerUser(id, input);
+    return res.status(200).json(result);
+  } catch (err) {
+    // P2002 = userId already linked to another influencer
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return res.status(409).json({
+        error: "This user is already linked to another influencer",
+        code: "USER_ALREADY_LINKED",
+      });
+    }
+    return handleError(req, res, err);
+  }
+};
+

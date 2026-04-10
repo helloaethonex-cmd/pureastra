@@ -159,6 +159,114 @@ export const updateInfluencerDashboardAccess = (
   });
 };
 
+export const findInfluencerByUserId = (
+  tx: TxClient,
+  userId: bigint,
+) => {
+  return tx.influencer.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      referralCode: true,
+      commissionRate: true,
+      totalEarnings: true,
+      canViewDashboard: true,
+      status: true,
+    },
+  });
+};
+
+export const linkInfluencerToUser = (
+  tx: TxClient,
+  influencerId: bigint,
+  userId: bigint,
+) => {
+  return tx.influencer.update({
+    where: { id: influencerId },
+    data: { userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      userId: true,
+    },
+  });
+};
+
+/**
+ * Returns commission amounts grouped by sale status for a single influencer.
+ * Used for dashboard earnings breakdown.
+ * Single query — no N+1.
+ */
+export const findInfluencerSalesAggregates = (
+  tx: TxClient,
+  influencerId: bigint,
+) => {
+  return tx.influencerSale.groupBy({
+    by: ["status"],
+    where: { influencerId },
+    _sum: { commissionAmount: true },
+    _count: { id: true },
+  });
+};
+
+/**
+ * Returns top N influencers ordered by total_earnings DESC.
+ * Uses the denormalized counter + the DESC index for O(log n) scan.
+ */
+export const findTopInfluencersByEarnings = (
+  tx: TxClient,
+  limit: number,
+) => {
+  return tx.influencer.findMany({
+    orderBy: { totalEarnings: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      name: true,
+      referralCode: true,
+      totalEarnings: true,
+      status: true,
+      _count: { select: { sales: true } },
+    },
+  });
+};
+
+/**
+ * Returns platform-wide commission aggregates grouped by status.
+ * Used for admin analytics. Single query.
+ */
+export const getSalesAggregatesByStatus = (tx: TxClient) => {
+  return tx.influencerSale.groupBy({
+    by: ["status"],
+    _sum: { commissionAmount: true },
+    _count: { id: true },
+  });
+};
+
+/**
+ * Sum of totalPaid on all orders that have an influencer attached.
+ * Represents total revenue influenced by the system.
+ */
+export const getTotalInfluencedOrderValue = (tx: TxClient) => {
+  return tx.order.aggregate({
+    where: { influencerId: { not: null } },
+    _sum: { totalPaid: true },
+  });
+};
+
+/**
+ * Influencer count broken down by status (ACTIVE, PAUSED, BANNED).
+ */
+export const getInfluencerCountsByStatus = (tx: TxClient) => {
+  return tx.influencer.groupBy({
+    by: ["status"],
+    _count: { id: true },
+  });
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // INFLUENCER SALE QUERIES
 // ─────────────────────────────────────────────────────────────────────────────

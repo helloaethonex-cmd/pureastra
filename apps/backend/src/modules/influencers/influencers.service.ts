@@ -12,6 +12,8 @@ import {
   UpdateSaleStatusInput,
   RecordPayoutInput,
   UpdatePayoutStatusInput,
+  LinkUserInput,
+  AnalyticsQueryInput,
   INFLUENCER_SALE_STATUS,
 } from "./influencers.types";
 import {
@@ -19,8 +21,15 @@ import {
   findAllInfluencers,
   findInfluencerById,
   findInfluencerByReferralCode,
+  findInfluencerByUserId,
   findInfluencerWithSaleStats,
+  findInfluencerSalesAggregates,
   findSalesForInfluencer,
+  findTopInfluencersByEarnings,
+  getSalesAggregatesByStatus,
+  getTotalInfluencedOrderValue,
+  getInfluencerCountsByStatus,
+  linkInfluencerToUser,
   updateInfluencerCommissionRate,
   updateInfluencerDashboardAccess,
   updateInfluencerStatus,
@@ -381,8 +390,228 @@ export const validateReferralCode = async (code: string) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL — Used by orders.service + payments.service
+// INFLUENCER DASHBOARD (user-facing)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolves the influencer from the authenticated userId and returns
+ * the full dashboard payload in 3 parallel queries.
+ */
+export const getInfluencerDashboard = async (userId: string) => {
+  const influencer = await findInfluencerByUserId(prisma, BigInt(userId));
+
+  if (!influencer) {
+    throw new AppError(
+      404,
+      "No influencer account linked to this user",
+      "INFLUENCER_NOT_FOUND",
+    );
+  }
+
+  if (!influencer.canViewDashboard) {
+    throw new AppError(
+      403,
+      "Dashboard access is not enabled for this account",
+      "DASHBOARD_ACCESS_DENIED",
+    );
+  }
+
+  // 3 parallel queries — no N+1
+  const [aggregates, recentSales] = await Promise.all([
+    findInfluencerSalesAggregates(prisma, influencer.id),
+    prisma.influencerSale.findMany({
+      where: { influencerId: influencer.id },
+      select: {
+        id: true,
+        orderId: true,
+        commissionAmount: true,
+        status: true,
+        createdAt: true,
+        order: {
+          select: {
+            orderNumber: true,
+            totalPaid: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
+
+  // Build earnings and order counts from the groupBy result.
+  // Initialise all buckets to zero — handles influencer with no sales.
+  const ZERO = new Prisma.Decimal(0);
+  const earnings = { pending: ZERO, approved: ZERO, paid: ZERO };
+  const counts = { total: 0, pending: 0, approved: 0, paid: 0, cancelled: 0 };
+
+  for (const row of aggregates) {
+    const amount = row._sum.commissionAmount ?? ZERO;
+    const count = row._count.id;
+    counts.total += count;
+
+    switch (row.status) {
+      case "PENDING":
+        earnings.pending = amount;
+        counts.pending = count;
+        break;
+      case "APPROVED":
+        earnings.approved = amount;
+        counts.approved = count;
+        break;
+      case "PAID":
+        earnings.paid = amount;
+        counts.paid = count;
+        break;
+      case "CANCELLED":
+        counts.cancelled = count;
+        break;
+    }
+  }
+
+  return {
+    influencer: {
+      id: influencer.id.toString(),
+      name: influencer.name,
+      referralCode: influencer.referralCode,
+      commissionRate: influencer.commissionRate.toString(),
+      status: influencer.status,
+    },
+    earnings: {
+      // total from denormalized counter — O(1), atomic
+      total: influencer.totalEarnings.toString(),
+      pending: earnings.pending.toString(),
+      approved: earnings.approved.toString(),
+      paid: earnings.paid.toString(),
+    },
+    orders: {
+      total: counts.total,
+      pending: counts.pending,
+      approved: counts.approved,
+      paid: counts.paid,
+      cancelled: counts.cancelled,
+    },
+    recentSales: recentSales.map((s) => ({
+      id: s.id.toString(),
+      orderId: s.orderId.toString(),
+      orderNumber: s.order.orderNumber,
+      commissionAmount: s.commissionAmount.toString(),
+      status: s.status,
+      orderTotal: s.order.totalPaid.toString(),
+      createdAt: s.createdAt.toISOString(),
+    })),
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN ANALYTICS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getAdminAnalytics = async (input: AnalyticsQueryInput) => {
+  // 4 parallel queries
+  const [topInfluencers, influencedRevenue, commissionByStatus, influencerCounts] =
+    await Promise.all([
+      findTopInfluencersByEarnings(prisma, input.topLimit),
+      getTotalInfluencedOrderValue(prisma),
+      getSalesAggregatesByStatus(prisma),
+      getInfluencerCountsByStatus(prisma),
+    ]);
+
+  // Commission aggregates from groupBy
+  const ZERO = new Prisma.Decimal(0);
+  const commission = {
+    issued: ZERO,   // PENDING + APPROVED + PAID (anything not CANCELLED)
+    paid: ZERO,
+    pending: ZERO,
+    approved: ZERO,
+  };
+
+  for (const row of commissionByStatus) {
+    const amount = row._sum.commissionAmount ?? ZERO;
+    switch (row.status) {
+      case "PAID":
+        commission.paid = amount;
+        commission.issued = commission.issued.add(amount);
+        break;
+      case "PENDING":
+        commission.pending = amount;
+        commission.issued = commission.issued.add(amount);
+        break;
+      case "APPROVED":
+        commission.approved = amount;
+        commission.issued = commission.issued.add(amount);
+        break;
+      // CANCELLED excluded from issued total
+    }
+  }
+
+  // Influencer status counts
+  const infCounts = { total: 0, active: 0, paused: 0, banned: 0 };
+  for (const row of influencerCounts) {
+    const c = row._count.id;
+    infCounts.total += c;
+    if (row.status === "ACTIVE") infCounts.active = c;
+    else if (row.status === "PAUSED") infCounts.paused = c;
+    else if (row.status === "BANNED") infCounts.banned = c;
+  }
+
+  return {
+    revenue: {
+      totalInfluencedOrderValue: (influencedRevenue._sum.totalPaid ?? ZERO).toString(),
+      totalCommissionIssued: commission.issued.toString(),
+      totalCommissionPaid: commission.paid.toString(),
+      totalCommissionPending: commission.pending.toString(),
+      totalCommissionApproved: commission.approved.toString(),
+    },
+    influencers: infCounts,
+    topInfluencers: topInfluencers.map((inf) => ({
+      id: inf.id.toString(),
+      name: inf.name,
+      referralCode: inf.referralCode,
+      totalEarnings: inf.totalEarnings.toString(),
+      status: inf.status,
+      totalOrders: inf._count.sales,
+    })),
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN — Link influencer to a User account
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const adminLinkInfluencerUser = async (
+  influencerId: string,
+  input: LinkUserInput,
+) => {
+  const exists = await findInfluencerById(prisma, BigInt(influencerId));
+  if (!exists) {
+    throw new AppError(404, "Influencer not found", "INFLUENCER_NOT_FOUND");
+  }
+
+  // Verify the target user exists
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { id: true, email: true, name: true },
+  });
+  if (!user) {
+    throw new AppError(404, "User not found", "USER_NOT_FOUND");
+  }
+
+  // linkInfluencerToUser will throw P2002 if userId is already taken by another influencer
+  const updated = await linkInfluencerToUser(
+    prisma,
+    BigInt(influencerId),
+    input.userId,
+  );
+
+  return {
+    id: updated.id.toString(),
+    name: updated.name,
+    email: updated.email,
+    userId: updated.userId?.toString() ?? null,
+  };
+};
+
 
 export {
   findActiveInfluencerByCode,

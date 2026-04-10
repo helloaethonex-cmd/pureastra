@@ -12,6 +12,8 @@ import {
   recordPayout,
   listPayouts,
   updatePayoutStatus,
+  getAnalytics,
+  linkUser,
 } from "./influencers.controller";
 
 const router = Router();
@@ -22,10 +24,12 @@ const adminGuard = [requireAuth, requireRole("admin")];
 // ─── Influencer CRUD ────────────────────────────────────────────────────────
 router.post("/", ...adminGuard, createInfluencer);
 router.get("/", ...adminGuard, listInfluencers);
+router.get("/analytics", ...adminGuard, getAnalytics);
 router.get("/:id", ...adminGuard, getInfluencer);
 router.patch("/:id/status", ...adminGuard, updateInfluencerStatus);
 router.patch("/:id/commission", ...adminGuard, updateCommissionRate);
 router.patch("/:id/dashboard-access", ...adminGuard, updateDashboardAccess);
+router.patch("/:id/link-user", ...adminGuard, linkUser);
 
 // ─── Sales ─────────────────────────────────────────────────────────────────
 router.get("/:id/sales", ...adminGuard, listSales);

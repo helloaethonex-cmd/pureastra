@@ -51,6 +51,7 @@ model User {
   orders        Order[]
   wishlistItems WishlistItem[]
   reviews       Review[]
+  influencer    Influencer?
 
   @@map("users")
 }
@@ -708,6 +709,10 @@ model Influencer {
   email        String           @unique @db.VarChar(255)
   referralCode String           @unique @map("referral_code") @db.VarChar(30)
 
+  // Linked User account — set by admin, enables dashboard login
+  userId BigInt? @unique @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id])
+
   // Stored as percentage: 10.00 = 10%
   // commission = totalPaid * (commissionRate / 100)
   commissionRate   Decimal          @map("commission_rate") @db.Decimal(5, 2)
@@ -729,6 +734,7 @@ model Influencer {
 
   @@index([referralCode])
   @@index([status])
+  @@index([totalEarnings(sort: Desc)])
   @@map("influencers")
 }
 
