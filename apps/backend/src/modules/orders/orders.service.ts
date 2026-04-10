@@ -2,6 +2,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../lib/errors/app-error";
+import { logger } from "../../lib/logger";
 import {
   CART_STATUS,
   CreateOrderInput,
@@ -34,6 +35,13 @@ import {
   updateInventoryReservationStatusByOrder,
   updateOrderStatus,
 } from "./orders.repository";
+import {
+  findActiveInfluencerByCode,
+  findInfluencerSaleByOrderId,
+  updateInfluencerSaleStatus,
+  decrementInfluencerEarningsSafe,
+} from "../influencers/influencers.repository";
+import { INFLUENCER_SALE_STATUS } from "../influencers/influencers.types";
 
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -153,6 +161,20 @@ const createOrderInTx = async (
     throw new AppError(400, "Invalid address", "ADDRESS_INVALID");
   }
 
+  // ── Referral attribution (silent fail — never blocks order) ──────────────
+  let influencerId: bigint | undefined;
+  let referralCode: string | undefined;
+  if (input.referralCode) {
+    const influencer = await findActiveInfluencerByCode(
+      tx,
+      input.referralCode.toUpperCase(),
+    );
+    if (influencer) {
+      influencerId = influencer.id;
+      referralCode = influencer.referralCode;
+    }
+  }
+
   const preparedItems = buildPreparedItems(cart.items);
   const productTotalCents = preparedItems.reduce(
     (sum, item) => sum + item.unitPriceCents * item.quantity,
@@ -183,6 +205,12 @@ const createOrderInTx = async (
     orderStatus: ORDER_STATUS.PLACED,
     paymentStatus: PAYMENT_STATUS.PENDING,
     placedAt: now,
+
+    // Attach influencer attribution if a valid active code was provided
+    ...(influencerId && {
+      influencer: { connect: { id: influencerId } },
+      referralCode,
+    }),
   });
 
   await createOrderItems(
@@ -415,6 +443,46 @@ const updateOrderStatusInTx = async (
       ],
       INVENTORY_RESERVATION_STATUS.RELEASED,
     );
+
+    // ── Commission cancellation ─────────────────────────────────────────────
+    // Only cancel if the sale exists and is still in a cancellable state.
+    // The status check is the double-cancel guard: if a previous cancel call
+    // already moved the sale to CANCELLED, this block is a no-op.
+    const influencerSale = await findInfluencerSaleByOrderId(tx, order.id);
+    if (
+      influencerSale &&
+      (influencerSale.status === INFLUENCER_SALE_STATUS.PENDING ||
+        influencerSale.status === INFLUENCER_SALE_STATUS.APPROVED)
+    ) {
+      await updateInfluencerSaleStatus(
+        tx,
+        influencerSale.id,
+        "CANCELLED",
+      );
+      await decrementInfluencerEarningsSafe(
+        tx,
+        influencerSale.influencerId,
+        influencerSale.commissionAmount,
+      );
+      logger.info(
+        {
+          orderId: order.id.toString(),
+          saleId: influencerSale.id.toString(),
+          influencerId: influencerSale.influencerId.toString(),
+          commissionAmount: influencerSale.commissionAmount.toString(),
+        },
+        "[commission] cancelled — order cancelled",
+      );
+    } else if (influencerSale) {
+      // Sale exists but is already CANCELLED/PAID/REFUNDED — double-cancel guard fired.
+      logger.debug(
+        {
+          orderId: order.id.toString(),
+          saleStatus: influencerSale.status,
+        },
+        "[commission] cancel skipped — sale already in terminal status",
+      );
+    }
   }
 
   return findOrderByOrderNumber(tx, orderNumber);

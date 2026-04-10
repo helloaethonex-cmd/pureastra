@@ -45,6 +45,7 @@ export const STATUS_TRANSITIONS: Record<number, number[]> = {
 export const createOrderSchema = z.object({
   addressId: z.coerce.bigint(),
   note: z.string().trim().max(500).optional(),
+  referralCode: z.string().trim().max(30).optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

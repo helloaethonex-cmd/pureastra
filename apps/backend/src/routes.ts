@@ -14,6 +14,8 @@ import reviewsRoute from "./modules/reviews/reviews.route";
 // Admin routes
 import ordersAdminRoute from "./modules/orders/orders.admin.route";
 import reviewsAdminRoute from "./modules/reviews/reviews.admin.route";
+import influencersAdminRoute from "./modules/influencers/influencers.admin.route";
+import influencersRoute from "./modules/influencers/influencers.route";
 
 const router = Router();
 
@@ -61,5 +63,9 @@ router.use("/reviews", reviewsRoute);
 // Admin routes
 router.use("/admin/orders", ordersAdminRoute);
 router.use("/admin/reviews", reviewsAdminRoute);
+router.use("/admin/influencers", influencersAdminRoute);
+
+// Influencer public routes
+router.use("/influencers", influencersRoute);
 
 export default router;

@@ -2,6 +2,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../lib/errors/app-error";
 import { env } from "../../config/env";
+import { logger } from "../../lib/logger";
 import {
   ConfirmPaymentBody,
   CreatePaymentAttemptBody,
@@ -27,6 +28,10 @@ import {
   verifyRazorpayWebhookSignature,
 } from "./gateways/razorpay.gateway";
 import { ORDER_STATUS, PAYMENT_STATUS } from "../orders/orders.types";
+import {
+  createInfluencerSale,
+  incrementInfluencerEarnings,
+} from "../influencers/influencers.repository";
 
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -341,6 +346,88 @@ export const confirmPaymentAttempt = async (
         newStatus: ORDER_STATUS.CONFIRMED,
         note: "Payment confirmed",
       });
+    }
+
+    // ── Commission write ──────────────────────────────────────────────────────
+    // Guards:
+    //  1. Only when fully paid (partial-payment safety)
+    //  2. Only when the order has influencer attribution
+    //  3. Race-condition guard: skip if order was cancelled before this webhook
+    //     arrived (cancel TX already ran or is running concurrently).
+    //     The Serializable isolation means we see a consistent order snapshot;
+    //     if cancel committed first, orderStatus will be CANCELLED here.
+    if (
+      fullyPaid &&
+      payment.order.influencerId != null &&
+      payment.order.orderStatus !== ORDER_STATUS.CANCELLED
+    ) {
+      const influencerId = payment.order.influencerId;
+
+      const influencer = await tx.influencer.findUnique({
+        where: { id: influencerId },
+        select: { commissionRate: true },
+      });
+
+      if (influencer) {
+        // Keep entirely in Decimal to avoid JS float drift.
+        // nextTotalPaid is integer paise; divide by 100 inside Decimal.
+        const totalPaidDecimal = new Prisma.Decimal(nextTotalPaid).div(100);
+        // commissionRate is stored as percentage (e.g. 10.00 = 10%)
+        // commission = totalPaid * (commissionRate / 100), rounded HALF_UP to 2dp
+        const commissionAmount = totalPaidDecimal
+          .mul(influencer.commissionRate)
+          .div(100)
+          .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+
+        try {
+          await createInfluencerSale(tx, {
+            influencerId,
+            orderId: payment.orderId,
+            commissionRate: influencer.commissionRate,
+            commissionAmount,
+          });
+          await incrementInfluencerEarnings(tx, influencerId, commissionAmount);
+
+          logger.info(
+            {
+              orderId: payment.orderId.toString(),
+              influencerId: influencerId.toString(),
+              commissionAmount: commissionAmount.toString(),
+              commissionRate: influencer.commissionRate.toString(),
+            },
+            "[commission] created",
+          );
+        } catch (commissionError) {
+          if (
+            commissionError instanceof Prisma.PrismaClientKnownRequestError &&
+            commissionError.code === "P2002"
+          ) {
+            // UNIQUE(order_id) violation = payment webhook retry.
+            // Commission was already recorded on the first delivery — safe skip.
+            logger.info(
+              { orderId: payment.orderId.toString() },
+              "[commission] skipped — duplicate (P2002 idempotent retry)",
+            );
+          } else {
+            throw commissionError;
+          }
+        }
+      } else {
+        // Influencer row deleted between order creation and payment — skip silently.
+        logger.warn(
+          {
+            orderId: payment.orderId.toString(),
+            influencerId: influencerId.toString(),
+          },
+          "[commission] skipped — influencer record not found",
+        );
+      }
+    } else if (fullyPaid && payment.order.influencerId != null && payment.order.orderStatus === ORDER_STATUS.CANCELLED) {
+      // Race: cancel beat this webhook — commission intentionally suppressed.
+      logger.info(
+        { orderId: payment.orderId.toString() },
+        "[commission] skipped — order already cancelled",
+      );
     }
 
     return updatedPayment;

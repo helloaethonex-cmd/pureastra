@@ -428,6 +428,10 @@ model Order {
 
   placedAt DateTime? @map("placed_at")
 
+  // 🔥 INFLUENCER ATTRIBUTION (nullable — orders without referral are unaffected)
+  influencerId BigInt? @map("influencer_id")
+  referralCode String? @map("referral_code") @db.VarChar(30)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -436,8 +440,11 @@ model Order {
   statusHistory         OrderStatusHistory[]
   inventoryReservations InventoryReservation[]
   reviews               Review[]
+  influencer            Influencer?     @relation(fields: [influencerId], references: [id])
+  influencerSale        InfluencerSale?
 
   @@index([userId])
+  @@index([influencerId])
   @@map("orders")
 }
 
@@ -659,4 +666,123 @@ model ProductReviewSummary {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("product_review_summaries")
+}
+
+//
+// ========================================================
+// INFLUENCER ATTRIBUTION SYSTEM
+// ========================================================
+// Commission-per-order affiliate system.
+// Attribution is locked at order creation time.
+// Commission is triggered once payment is fully confirmed.
+//
+
+enum InfluencerStatus {
+  ACTIVE
+  PAUSED
+  BANNED
+}
+
+enum InfluencerSaleStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum PayoutMethod {
+  UPI
+  BANK
+}
+
+enum InfluencerPayoutStatus {
+  INITIATED
+  COMPLETED
+  FAILED
+}
+
+model Influencer {
+  id           BigInt           @id @default(autoincrement())
+  name         String           @db.VarChar(100)
+  email        String           @unique @db.VarChar(255)
+  referralCode String           @unique @map("referral_code") @db.VarChar(30)
+
+  // Stored as percentage: 10.00 = 10%
+  // commission = totalPaid * (commissionRate / 100)
+  commissionRate   Decimal          @map("commission_rate") @db.Decimal(5, 2)
+
+  // Denormalized counter — always use atomic increment/decrement
+  // Source of truth is SUM(influencer_sales.commission_amount WHERE status != 'CANCELLED')
+  totalEarnings    Decimal          @default(0) @map("total_earnings") @db.Decimal(12, 2)
+
+  canViewDashboard Boolean          @default(false) @map("can_view_dashboard")
+  status           InfluencerStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders        Order[]
+  sales         InfluencerSale[]
+  payoutDetails InfluencerPayoutDetails?
+  payouts       InfluencerPayout[]
+
+  @@index([referralCode])
+  @@index([status])
+  @@map("influencers")
+}
+
+model InfluencerSale {
+  id           BigInt               @id @default(autoincrement())
+  influencerId BigInt               @map("influencer_id")
+  orderId      BigInt               @unique @map("order_id")
+  // UNIQUE(order_id) is the primary idempotency guard against duplicate commissions on payment retries
+
+  commissionRate   Decimal              @map("commission_rate") @db.Decimal(5, 2)
+  commissionAmount Decimal              @map("commission_amount") @db.Decimal(10, 2)
+  status           InfluencerSaleStatus @default(PENDING)
+
+  influencer Influencer @relation(fields: [influencerId], references: [id])
+  order      Order      @relation(fields: [orderId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([influencerId, status])
+  @@index([influencerId, createdAt])
+  @@index([orderId])
+  @@map("influencer_sales")
+}
+
+model InfluencerPayoutDetails {
+  influencerId      BigInt       @id @map("influencer_id")
+  payoutMethod      PayoutMethod @map("payout_method")
+
+  upiId             String? @map("upi_id") @db.VarChar(100)
+  bankAccountNumber String? @map("bank_account_number") @db.VarChar(20)
+  bankIfsc          String? @map("bank_ifsc") @db.VarChar(20)
+  accountHolderName String? @map("account_holder_name") @db.VarChar(100)
+
+  influencer Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("influencer_payout_details")
+}
+
+model InfluencerPayout {
+  id            BigInt                 @id @default(autoincrement())
+  influencerId  BigInt                 @map("influencer_id")
+  amount        Decimal                @db.Decimal(10, 2)
+  status        InfluencerPayoutStatus @default(INITIATED)
+  referenceNote String?                @map("reference_note") @db.VarChar(500)
+
+  influencer Influencer @relation(fields: [influencerId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([influencerId, status])
+  @@map("influencer_payouts")
 }
