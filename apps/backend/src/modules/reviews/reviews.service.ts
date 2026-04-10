@@ -5,6 +5,7 @@ import {
   ListReviewsInput,
   CreateMetricInput,
   AssignMetricInput,
+  AddReviewMetricInput,
 } from "./reviews.types";
 import {
   findReviewByUserAndProduct,
@@ -14,8 +15,10 @@ import {
   updateReviewApproval,
   deleteReview,
   createMetric,
+  upsertMetricByName,
   findMetricsByProductId,
   assignMetricToProduct,
+  upsertMetricToProduct,
   removeMetricFromProduct,
   hasUserPurchasedProduct,
   getReviewSummary,
@@ -37,6 +40,13 @@ export const submitReview = async (userId: string, input: CreateReviewInput) => 
 
   // 2. Verified purchase check
   const purchase = await hasUserPurchasedProduct(uid, input.productId);
+  if (!purchase.purchased) {
+    throw new AppError(
+      403,
+      "Only customers who have purchased this product can add a review",
+      "REVIEW_NOT_ALLOWED",
+    );
+  }
 
   // 3. Validate metric responses against product-configured metrics
   const metricResponses: { metricId: bigint; value: number }[] = [];
@@ -194,6 +204,25 @@ export const getProductReviewSummary = async (productId: string) => {
   };
 };
 
+export const getReviewEligibilityService = async (userId: string, productId: string) => {
+  const uid = BigInt(userId);
+  const pid = BigInt(productId);
+
+  const [purchase, existingReview] = await Promise.all([
+    hasUserPurchasedProduct(uid, pid),
+    findReviewByUserAndProduct(uid, pid),
+  ]);
+
+  const hasPurchased = purchase.purchased;
+  const hasReviewed = Boolean(existingReview);
+
+  return {
+    hasPurchased,
+    hasReviewed,
+    canReview: hasPurchased && !hasReviewed,
+  };
+};
+
 // ── Summary refresh ──────────────────────────────────────────────────────────
 
 const refreshSummary = async (productId: bigint) => {
@@ -246,6 +275,41 @@ export const removeMetricFromProductService = async (
     }
     throw err;
   }
+};
+
+export const addReviewMetricToProductService = async (
+  productId: string,
+  input: AddReviewMetricInput,
+) => {
+  const productBigInt = BigInt(productId);
+
+  const metric = await upsertMetricByName(input.name, {
+    icon: input.icon,
+    minValue: input.minValue,
+    maxValue: input.maxValue,
+    unit: input.unit,
+  });
+
+  const mapping = await upsertMetricToProduct(
+    productBigInt,
+    metric.id,
+    input.displayOrder,
+  );
+
+  return {
+    id: mapping.id.toString(),
+    productId: mapping.productId.toString(),
+    metricId: mapping.metricId.toString(),
+    displayOrder: mapping.displayOrder,
+    metric: {
+      id: metric.id.toString(),
+      name: metric.name,
+      icon: metric.icon,
+      minValue: metric.minValue,
+      maxValue: metric.maxValue,
+      unit: metric.unit,
+    },
+  };
 };
 
 // ── Admin: moderation ────────────────────────────────────────────────────────

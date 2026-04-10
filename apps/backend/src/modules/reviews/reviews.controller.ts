@@ -7,6 +7,7 @@ import {
   listReviewsSchema,
   createMetricSchema,
   assignMetricSchema,
+  addReviewMetricSchema,
   moderateReviewSchema,
 } from "./reviews.types";
 import {
@@ -14,7 +15,9 @@ import {
   listProductReviews,
   getProductReviewMetrics,
   getProductReviewSummary,
+  getReviewEligibilityService,
   createReviewMetric,
+  addReviewMetricToProductService,
   assignMetricToProductService,
   removeMetricFromProductService,
   moderateReview,
@@ -104,6 +107,22 @@ export const getReviewSummary = async (req: Request, res: Response) => {
   }
 };
 
+export const getReviewEligibility = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id?.toString();
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const productId = req.params.productId as string;
+    const eligibility = await getReviewEligibilityService(userId, productId);
+
+    return res.status(200).json(eligibility);
+  } catch (err) {
+    return handleError(req, res, err);
+  }
+};
+
 // ── Admin endpoints ──────────────────────────────────────────────────────────
 
 export const adminCreateMetric = async (req: Request, res: Response) => {
@@ -122,6 +141,18 @@ export const adminAssignMetric = async (req: Request, res: Response) => {
     const productId = req.params.productId as string;
     const input = assignMetricSchema.parse(req.body);
     const result = await assignMetricToProductService(productId, input);
+
+    return res.status(201).json(result);
+  } catch (err) {
+    return handleError(req, res, err);
+  }
+};
+
+export const adminAddReviewMetric = async (req: Request, res: Response) => {
+  try {
+    const productId = req.params.productId as string;
+    const input = addReviewMetricSchema.parse(req.body);
+    const result = await addReviewMetricToProductService(productId, input);
 
     return res.status(201).json(result);
   } catch (err) {

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "../auth/auth.middleware";
 import {
   adminCreateMetric,
+  adminAddReviewMetric,
   adminAssignMetric,
   adminRemoveMetric,
   adminModerateReview,
@@ -103,6 +104,61 @@ router.post(
   requireAuth,
   requireRole("admin"),
   adminAssignMetric,
+);
+
+/**
+ * @openapi
+ * /api/v1/admin/reviews/products/{productId}/add-review-metric:
+ *   post:
+ *     tags:
+ *       - Admin - Reviews
+ *     summary: Create metric and assign it to a product in one call
+ *     description: >
+ *       Upserts a metric by name and maps it to the product with display order.
+ *       Useful for quickly attaching product-specific review metrics.
+ *       **Requires admin role.**
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               icon:
+ *                 type: string
+ *               minValue:
+ *                 type: integer
+ *                 default: 0
+ *               maxValue:
+ *                 type: integer
+ *                 default: 100
+ *               unit:
+ *                 type: string
+ *                 enum: [PERCENT, RATING]
+ *                 default: PERCENT
+ *               displayOrder:
+ *                 type: integer
+ *                 default: 0
+ *     responses:
+ *       201:
+ *         description: Metric upserted and assigned to product
+ */
+router.post(
+  "/products/:productId/add-review-metric",
+  requireAuth,
+  requireRole("admin"),
+  adminAddReviewMetric,
 );
 
 /**
