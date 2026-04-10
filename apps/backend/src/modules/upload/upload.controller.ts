@@ -14,6 +14,22 @@ const r2Client = new S3Client({
 const BUCKET = process.env.R2_BUCKET_NAME ?? "pureastra-media";
 const PUBLIC_URL = process.env.R2_PUBLIC_URL ?? "https://pub-dummy.r2.dev";
 
+const uploadToR2 = async (file: Express.Multer.File, keyPrefix: string) => {
+  const ext = file.originalname.split(".").pop() ?? "jpg";
+  const key = `${keyPrefix}/${uuidv4()}.${ext}`;
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    })
+  );
+
+  return `${PUBLIC_URL}/${key}`;
+};
+
 /**
  * POST /api/v1/upload/image
  * Accepts multipart/form-data with field "file"
@@ -27,22 +43,31 @@ export const uploadImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
-    const ext = file.originalname.split(".").pop() ?? "jpg";
-    const key = `products/${uuidv4()}.${ext}`;
-
-    await r2Client.send(
-      new PutObjectCommand({
-        Bucket: BUCKET,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      })
-    );
-
-    const url = `${PUBLIC_URL}/${key}`;
+    const url = await uploadToR2(file, "products");
     res.status(200).json({ url });
   } catch (err: any) {
     console.error("[upload] R2 error:", err);
+    res.status(500).json({ error: "Upload failed" });
+  }
+};
+
+/**
+ * POST /api/v1/upload/review-image
+ * Accepts multipart/form-data with field "file"
+ * Returns { url: string }
+ */
+export const uploadReviewImage = async (req: Request, res: Response) => {
+  try {
+    const file = (req as any).file as Express.Multer.File | undefined;
+
+    if (!file) {
+      return res.status(400).json({ error: "No file provided" });
+    }
+
+    const url = await uploadToR2(file, "reviews");
+    res.status(200).json({ url });
+  } catch (err: any) {
+    console.error("[upload:review] R2 error:", err);
     res.status(500).json({ error: "Upload failed" });
   }
 };

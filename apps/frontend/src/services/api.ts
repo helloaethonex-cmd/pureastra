@@ -537,6 +537,25 @@ export const uploadImageToR2 = async (file: File): Promise<string> => {
   return data.url as string;
 };
 
+export const uploadReviewImage = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${BASE}/upload/review-image`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? `Upload failed ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.url as string;
+};
+
 // ─── Admin check ──────────────────────────────────────────────────────────────
 
 export const checkAdminAccess = async (): Promise<boolean> => {
@@ -784,6 +803,7 @@ export const createProductReview = (body: {
   rating: number;
   title?: string;
   comment?: string;
+  images?: string[];
   metrics?: Array<{
     metricId: string;
     value: number;

@@ -7,6 +7,7 @@ export const createReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   title: z.string().trim().max(255).transform((v) => v || undefined).optional(),
   comment: z.string().trim().max(5000).transform((v) => v || undefined).optional(),
+  images: z.array(z.string().trim().url()).max(5).optional(),
   metrics: z
     .array(
       z.object({
