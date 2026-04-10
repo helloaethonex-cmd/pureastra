@@ -4,6 +4,7 @@ import {
   createReview,
   getReviews,
   getReviewMetrics,
+  getReviewEligibility,
   getReviewSummary,
 } from "./reviews.controller";
 
@@ -150,5 +151,32 @@ router.get("/products/:productId/metrics", getReviewMetrics);
  *         description: Review summary
  */
 router.get("/products/:productId/summary", getReviewSummary);
+
+/**
+ * @openapi
+ * /api/v1/reviews/products/{productId}/eligibility:
+ *   get:
+ *     tags:
+ *       - Reviews
+ *     summary: Check if authenticated user can add a review
+ *     description: >
+ *       Returns whether the logged-in user has purchased the product,
+ *       has already reviewed it, and if they can submit a new review.
+ *       **Requires authentication.**
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Review eligibility details
+ *       401:
+ *         description: Not authenticated
+ */
+router.get("/products/:productId/eligibility", requireAuth, getReviewEligibility);
 
 export default router;

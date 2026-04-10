@@ -71,6 +71,27 @@ export const deleteReview = (id: bigint) =>
 export const createMetric = (data: Prisma.ReviewMetricCreateInput) =>
   prisma.reviewMetric.create({ data });
 
+export const upsertMetricByName = (
+  name: string,
+  data: { icon?: string; minValue: number; maxValue: number; unit: "PERCENT" | "RATING" },
+) =>
+  prisma.reviewMetric.upsert({
+    where: { name },
+    create: {
+      name,
+      icon: data.icon,
+      minValue: data.minValue,
+      maxValue: data.maxValue,
+      unit: data.unit,
+    },
+    update: {
+      icon: data.icon,
+      minValue: data.minValue,
+      maxValue: data.maxValue,
+      unit: data.unit,
+    },
+  });
+
 export const findAllMetrics = () =>
   prisma.reviewMetric.findMany({ orderBy: { name: "asc" } });
 
@@ -90,6 +111,17 @@ export const assignMetricToProduct = (
 ) =>
   prisma.productReviewMetric.create({
     data: { productId, metricId, displayOrder },
+  });
+
+export const upsertMetricToProduct = (
+  productId: bigint,
+  metricId: bigint,
+  displayOrder: number,
+) =>
+  prisma.productReviewMetric.upsert({
+    where: { productId_metricId: { productId, metricId } },
+    create: { productId, metricId, displayOrder },
+    update: { displayOrder },
   });
 
 export const removeMetricFromProduct = (productId: bigint, metricId: bigint) =>

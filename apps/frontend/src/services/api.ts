@@ -348,6 +348,69 @@ export interface WishlistItem {
   productVariant: WishlistProductVariant;
 }
 
+export interface ReviewMetric {
+  id: string;
+  name: string;
+  icon: string | null;
+  minValue: number;
+  maxValue: number;
+  unit: "PERCENT" | "RATING";
+  displayOrder: number;
+}
+
+export interface ReviewMetricValue {
+  metricId: string;
+  name: string;
+  icon: string | null;
+  unit: "PERCENT" | "RATING";
+  value: number;
+}
+
+export interface ProductReview {
+  id: string;
+  rating: number;
+  title?: string | null;
+  comment?: string | null;
+  isVerifiedPurchase: boolean;
+  user: {
+    name: string;
+    image?: string | null;
+  };
+  images: Array<{
+    id: string;
+    imageUrl: string;
+  }>;
+  metrics: ReviewMetricValue[];
+  createdAt: string;
+}
+
+export interface ProductReviewListResponse {
+  data: ProductReview[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface ProductReviewSummary {
+  totalReviews: number;
+  avgRating: number;
+  metrics: Array<{
+    metricId: string;
+    name: string;
+    icon: string | null;
+    average: number;
+  }>;
+}
+
+export interface ReviewEligibility {
+  hasPurchased: boolean;
+  hasReviewed: boolean;
+  canReview: boolean;
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export const listCategories = () =>
@@ -688,4 +751,45 @@ export const removeWishlistItem = (productVariantId: string) =>
 export const moveWishlistItemToCart = (productVariantId: string) =>
   apiFetch<{ message: string }>(`/wishlist/items/${productVariantId}/move-to-cart`, {
     method: "POST",
+  });
+
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+
+export const getProductReviews = (productId: string, params?: {
+  page?: number;
+  limit?: number;
+  sortBy?: "newest" | "highest" | "lowest";
+}) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.sortBy) q.set("sortBy", params.sortBy);
+  const suffix = q.toString();
+  return apiFetch<ProductReviewListResponse>(
+    `/reviews/products/${productId}${suffix ? `?${suffix}` : ""}`,
+  );
+};
+
+export const getProductReviewSummary = (productId: string) =>
+  apiFetch<ProductReviewSummary>(`/reviews/products/${productId}/summary`);
+
+export const getProductReviewMetrics = (productId: string) =>
+  apiFetch<ReviewMetric[]>(`/reviews/products/${productId}/metrics`);
+
+export const getReviewEligibility = (productId: string) =>
+  apiFetch<ReviewEligibility>(`/reviews/products/${productId}/eligibility`);
+
+export const createProductReview = (body: {
+  productId: string;
+  rating: number;
+  title?: string;
+  comment?: string;
+  metrics?: Array<{
+    metricId: string;
+    value: number;
+  }>;
+}) =>
+  apiFetch<ProductReview>("/reviews", {
+    method: "POST",
+    body: JSON.stringify(body),
   });

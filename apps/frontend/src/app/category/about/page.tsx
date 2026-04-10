@@ -109,7 +109,7 @@ export default function AboutPage() {
           </p>
 
           <p className="text-sm md:text-[15px] text-[#3e2a1f] mb-4 leading-relaxed">
-            PureAstra began as a personal journey of understanding skincare ingredients.
+            Pureastra began as a personal journey of understanding skincare ingredients.
           </p>
 
           <p className="text-sm md:text-[15px] text-[#3e2a1f] mb-4 leading-relaxed">

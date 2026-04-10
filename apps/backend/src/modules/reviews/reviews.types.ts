@@ -58,6 +58,20 @@ export const assignMetricSchema = z.object({
 
 export type AssignMetricInput = z.infer<typeof assignMetricSchema>;
 
+export const addReviewMetricSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  icon: z.string().trim().max(50).optional(),
+  minValue: z.number().int().default(0),
+  maxValue: z.number().int().default(100),
+  unit: z.enum(["PERCENT", "RATING"]).default("PERCENT"),
+  displayOrder: z.number().int().min(0).default(0),
+}).refine((d) => d.minValue < d.maxValue, {
+  message: "minValue must be less than maxValue",
+  path: ["minValue"],
+});
+
+export type AddReviewMetricInput = z.infer<typeof addReviewMetricSchema>;
+
 // ── Admin: approve/reject review ─────────────────────────────────────────────
 
 export const moderateReviewSchema = z.object({
