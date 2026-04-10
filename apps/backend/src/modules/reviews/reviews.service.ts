@@ -85,6 +85,13 @@ export const submitReview = async (userId: string, input: CreateReviewInput) => 
     rating: input.rating,
     title: input.title,
     comment: input.comment,
+    ...(input.images && input.images.length > 0
+      ? {
+          images: {
+            create: input.images.map((imageUrl) => ({ imageUrl })),
+          },
+        }
+      : {}),
     isVerifiedPurchase: purchase.purchased,
     ...(purchase.orderId
       ? { order: { connect: { id: purchase.orderId } } }

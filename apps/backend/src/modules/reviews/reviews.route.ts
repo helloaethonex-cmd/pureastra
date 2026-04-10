@@ -48,6 +48,12 @@ const router = Router();
  *               comment:
  *                 type: string
  *                 maxLength: 5000
+ *               images:
+ *                 type: array
+ *                 maxItems: 5
+ *                 items:
+ *                   type: string
+ *                   format: uri
  *               metrics:
  *                 type: array
  *                 items:
