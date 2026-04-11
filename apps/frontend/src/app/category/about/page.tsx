@@ -17,7 +17,7 @@ export default function AboutPage() {
 
         <div className="relative z-10">
           <h1 className="text-2xl sm:text-3xl md:text-[42px] font-bold text-[#8B543E]">
-            About PureAstra
+            About Pureastra
           </h1>
           <p className="text-[#7a5a4a] mt-2 text-xs sm:text-sm md:text-base">
             Gentle. Honest. Thoughtfully formulated skincare.
@@ -35,7 +35,7 @@ export default function AboutPage() {
           </h2>
 
           <p className="text-sm md:text-[15px] text-[#3e2a1f] mb-4 leading-relaxed">
-            PureAstra was created with a clear purpose to develop skincare that is gentle, transparent, and thoughtfully formulated.
+            Pureastra was created with a clear purpose to develop skincare that is gentle, transparent, and thoughtfully formulated.
           </p>
 
           <p className="text-sm md:text-[15px] text-[#3e2a1f] mb-4 leading-relaxed">
@@ -105,7 +105,7 @@ export default function AboutPage() {
           </h2>
 
           <p className="text-sm md:text-[15px] text-[#3e2a1f] mb-4 leading-relaxed">
-            Hello, I’m Gauri Babu, the founder of PureAstra.
+            Hello, I’m Gauri Babu, the founder of Pureastra.
           </p>
 
           <p className="text-sm md:text-[15px] text-[#3e2a1f] mb-4 leading-relaxed">
@@ -117,7 +117,7 @@ export default function AboutPage() {
           </p>
 
           <p className="text-sm md:text-[15px] text-[#3e2a1f] leading-relaxed">
-            PureAstra is more than skincare it’s a journey of care and trust.
+            Pureastra is more than skincare it’s a journey of care and trust.
           </p>
         </div>
       </div>

@@ -7,11 +7,10 @@ import {
   faPhone,
 } from "@fortawesome/free-solid-svg-icons";
 import { faFacebookF, faInstagram } from "@fortawesome/free-brands-svg-icons";
-import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-[#8B543E] text-white px-5 sm:px-8 md:px-10 py-10 font-sans">
+    <footer className="bg-[#8B543E] text-white px-5 sm:px-8 md:px-10 py-10 font-sans w-full overflow-x-hidden!">
 
       <div className="max-w-[1200px] mx-auto">
 
