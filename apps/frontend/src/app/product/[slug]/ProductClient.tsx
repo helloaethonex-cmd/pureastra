@@ -446,14 +446,16 @@ function UsageInstructionSection({
 
 function BeforeAfterSection({
   section,
+  fallbackImage,
 }: {
   section: ProductContentSection | undefined;
+  fallbackImage?: string;
 }) {
   const content = section?.content as any;
   const beforeLabel: string = content?.beforeLabel ?? "Dull Skin";
   const afterLabel: string = content?.afterLabel ?? "Radiant Skin";
-  const beforeImg: string = content?.beforeImage ?? "/img/before1.webp";
-  const afterImg: string = content?.afterImage ?? "/img/after1.webp";
+  const beforeImg: string = content?.beforeImage ?? fallbackImage ?? "/img/before1.webp";
+  const afterImg: string = content?.afterImage ?? fallbackImage ?? "/img/after1.webp";
   const caption: string = content?.caption ?? "Brighter skin in just 2 weeks";
 
   return (
@@ -893,7 +895,6 @@ export default function ProductClient({ product }: { product: Product }) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
-  const [tab, setTab] = useState("desc");
   const [showAddReview, setShowAddReview] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewTitle, setReviewTitle] = useState("");
@@ -1146,7 +1147,7 @@ export default function ProductClient({ product }: { product: Product }) {
         {/* ── TOP HEADER BANNER ── */}
         <div
           className="relative px-4 sm:px-6 md:px-12 py-6 md:py-10 flex items-center justify-between bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/img/facewash.jpeg')" }}
+          style={{ backgroundImage: `url(${displayImages[0]})` }}
         >
           {/* Overlay */}
           <div className="absolute inset-0 bg-black/30" />
@@ -1157,7 +1158,7 @@ export default function ProductClient({ product }: { product: Product }) {
             </h1>
             <div className="w-[70px] h-[70px] sm:w-[60px] sm:h-[60px] md:w-[90px] md:h-[90px] bg-white rounded-full flex items-center justify-center shadow-md">
               <Image
-                src="/img/thumb.png"
+                src={displayImages[0]}
                 alt="product"
                 width={54}
                 height={54}
@@ -1398,423 +1399,20 @@ export default function ProductClient({ product }: { product: Product }) {
               </div>
             </div>
 
-            {/* TABS */}
-            <div className="border-b mb-4 overflow-x-auto">
-              <div className="flex gap-6 md:gap-10 min-w-max">
-                <button
-                  onClick={() => setTab("desc")}
-                  className={`pb-2 font-semibold text-[14px] md:text-[16px] whitespace-nowrap ${
-                    tab === "desc"
-                      ? "text-[#3B7509] border-b-2 border-[#5E2B16]"
-                      : "text-gray-500"
-                  }`}
-                >
-                  Description
-                </button>
-
-                <button
-                  onClick={() => setTab("reviews")}
-                  className={`pb-2 font-semibold text-[14px] md:text-[16px] whitespace-nowrap ${
-                    tab === "reviews"
-                      ? "text-[#3B7509] border-b-2 border-[#5E2B16]"
-                      : "text-gray-500"
-                  }`}
-                >
-                  Reviews
-                </button>
-              </div>
-            </div>
-
-            {/* TAB CONTENT */}
-            <div className="space-y-4">
-              {/* DESCRIPTION */}
-              {tab === "desc" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[15px] leading-5 md:leading-6 max-w-full md:max-w-[600px]"
-                >
-                  Discover the power of our Vitamin C Face Wash, enriched with
-                  stable Vitamin C, natural papaya and tangerine extracts, and
-                  hydrating sodium PCA. This gentle, toxin-free, fragrance-free,
-                  paraben-free, sulfate-free, and SLS-free formula cleanses
-                  effectively while keeping your skin balanced, refreshed, and
-                  nourished.
-                </motion.div>
-              )}
-
-              {/* REVIEWS */}
-              {tab === "reviews" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[18px] md:text-[22px] text-[#5e2b16] font-bold">
-                        {reviewSummaryQuery.isLoading
-                          ? "..."
-                          : (reviewSummary?.avgRating ?? 0).toFixed(1)}
-                      </span>
-                      <FontAwesomeIcon
-                        icon={faStar}
-                        className="text-green-600"
-                      />
-                      <span className="bg-green-100 text-green-700 px-2 py-[2px] rounded text-xs md:text-sm">
-                        {(reviewSummary?.avgRating ?? 0) >= 4
-                          ? "Very Good"
-                          : "Good"}
-                      </span>
-                    </div>
-
-                    {user && reviewEligibility?.canReview && (
-                      <button
-                        onClick={() => setShowAddReview((prev) => !prev)}
-                        className="bg-[#819744] text-white text-xs md:text-sm px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition"
-                      >
-                        {showAddReview ? "Close" : "Add Review"}
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="text-[12px] md:text-[14px] text-[#8B5E3C] mb-4">
-                    based on {reviewSummary?.totalReviews ?? 0} ratings by
-                    verified buyers
-                  </p>
-
-                  {(reviewSummary?.metrics?.length ?? 0) > 0 && (
-                    <div className="space-y-2 text-[11px] md:text-[12px] mb-4">
-                      {reviewSummary?.metrics.map((metric) => (
-                        <div key={metric.metricId}>
-                          <div className="flex justify-between items-center text-[#5E2B16] mb-1">
-                            <div className="flex items-center gap-1">
-                              <FontAwesomeIcon
-                                icon={getMetricIcon(metric.name, metric.icon)}
-                                className="text-[#819744]"
-                              />
-                              <span>{metric.name}</span>
-                            </div>
-                            <span>{metric.average}%</span>
-                          </div>
-                          <div className="w-full bg-white/60 rounded-full h-2">
-                            <div
-                              className="bg-[#819744] h-2 rounded-full"
-                              style={{ width: `${metric.average}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {reviewEligibility?.hasReviewed && (
-                    <p className="text-xs md:text-sm text-[#7f6a58] mb-4">
-                      You have already submitted a review for this product.
-                    </p>
-                  )}
-                  {user &&
-                    reviewEligibility &&
-                    !reviewEligibility.hasPurchased && (
-                      <p className="text-xs md:text-sm text-[#7f6a58] mb-4">
-                        Add Review is available after purchasing this product.
-                      </p>
-                    )}
-
-                  {showAddReview && reviewEligibility?.canReview && (
-                    <div className="mb-5 bg-[#F5F0E6] p-4 rounded-xl border border-[#E6DCCB] space-y-3">
-                      <p className="text-sm font-semibold text-[#5E2B16]">
-                        Write your review
-                      </p>
-
-                      <div>
-                        <p className="text-xs text-[#8B5E3C] mb-2">Rating</p>
-                        <div className="flex items-center gap-2 text-[#819744]">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              onClick={() => setReviewRating(star)}
-                              className="text-lg"
-                            >
-                              <FontAwesomeIcon
-                                icon={faStar}
-                                className={
-                                  star <= reviewRating
-                                    ? "opacity-100"
-                                    : "opacity-35"
-                                }
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <input
-                        value={reviewTitle}
-                        onChange={(e) => setReviewTitle(e.target.value)}
-                        placeholder="Title (optional)"
-                        className="w-full px-3 py-2 rounded-lg border border-[#D6C9B6] bg-white/80 text-sm"
-                      />
-                      <textarea
-                        value={reviewComment}
-                        onChange={(e) => setReviewComment(e.target.value)}
-                        placeholder="Share your experience"
-                        rows={4}
-                        className="w-full px-3 py-2 rounded-lg border border-[#D6C9B6] bg-white/80 text-sm"
-                      />
-
-                      <div className="space-y-3">
-                        <p className="text-xs font-medium text-[#8B5E3C]">
-                          Add photos (optional)
-                        </p>
-
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleReviewImageSelect}
-                          disabled={
-                            isUploadingReviewImage ||
-                            createReview.isPending ||
-                            reviewImageUrls.length >= MAX_REVIEW_IMAGES
-                          }
-                          className="block w-full text-xs text-[#5E2B16]
-               file:mr-3 file:px-3 file:py-1.5
-               file:rounded-md file:border-0
-               file:text-xs file:font-medium
-               file:bg-[#EADBC8] file:text-[#5E2B16]
-               hover:file:bg-[#ecd2af]
-               cursor-pointer disabled:cursor-not-allowed"
-                        />
-
-                        {isUploadingReviewImage && (
-                          <p className="text-xs text-[#8B5E3C] animate-pulse">
-                            Uploading image...
-                          </p>
-                        )}
-
-                        {reviewImageUrls.length > 0 && (
-                          <div className="grid grid-cols-3 gap-3">
-                            {reviewImageUrls.map((url, index) => (
-                              <div
-                                key={`${url}-${index}`}
-                                className="relative group rounded-lg overflow-hidden border border-[#D6C9B6] bg-white"
-                              >
-                                <Image
-                                  src={url}
-                                  alt={`review-upload-${index}`}
-                                  width={120}
-                                  height={120}
-                                  className="w-full h-24 object-cover"
-                                />
-
-                                {/* Overlay remove button */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveReviewImage(index)}
-                                  className="absolute top-1 right-1 w-6 h-6
-                       rounded-full bg-black/70 text-white text-xs
-                       flex items-center justify-center
-                       opacity-0 group-hover:opacity-100
-                       transition"
-                                  aria-label="Remove uploaded image"
-                                >
-                                  <FontAwesomeIcon icon={faTrash} />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {reviewMetrics.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs text-[#8B5E3C]">
-                            Rate product metrics
-                          </p>
-                          {reviewMetrics.map((metric: ReviewMetric) => {
-                            const range =
-                              metric.maxValue - metric.minValue || 1;
-                            const value =
-                              metricRatings[metric.id] ?? metric.minValue;
-                            const percentage =
-                              ((value - metric.minValue) / range) * 100;
-                            return (
-                              <div key={metric.id}>
-                                <div className="flex items-center justify-between text-xs text-[#5E2B16] mb-1">
-                                  <span className="flex items-center gap-2">
-                                    <FontAwesomeIcon
-                                      icon={getMetricIcon(
-                                        metric.name,
-                                        metric.icon,
-                                      )}
-                                      className="text-[#819744]"
-                                    />
-                                    {metric.name}
-                                  </span>
-                                  <span>
-                                    {value}
-                                    {metric.unit === "PERCENT" ? "%" : ""}
-                                  </span>
-                                </div>
-                                <input
-                                  type="range"
-                                  min={metric.minValue}
-                                  max={metric.maxValue}
-                                  value={value}
-                                  onChange={(e) =>
-                                    setMetricRatings((prev) => ({
-                                      ...prev,
-                                      [metric.id]: Number(e.target.value),
-                                    }))
-                                  }
-                                  className="w-full"
-                                  style={{ accentColor: "#819744" }}
-                                />
-                                {/* <div className="w-full bg-white/60 rounded-full h-1.5 mt-1">
-                                <div className="bg-[#819744] h-1.5 rounded-full" style={{ width: `${percentage}%` }} />
-                              </div> */}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={handleSubmitReview}
-                        disabled={createReview.isPending}
-                        className="bg-[#5E2B16] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-60"
-                      >
-                        {createReview.isPending
-                          ? "Submitting..."
-                          : "Submit Review"}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* REVIEW GALLERY */}
-                  {allReviewImages.length > 0 && (
-                    <div className="flex gap-2 mb-4 w-full overflow-x-auto">
-                      {allReviewImages.map((img) => (
-                        <a
-                          key={img.id}
-                          href={img.imageUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block rounded-lg overflow-hidden border border-[#D6C9B6] w-24 h-24"
-                        >
-                          <Image
-                            src={img.imageUrl}
-                            alt="review"
-                            width={96}
-                            height={96}
-                            className="w-24 h-24 object-cover"
-                          />
-                        </a>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* REVIEW SLIDER */}
-                  <div className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2">
-                    {reviewsQuery.isLoading && (
-                      <p className="text-sm text-[#8B5E3C]">
-                        Loading reviews...
-                      </p>
-                    )}
-
-                    {!reviewsQuery.isLoading && reviewList.length === 0 && (
-                      <p className="text-sm text-[#8B5E3C]">
-                        No reviews yet. Be the first to review after purchase.
-                      </p>
-                    )}
-
-                    {/** Render each review (images shown in a single gallery above) */}
-                    {reviewList.map((review) => (
-                      <motion.div
-                        key={review.id}
-                        whileHover={{ scale: 1.03 }}
-                        className="snap-start min-w-[85%] sm:min-w-[48%] md:min-w-[350px] bg-[#F5F0E6] p-4 rounded-xl shadow-sm space-y-3"
-                      >
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1 text-[#819744] text-[13px] md:text-[14px]">
-                            {[...Array(review.rating)].map((_, i) => (
-                              <FontAwesomeIcon key={i} icon={faStar} />
-                            ))}
-                          </div>
-
-                          <span className="text-[10px] md:text-xs text-[#8B5E3C]">
-                            {getRelativeDateLabel(review.createdAt)}
-                          </span>
-                        </div>
-
-                        {review.metrics.length > 0 && (
-                          <div className="space-y-2 text-[11px] md:text-[12px]">
-                            {review.metrics.map((metric) => (
-                              <div key={`${review.id}-${metric.metricId}`}>
-                                <div className="flex justify-between items-center text-[#5E2B16] mb-1">
-                                  <div className="flex items-center gap-1">
-                                    <FontAwesomeIcon
-                                      icon={getMetricIcon(
-                                        metric.name,
-                                        metric.icon,
-                                      )}
-                                      className="text-[#819744]"
-                                    />
-                                    <span>{metric.name}</span>
-                                  </div>
-                                  <span>
-                                    {metric.value}
-                                    {metric.unit === "PERCENT" ? "%" : ""}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="flex justify-between items-center text-[11px] md:text-[12px]">
-                          <div className="flex items-center gap-2 text-[#819744] font-semibold">
-                            {review.isVerifiedPurchase && (
-                              <FontAwesomeIcon icon={faCheckCircle} />
-                            )}
-                            {review.isVerifiedPurchase
-                              ? "Verified"
-                              : "Customer"}
-                          </div>
-
-                          <div className="flex text-[#819744]">
-                            {[...Array(review.rating)].map((_, i) => (
-                              <FontAwesomeIcon
-                                key={`${review.id}-rate-${i}`}
-                                icon={faStar}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="text-[11px] md:text-[13px] text-[#5E2B16]">
-                          <p className="font-semibold">{review.user.name}</p>
-                        </div>
-
-                        {review.title && (
-                          <p className="text-[12px] md:text-[14px] text-[#5E2B16] font-semibold leading-5">
-                            {review.title}
-                          </p>
-                        )}
-
-                        {review.comment && (
-                          <p className="text-[12px] md:text-[14px] text-[#5E2B16] italic leading-5">
-                            {review.comment}
-                          </p>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </div>
+            {/* Description */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[15px] leading-5 md:leading-6 max-w-full md:max-w-[600px]"
+            >
+              Discover the power of our Vitamin C Face Wash, enriched with
+              stable Vitamin C, natural papaya and tangerine extracts, and
+              hydrating sodium PCA. This gentle, toxin-free, fragrance-free,
+              paraben-free, sulfate-free, and SLS-free formula cleanses
+              effectively while keeping your skin balanced, refreshed, and
+              nourished.
+            </motion.div>
           </div>
         </div>
 
@@ -1900,7 +1498,10 @@ export default function ProductClient({ product }: { product: Product }) {
             <SuitableForSection section={suitableSection} />
             <UsageInstructionSection section={usageSection} />
           </div>
-          <BeforeAfterSection section={beforeAfterSection} />
+          <BeforeAfterSection
+            section={beforeAfterSection}
+            fallbackImage={displayImages[0]}
+          />
         </div>
 
         {/* ── RELATED PRODUCTS ── */}
@@ -1920,7 +1521,7 @@ export default function ProductClient({ product }: { product: Product }) {
                 const img =
                   item.images.find((im) => im.position === 0)?.imageUrl ??
                   item.images[0]?.imageUrl ??
-                  "/img/facewash.webp";
+                  displayImages[0];
                 const minPrice = item.variants.reduce(
                   (min, v) =>
                     v.price != null && Number(v.price) < min
@@ -1985,6 +1586,358 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
           </div>
         )}
+
+        {/* ── REVIEWS ── */}
+        <div className="bg-[#F5F0E6] py-10 px-4 sm:px-6 md:py-12">
+          <div className="max-w-5xl mx-auto">
+            <motion.h2
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-center text-[#819744] font-['Marko_One'] text-[22px] sm:text-[26px] md:text-[34px] font-semibold mb-8"
+            >
+              Customer Reviews
+            </motion.h2>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-[18px] md:text-[22px] text-[#5e2b16] font-bold">
+                    {reviewSummaryQuery.isLoading
+                      ? "..."
+                      : (reviewSummary?.avgRating ?? 0).toFixed(1)}
+                  </span>
+                  <FontAwesomeIcon icon={faStar} className="text-green-600" />
+                  <span className="bg-green-100 text-green-700 px-2 py-[2px] rounded text-xs md:text-sm">
+                    {(reviewSummary?.avgRating ?? 0) >= 4
+                      ? "Very Good"
+                      : "Good"}
+                  </span>
+                </div>
+
+                {user && reviewEligibility?.canReview && (
+                  <button
+                    onClick={() => setShowAddReview((prev) => !prev)}
+                    className="bg-[#819744] text-white text-xs md:text-sm px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition"
+                  >
+                    {showAddReview ? "Close" : "Add Review"}
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[12px] md:text-[14px] text-[#8B5E3C] mb-4">
+                based on {reviewSummary?.totalReviews ?? 0} ratings by verified
+                buyers
+              </p>
+
+              {(reviewSummary?.metrics?.length ?? 0) > 0 && (
+                <div className="space-y-2 text-[11px] md:text-[12px] mb-4">
+                  {reviewSummary?.metrics.map((metric) => (
+                    <div key={metric.metricId}>
+                      <div className="flex justify-between items-center text-[#5E2B16] mb-1">
+                        <div className="flex items-center gap-1">
+                          <FontAwesomeIcon
+                            icon={getMetricIcon(metric.name, metric.icon)}
+                            className="text-[#819744]"
+                          />
+                          <span>{metric.name}</span>
+                        </div>
+                        <span>{metric.average}%</span>
+                      </div>
+                      <div className="w-full bg-white/60 rounded-full h-2">
+                        <div
+                          className="bg-[#819744] h-2 rounded-full"
+                          style={{ width: `${metric.average}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {reviewEligibility?.hasReviewed && (
+                <p className="text-xs md:text-sm text-[#7f6a58] mb-4">
+                  You have already submitted a review for this product.
+                </p>
+              )}
+              {user && reviewEligibility && !reviewEligibility.hasPurchased && (
+                <p className="text-xs md:text-sm text-[#7f6a58] mb-4">
+                  Add Review is available after purchasing this product.
+                </p>
+              )}
+
+              {showAddReview && reviewEligibility?.canReview && (
+                <div className="mb-5 bg-[#F5F0E6] p-4 rounded-xl border border-[#E6DCCB] space-y-3">
+                  <p className="text-sm font-semibold text-[#5E2B16]">
+                    Write your review
+                  </p>
+
+                  <div>
+                    <p className="text-xs text-[#8B5E3C] mb-2">Rating</p>
+                    <div className="flex items-center gap-2 text-[#819744]">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setReviewRating(star)}
+                          className="text-lg"
+                        >
+                          <FontAwesomeIcon
+                            icon={faStar}
+                            className={
+                              star <= reviewRating ? "opacity-100" : "opacity-35"
+                            }
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <input
+                    value={reviewTitle}
+                    onChange={(e) => setReviewTitle(e.target.value)}
+                    placeholder="Title (optional)"
+                    className="w-full px-3 py-2 rounded-lg border border-[#D6C9B6] bg-white/80 text-sm"
+                  />
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Share your experience"
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-lg border border-[#D6C9B6] bg-white/80 text-sm"
+                  />
+
+                  <div className="space-y-3">
+                    <p className="text-xs font-medium text-[#8B5E3C]">
+                      Add photos (optional)
+                    </p>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleReviewImageSelect}
+                      disabled={
+                        isUploadingReviewImage ||
+                        createReview.isPending ||
+                        reviewImageUrls.length >= MAX_REVIEW_IMAGES
+                      }
+                      className="block w-full text-xs text-[#5E2B16]
+               file:mr-3 file:px-3 file:py-1.5
+               file:rounded-md file:border-0
+               file:text-xs file:font-medium
+               file:bg-[#EADBC8] file:text-[#5E2B16]
+               hover:file:bg-[#ecd2af]
+               cursor-pointer disabled:cursor-not-allowed"
+                    />
+
+                    {isUploadingReviewImage && (
+                      <p className="text-xs text-[#8B5E3C] animate-pulse">
+                        Uploading image...
+                      </p>
+                    )}
+
+                    {reviewImageUrls.length > 0 && (
+                      <div className="grid grid-cols-3 gap-3">
+                        {reviewImageUrls.map((url, index) => (
+                          <div
+                            key={`${url}-${index}`}
+                            className="relative group rounded-lg overflow-hidden border border-[#D6C9B6] bg-white"
+                          >
+                            <Image
+                              src={url}
+                              alt={`review-upload-${index}`}
+                              width={120}
+                              height={120}
+                              className="w-full h-24 object-cover"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveReviewImage(index)}
+                              className="absolute top-1 right-1 w-6 h-6
+                       rounded-full bg-black/70 text-white text-xs
+                       flex items-center justify-center
+                       opacity-0 group-hover:opacity-100
+                       transition"
+                              aria-label="Remove uploaded image"
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {reviewMetrics.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-[#8B5E3C]">
+                        Rate product metrics
+                      </p>
+                      {reviewMetrics.map((metric: ReviewMetric) => {
+                        const range = metric.maxValue - metric.minValue || 1;
+                        const value = metricRatings[metric.id] ?? metric.minValue;
+                        return (
+                          <div key={metric.id}>
+                            <div className="flex items-center justify-between text-xs text-[#5E2B16] mb-1">
+                              <span className="flex items-center gap-2">
+                                <FontAwesomeIcon
+                                  icon={getMetricIcon(metric.name, metric.icon)}
+                                  className="text-[#819744]"
+                                />
+                                {metric.name}
+                              </span>
+                              <span>
+                                {value}
+                                {metric.unit === "PERCENT" ? "%" : ""}
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min={metric.minValue}
+                              max={metric.maxValue}
+                              value={value}
+                              onChange={(e) =>
+                                setMetricRatings((prev) => ({
+                                  ...prev,
+                                  [metric.id]: Number(e.target.value),
+                                }))
+                              }
+                              className="w-full"
+                              style={{ accentColor: "#819744" }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleSubmitReview}
+                    disabled={createReview.isPending}
+                    className="bg-[#5E2B16] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-60"
+                  >
+                    {createReview.isPending ? "Submitting..." : "Submit Review"}
+                  </button>
+                </div>
+              )}
+
+              {allReviewImages.length > 0 && (
+                <div className="flex gap-2 mb-4 w-full overflow-x-auto">
+                  {allReviewImages.map((img) => (
+                    <a
+                      key={img.id}
+                      href={img.imageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-lg overflow-hidden border border-[#D6C9B6] w-24 h-24"
+                    >
+                      <Image
+                        src={img.imageUrl}
+                        alt="review"
+                        width={96}
+                        height={96}
+                        className="w-24 h-24 object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2">
+                {reviewsQuery.isLoading && (
+                  <p className="text-sm text-[#8B5E3C]">Loading reviews...</p>
+                )}
+
+                {!reviewsQuery.isLoading && reviewList.length === 0 && (
+                  <p className="text-sm text-[#8B5E3C]">
+                    No reviews yet. Be the first to review after purchase.
+                  </p>
+                )}
+
+                {reviewList.map((review) => (
+                  <motion.div
+                    key={review.id}
+                    whileHover={{ scale: 1.03 }}
+                    className="snap-start min-w-[85%] sm:min-w-[48%] md:min-w-[350px] bg-[#F5F0E6] p-4 rounded-xl shadow-sm space-y-3"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1 text-[#819744] text-[13px] md:text-[14px]">
+                        {[...Array(review.rating)].map((_, i) => (
+                          <FontAwesomeIcon key={i} icon={faStar} />
+                        ))}
+                      </div>
+
+                      <span className="text-[10px] md:text-xs text-[#8B5E3C]">
+                        {getRelativeDateLabel(review.createdAt)}
+                      </span>
+                    </div>
+
+                    {review.metrics.length > 0 && (
+                      <div className="space-y-2 text-[11px] md:text-[12px]">
+                        {review.metrics.map((metric) => (
+                          <div key={`${review.id}-${metric.metricId}`}>
+                            <div className="flex justify-between items-center text-[#5E2B16] mb-1">
+                              <div className="flex items-center gap-1">
+                                <FontAwesomeIcon
+                                  icon={getMetricIcon(metric.name, metric.icon)}
+                                  className="text-[#819744]"
+                                />
+                                <span>{metric.name}</span>
+                              </div>
+                              <span>
+                                {metric.value}
+                                {metric.unit === "PERCENT" ? "%" : ""}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center text-[11px] md:text-[12px]">
+                      <div className="flex items-center gap-2 text-[#819744] font-semibold">
+                        {review.isVerifiedPurchase && (
+                          <FontAwesomeIcon icon={faCheckCircle} />
+                        )}
+                        {review.isVerifiedPurchase ? "Verified" : "Customer"}
+                      </div>
+
+                      <div className="flex text-[#819744]">
+                        {[...Array(review.rating)].map((_, i) => (
+                          <FontAwesomeIcon
+                            key={`${review.id}-rate-${i}`}
+                            icon={faStar}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] md:text-[13px] text-[#5E2B16]">
+                      <p className="font-semibold">{review.user.name}</p>
+                    </div>
+
+                    {review.title && (
+                      <p className="text-[12px] md:text-[14px] text-[#5E2B16] font-semibold leading-5">
+                        {review.title}
+                      </p>
+                    )}
+
+                    {review.comment && (
+                      <p className="text-[12px] md:text-[14px] text-[#5E2B16] italic leading-5">
+                        {review.comment}
+                      </p>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
 
         {/* ── FAQ ── */}
         <div className="bg-[#F5F0E6] py-10 px-4 sm:px-6 md:py-16">

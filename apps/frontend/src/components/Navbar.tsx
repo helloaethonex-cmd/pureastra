@@ -194,13 +194,6 @@ export default function Navbar() {
                     >
                       My Account
                     </Link>
-                    <Link
-                      href="/influencers"
-                      className="block px-4 py-2 text-sm text-[#5E2B16] hover:bg-[#FAF3E2] transition"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      Influencer Dashboard
-                    </Link>
                     <div
                       onClick={() => {
                         setIsUserMenuOpen(false);
