@@ -975,6 +975,12 @@ export default function ProductClient({ product }: { product: Product }) {
   const beforeAfterSection = getSection(sections, "BEFORE_AFTER");
   const faqSection = getSection(sections, "FAQ");
   const ingredientsSection = getSection(sections, "INGREDIENTS");
+  const ingredientsContent = ingredientsSection?.content as any;
+  const hasIngredients =
+    Boolean(ingredientsContent?.text) ||
+    (ingredientsContent?.list?.length ?? 0) > 0 ||
+    (ingredientsContent?.cardItems?.length ?? 0) > 0;
+  const [showIngredients, setShowIngredients] = useState(false);
 
   // Quick info badges — from HIGHLIGHTS or HIGHLIGHTS.badges
   const highlightsContent = highlightsSection?.content as any;
@@ -1158,7 +1164,7 @@ export default function ProductClient({ product }: { product: Product }) {
             </h1>
             <div className="w-[70px] h-[70px] sm:w-[60px] sm:h-[60px] md:w-[90px] md:h-[90px] bg-white rounded-full flex items-center justify-center shadow-md">
               <Image
-                src={displayImages[0]}
+                src="/img/thumb.png"
                 alt="product"
                 width={54}
                 height={54}
@@ -1406,12 +1412,7 @@ export default function ProductClient({ product }: { product: Product }) {
               transition={{ duration: 0.4 }}
               className="text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[15px] leading-5 md:leading-6 max-w-full md:max-w-[600px]"
             >
-              Discover the power of our Vitamin C Face Wash, enriched with
-              stable Vitamin C, natural papaya and tangerine extracts, and
-              hydrating sodium PCA. This gentle, toxin-free, fragrance-free,
-              paraben-free, sulfate-free, and SLS-free formula cleanses
-              effectively while keeping your skin balanced, refreshed, and
-              nourished.
+              Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C, natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle, toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula cleanses effectively while keeping your skin balanced, refreshed, and nourished. Say goodbye to dullness and uneven skin, lock in moisture for soft, supple skin, and enjoy balanced care that leaves your face feeling clean, energized, and healthy. Safe for all skin types, including sensitive skin, teens, and beginners, it delivers hydration, natural glow, and gentle daily care you can trust.
             </motion.div>
           </div>
         </div>
@@ -1462,9 +1463,33 @@ export default function ProductClient({ product }: { product: Product }) {
                 {benefitsSection?.title ?? "BENEFITS:"}
               </motion.h3>
               <BenefitsSection section={benefitsSection} />
-              <div className="mt-8 md:mt-10">
-                <IngredientsGridSection section={ingredientsSection} />
-              </div>
+
+              {hasIngredients && (
+                <div className="mt-8 md:mt-10">
+                  <button
+                    onClick={() => setShowIngredients((prev) => !prev)}
+                    className="inline-flex items-center gap-2 bg-[#819744] text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#6e8539] transition"
+                  >
+                    {showIngredients ? "Hide Ingredients" : "View Ingredients"}
+                    <FontAwesomeIcon icon={showIngredients ? faMinus : faPlus} />
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {showIngredients && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                      >
+                        <IngredientsGridSection section={ingredientsSection} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               <ResultsSection section={getSection(sections, "CUSTOM")} />
             </div>
 

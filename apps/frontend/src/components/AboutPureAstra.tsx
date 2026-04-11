@@ -15,14 +15,14 @@ export default function AboutPureAstra() {
           </h2>
 
           <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal text-[#555]">
-            <strong>PureAstra</strong> was created with a clear purpose to develop skincare
+            <strong>Pureastra</strong> was created with a clear purpose to develop skincare
             that is gentle, transparent, and thoughtfully formulated.
           </p>
 
           <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal">
             We believe many skincare products today focus only on quick results,
             sometimes overlooking how certain ingredients may irritate the skin
-            or cause breakouts. PureAstra takes a different approach. Our
+            or cause breakouts. Pureastra takes a different approach. Our
             formulations are developed with carefully selected plant-based
             ingredients and a mindful philosophy focused on skin comfort,
             hydration, and balance.
@@ -37,7 +37,7 @@ export default function AboutPureAstra() {
           </p>
 
           <p className="text-[15px] leading-[1.7] text-[#333] mb-[14px] font-['Amaranth',sans-serif] italic font-normal">
-            At PureAstra, every formula has a story a process of research,
+            At Pureastra, every formula has a story a process of research,
             testing, and continuous improvement to create skincare that people
             can trust.
           </p>
@@ -51,7 +51,7 @@ export default function AboutPureAstra() {
           <div className="relative z-[2] w-full max-w-[380px] h-[420px] mt-[40px] transition-transform duration-300 hover:scale-105">
             <Image
               src="/img/why.webp"
-              alt="Why PureAstra"
+              alt="Why Pureastra"
               fill
               className="object-cover"
               sizes="(max-width: 768px) 90vw, 380px"

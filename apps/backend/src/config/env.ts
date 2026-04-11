@@ -103,7 +103,7 @@ export const envSchema = z
     SENTRY_DSN: z.url().optional(),
 
     // Seller config (for GST invoices)
-    SELLER_NAME: z.string().min(1).default("PureAstra"),
+    SELLER_NAME: z.string().min(1).default("Pureastra"),
     SELLER_ADDRESS: z.string().min(1).default("India"),
     SELLER_GSTIN: z.string().min(1).optional(),
     SELLER_STATE: z.string().min(1).default("MAHARASHTRA"),

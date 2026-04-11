@@ -169,14 +169,9 @@ export default function ProductCard({ active, product }: ProductCardProps) {
           active ? "show" : ""
         }`}
       >
-        <h5 className="text-[18px] font-semibold mb-1 font-['Roboto_Serif',serif]">
+        <h5 className="text-[18px] font-semibold mb-1 font-['Roboto_Serif',serif] text-left">
           {product.name}
         </h5>
-
-        <p className="font-['Poppins',sans-serif] text-[13px] leading-[1.4] mb-2 opacity-90">
-          {product.description ??
-            "A gentle formulation crafted to support healthy skin and visible glow."}
-        </p>
 
         <div className="flex justify-between">
           <span>{activeVariant?.variantName ?? "Default"}</span>
