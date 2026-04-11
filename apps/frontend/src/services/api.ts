@@ -224,6 +224,50 @@ export interface OrderDetailResponse {
   statusHistory: OrderDetailStatusHistory[];
 }
 
+export interface InvoiceItem {
+  id: string;
+  productName: string;
+  variantName: string | null;
+  sku: string | null;
+  quantity: number;
+  unitPrice: string;
+  totalPrice: string;
+}
+
+export interface OrderInvoiceResponse {
+  id: string;
+  orderId: string;
+  invoiceNumber: string;
+  status: number;
+  pdfStatus: number;
+  issuedAt: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: {
+    line1: string;
+    line2?: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  sellerName: string;
+  sellerAddress: string;
+  sellerGstin: string | null;
+  sellerState: string;
+  productTotal: string;
+  shippingAmount: string;
+  taxAmount: string;
+  discountAmount: string;
+  totalAmount: string;
+  cgst: string | null;
+  sgst: string | null;
+  igst: string | null;
+  pdfUrl: string | null;
+  createdAt: string;
+  items: InvoiceItem[];
+}
+
 export interface OrderListItem {
   id: string;
   orderNumber: string;
@@ -696,6 +740,9 @@ export const getMyInfluencerDashboard = () =>
 
 export const getOrderDetail = (orderNumber: string) =>
   apiFetch<OrderDetailResponse>(`/orders/${orderNumber}`);
+
+export const getOrderInvoice = (orderNumber: string) =>
+  apiFetch<OrderInvoiceResponse>(`/orders/${orderNumber}/invoice`);
 
 // Alias for explicit full-detail fetching
 export const getFullOrderDetail = getOrderDetail;
