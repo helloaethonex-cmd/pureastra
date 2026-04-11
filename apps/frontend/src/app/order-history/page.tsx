@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import toast from "react-hot-toast";
 import {
   faArrowLeftLong,
   faCircle,
@@ -15,7 +16,9 @@ import {
   faSpinner,
   faShoppingBag,
   faChevronRight,
+  faDownload,
 } from "@fortawesome/free-solid-svg-icons";
+import { getOrderInvoice } from "@/services/api";
 import { useMyOrders, useOrderDetail } from "@/hooks/useOrders";
 
 // ── Status maps ───────────────────────────────────────────────────────────────
@@ -63,6 +66,41 @@ const paymentBadgeStyle = (paymentStatus: number) => {
 // ── Order confirmation card (shown when ?order=PA-xxx is fresh) ───────────────
 function OrderConfirmationCard({ orderNumber }: { orderNumber: string }) {
   const { data: order, isLoading, isError } = useOrderDetail(orderNumber);
+  const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false);
+
+  const handleDownloadInvoice = useCallback(async () => {
+    if (!order?.orderNumber || isDownloadingInvoice) return;
+
+    try {
+      setIsDownloadingInvoice(true);
+      const invoice = await getOrderInvoice(order.orderNumber);
+
+      if (!invoice.pdfUrl) {
+        toast.error("Invoice is being generated. Please try again shortly.");
+        return;
+      }
+
+      const response = await fetch(invoice.pdfUrl);
+      if (!response.ok) {
+        throw new Error("Unable to download invoice right now.");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${invoice.invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to download invoice.";
+      toast.error(message);
+    } finally {
+      setIsDownloadingInvoice(false);
+    }
+  }, [isDownloadingInvoice, order?.orderNumber]);
 
   if (isLoading) {
     return (
@@ -231,7 +269,18 @@ function OrderConfirmationCard({ orderNumber }: { orderNumber: string }) {
       </div>
 
       {/* CTAs */}
-      <div className="flex gap-3 mt-5">
+      <div className="flex flex-col sm:flex-row gap-3 mt-5">
+        <button
+          type="button"
+          onClick={handleDownloadInvoice}
+          disabled={isDownloadingInvoice}
+          className="flex-1 text-center border-2 border-[#819744] text-[#5E2B15] py-3 rounded-xl font-semibold hover:bg-[#eef4dd] transition disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span className="inline-flex items-center justify-center gap-2">
+            <FontAwesomeIcon icon={isDownloadingInvoice ? faSpinner : faDownload} spin={isDownloadingInvoice} />
+            {isDownloadingInvoice ? "Downloading..." : "Download Invoice"}
+          </span>
+        </button>
         <Link
           href="/"
           className="flex-1 text-center bg-[#819744] text-white py-3 rounded-xl font-semibold hover:bg-[#6f873a] transition"
