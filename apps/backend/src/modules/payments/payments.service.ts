@@ -32,6 +32,10 @@ import {
   createInfluencerSale,
   incrementInfluencerEarnings,
 } from "../influencers/influencers.repository";
+import {
+  createInvoiceInTx,
+  generateInvoicePdf,
+} from "../invoices/invoices.service";
 
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -428,6 +432,64 @@ export const confirmPaymentAttempt = async (
         { orderId: payment.orderId.toString() },
         "[commission] skipped — order already cancelled",
       );
+    }
+
+    // ── Invoice creation ──────────────────────────────────────────────────────
+    // Only when fully paid AND order is not cancelled.
+    // Idempotent: UNIQUE(order_id) + pre-check inside createInvoiceInTx.
+    if (fullyPaid && payment.order.orderStatus !== ORDER_STATUS.CANCELLED) {
+      // Fetch order items (not included in payment.order by default)
+      const orderItems = await tx.orderItem.findMany({
+        where: { orderId: payment.orderId },
+        select: {
+          productName: true,
+          variantName: true,
+          sku: true,
+          quantity: true,
+          priceAtPurchase: true,
+        },
+      });
+
+      const orderWithItems = {
+        ...payment.order,
+        totalPaid: centsToDecimal(nextTotalPaid),
+        items: orderItems,
+      };
+
+      try {
+        const invoice = await createInvoiceInTx(tx, orderWithItems, {
+          paidAt: now,
+        });
+
+        // PDF generation runs AFTER TX commits — fire & forget.
+        // setImmediate defers execution until after the current TX callback returns.
+        setImmediate(() => {
+          generateInvoicePdf(invoice.id).catch((pdfErr) => {
+            logger.error(
+              { invoiceId: invoice.id.toString(), err: pdfErr },
+              "[invoice-pdf] async generation failed — will retry",
+            );
+          });
+        });
+      } catch (invoiceError) {
+        if (
+          invoiceError instanceof Prisma.PrismaClientKnownRequestError &&
+          invoiceError.code === "P2002"
+        ) {
+          // UNIQUE(order_id) violation = webhook retry.
+          logger.info(
+            { orderId: payment.orderId.toString() },
+            "[invoice] skipped — duplicate (P2002 idempotent retry)",
+          );
+        } else {
+          // Invoice failure should NOT fail the payment TX.
+          // Log and continue — invoice can be regenerated manually.
+          logger.error(
+            { orderId: payment.orderId.toString(), err: invoiceError },
+            "[invoice] creation failed — payment still succeeds",
+          );
+        }
+      }
     }
 
     return updatedPayment;

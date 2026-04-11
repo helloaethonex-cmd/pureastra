@@ -443,6 +443,7 @@ model Order {
   reviews               Review[]
   influencer            Influencer?     @relation(fields: [influencerId], references: [id])
   influencerSale        InfluencerSale?
+  invoice               Invoice?
 
   @@index([userId])
   @@index([influencerId])
@@ -791,4 +792,96 @@ model InfluencerPayout {
 
   @@index([influencerId, status])
   @@map("influencer_payouts")
+}
+
+//
+// ========================================================
+// INVOICE SYSTEM
+// ========================================================
+// GST-compliant, immutable invoice generation.
+// Created atomically inside the payment success TX.
+// PDF generated async outside TX.
+//
+
+enum InvoiceStatus {
+  ACTIVE
+  CANCELLED
+}
+
+model InvoiceNumberSequence {
+  year Int @id
+
+  lastValue Int @default(0) @map("last_value")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("invoice_number_sequences")
+}
+
+model Invoice {
+  id BigInt @id @default(autoincrement())
+
+  orderId       BigInt        @unique @map("order_id")
+  invoiceNumber String        @unique @map("invoice_number") @db.VarChar(30)
+  status        InvoiceStatus @default(ACTIVE)
+  issuedAt      DateTime      @map("issued_at")
+
+  // Customer snapshot (frozen at invoice time)
+  customerName    String @map("customer_name") @db.VarChar(200)
+  customerPhone   String @map("customer_phone") @db.VarChar(20)
+  customerAddress Json   @map("customer_address")
+
+  // Seller snapshot (from env at time of generation)
+  sellerName    String @map("seller_name") @db.VarChar(200)
+  sellerAddress String @map("seller_address") @db.VarChar(500)
+  sellerGstin   String @map("seller_gstin") @db.VarChar(20)
+  sellerState   String @map("seller_state") @db.VarChar(100)
+
+  // Financial snapshot (from order — NEVER recomputed)
+  productTotal   Decimal @map("product_total") @db.Decimal(10, 2)
+  shippingAmount Decimal @map("shipping_amount") @db.Decimal(10, 2)
+  taxAmount      Decimal @map("tax_amount") @db.Decimal(10, 2)
+  discountAmount Decimal @map("discount_amount") @db.Decimal(10, 2)
+  totalAmount    Decimal @map("total_amount") @db.Decimal(10, 2)
+
+  // GST breakdown (mutually exclusive: intra = cgst+sgst, inter = igst)
+  cgst Decimal? @db.Decimal(10, 2)
+  sgst Decimal? @db.Decimal(10, 2)
+  igst Decimal? @db.Decimal(10, 2)
+
+  // PDF storage — null until async generation completes
+  pdfUrl    String? @map("pdf_url")
+  // 0 = PENDING, 1 = GENERATED, 2 = FAILED
+  pdfStatus Int     @default(0) @map("pdf_status")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  order Order          @relation(fields: [orderId], references: [id])
+  items InvoiceItem[]
+
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id BigInt @id @default(autoincrement())
+
+  invoiceId BigInt @map("invoice_id")
+
+  productName String  @map("product_name")
+  variantName String? @map("variant_name")
+  sku         String?
+  quantity    Int
+  unitPrice   Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(10, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([invoiceId])
+  @@map("invoice_items")
 }

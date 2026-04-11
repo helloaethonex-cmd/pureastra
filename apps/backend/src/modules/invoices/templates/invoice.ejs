@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invoice <%= invoice.invoiceNumber %></title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 12px;
+      color: #1a1a1a;
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #1a1a1a;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .header-left h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .header-left p { color: #666; font-size: 11px; }
+    .header-right { text-align: right; }
+    .header-right .inv-number {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+    .header-right .inv-date {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .parties {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 40px;
+    }
+    .party { flex: 1; }
+    .party-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #999;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .party-name { font-weight: 700; font-size: 13px; }
+    .party-detail { font-size: 11px; color: #444; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+    thead th {
+      background: #f5f5f5;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #666;
+      border-bottom: 1px solid #ddd;
+    }
+    thead th.right { text-align: right; }
+    tbody td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 11px;
+    }
+    tbody td.right { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .totals {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 24px;
+    }
+    .totals-table { width: 280px; }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 11px;
+    }
+    .totals-row.subtotal { color: #666; }
+    .totals-row.grand-total {
+      font-size: 14px;
+      font-weight: 700;
+      border-top: 2px solid #1a1a1a;
+      padding-top: 8px;
+      margin-top: 4px;
+    }
+    .totals-label { }
+    .totals-value { font-variant-numeric: tabular-nums; }
+
+    .gst-section {
+      background: #f9f9f9;
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 24px;
+    }
+    .gst-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #999;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .gst-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      padding: 2px 0;
+    }
+
+    .footer {
+      border-top: 1px solid #eee;
+      padding-top: 16px;
+      text-align: center;
+      color: #999;
+      font-size: 10px;
+    }
+    .footer p { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1><%= invoice.sellerName %></h1>
+      <p>Tax Invoice</p>
+    </div>
+    <div class="header-right">
+      <div class="inv-number"><%= invoice.invoiceNumber %></div>
+      <div class="inv-date">Issued: <%= new Date(invoice.issuedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) %></div>
+    </div>
+  </div>
+
+  <!-- Seller + Customer -->
+  <div class="parties">
+    <div class="party">
+      <div class="party-label">From</div>
+      <div class="party-name"><%= invoice.sellerName %></div>
+      <div class="party-detail"><%= invoice.sellerAddress %></div>
+      <% if (invoice.sellerGstin) { %>
+        <div class="party-detail"><strong>GSTIN:</strong> <%= invoice.sellerGstin %></div>
+      <% } %>
+      <div class="party-detail"><strong>State:</strong> <%= invoice.sellerState %></div>
+    </div>
+    <div class="party">
+      <div class="party-label">Bill To</div>
+      <div class="party-name"><%= invoice.customerName %></div>
+      <div class="party-detail"><%= invoice.customerAddress.line1 %></div>
+      <% if (invoice.customerAddress.line2) { %>
+        <div class="party-detail"><%= invoice.customerAddress.line2 %></div>
+      <% } %>
+      <div class="party-detail"><%= invoice.customerAddress.city %>, <%= invoice.customerAddress.state %> — <%= invoice.customerAddress.postalCode %></div>
+      <div class="party-detail"><%= invoice.customerAddress.country %></div>
+      <div class="party-detail"><strong>Phone:</strong> <%= invoice.customerPhone %></div>
+    </div>
+  </div>
+
+  <!-- Line Items -->
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Item</th>
+        <th>SKU</th>
+        <th class="right">Qty</th>
+        <th class="right">Unit Price (₹)</th>
+        <th class="right">Total (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% items.forEach(function(item, i) { %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td>
+            <%= item.productName %>
+            <% if (item.variantName) { %>
+              <br /><small style="color: #888;"><%= item.variantName %></small>
+            <% } %>
+          </td>
+          <td><%= item.sku || '—' %></td>
+          <td class="right"><%= item.quantity %></td>
+          <td class="right"><%= parseFloat(item.unitPrice).toFixed(2) %></td>
+          <td class="right"><%= parseFloat(item.totalPrice).toFixed(2) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <!-- GST Breakdown -->
+  <% if (invoice.cgst || invoice.sgst || invoice.igst) { %>
+  <div class="gst-section">
+    <div class="gst-title">GST Breakdown</div>
+    <% if (invoice.cgst) { %>
+      <div class="gst-row">
+        <span>CGST</span>
+        <span>₹ <%= parseFloat(invoice.cgst).toFixed(2) %></span>
+      </div>
+    <% } %>
+    <% if (invoice.sgst) { %>
+      <div class="gst-row">
+        <span>SGST</span>
+        <span>₹ <%= parseFloat(invoice.sgst).toFixed(2) %></span>
+      </div>
+    <% } %>
+    <% if (invoice.igst) { %>
+      <div class="gst-row">
+        <span>IGST</span>
+        <span>₹ <%= parseFloat(invoice.igst).toFixed(2) %></span>
+      </div>
+    <% } %>
+  </div>
+  <% } %>
+
+  <!-- Totals -->
+  <div class="totals">
+    <div class="totals-table">
+      <div class="totals-row subtotal">
+        <span class="totals-label">Subtotal</span>
+        <span class="totals-value">₹ <%= parseFloat(invoice.productTotal).toFixed(2) %></span>
+      </div>
+      <div class="totals-row subtotal">
+        <span class="totals-label">Shipping</span>
+        <span class="totals-value">₹ <%= parseFloat(invoice.shippingAmount).toFixed(2) %></span>
+      </div>
+      <div class="totals-row subtotal">
+        <span class="totals-label">Tax</span>
+        <span class="totals-value">₹ <%= parseFloat(invoice.taxAmount).toFixed(2) %></span>
+      </div>
+      <% if (parseFloat(invoice.discountAmount) > 0) { %>
+      <div class="totals-row subtotal">
+        <span class="totals-label">Discount</span>
+        <span class="totals-value">− ₹ <%= parseFloat(invoice.discountAmount).toFixed(2) %></span>
+      </div>
+      <% } %>
+      <div class="totals-row grand-total">
+        <span class="totals-label">Total Amount</span>
+        <span class="totals-value">₹ <%= parseFloat(invoice.totalAmount).toFixed(2) %></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>This is a computer-generated invoice and does not require a signature.</p>
+    <p><%= invoice.sellerName %> — GSTIN: <%= invoice.sellerGstin || 'N/A' %></p>
+  </div>
+
+</body>
+</html>

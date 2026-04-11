@@ -16,6 +16,7 @@ import ordersAdminRoute from "./modules/orders/orders.admin.route";
 import reviewsAdminRoute from "./modules/reviews/reviews.admin.route";
 import influencersAdminRoute from "./modules/influencers/influencers.admin.route";
 import influencersRoute from "./modules/influencers/influencers.route";
+import { invoiceUserRouter, invoiceAdminRouter } from "./modules/invoices/invoices.route";
 
 const router = Router();
 
@@ -59,9 +60,11 @@ router.use("/upload", uploadRoute);
 router.use("/wishlist", wishlistRoute);
 router.use("/checkout", checkoutRoute);
 router.use("/reviews", reviewsRoute);
+router.use("/orders", invoiceUserRouter);
 
 // Admin routes
 router.use("/admin/orders", ordersAdminRoute);
+router.use("/admin/orders", invoiceAdminRouter);
 router.use("/admin/reviews", reviewsAdminRoute);
 router.use("/admin/influencers", influencersAdminRoute);
 
