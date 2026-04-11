@@ -203,10 +203,14 @@ export const linkInfluencerToUser = (
 export const findInfluencerSalesAggregates = (
   tx: TxClient,
   influencerId: bigint,
+  dateFilter?: { gte?: Date; lte?: Date },
 ) => {
   return tx.influencerSale.groupBy({
     by: ["status"],
-    where: { influencerId },
+    where: {
+      influencerId,
+      ...(dateFilter && { createdAt: dateFilter }),
+    },
     _sum: { commissionAmount: true },
     _count: { id: true },
   });
@@ -215,6 +219,7 @@ export const findInfluencerSalesAggregates = (
 /**
  * Returns top N influencers ordered by total_earnings DESC.
  * Uses the denormalized counter + the DESC index for O(log n) scan.
+ * Use this path only when NO date filter is applied.
  */
 export const findTopInfluencersByEarnings = (
   tx: TxClient,
@@ -235,12 +240,63 @@ export const findTopInfluencersByEarnings = (
 };
 
 /**
+ * Returns top N influencers by commissions earned within a date range.
+ * Cannot use the denormalized totalEarnings counter in this case.
+ * Runs a groupBy on influencer_sales then fetches influencer details.
+ */
+export const findTopInfluencersByEarningsInRange = async (
+  tx: TxClient,
+  limit: number,
+  dateFilter: { gte?: Date; lte?: Date },
+) => {
+  const groups = await tx.influencerSale.groupBy({
+    by: ["influencerId"],
+    where: {
+      status: { notIn: ["CANCELLED"] },
+      createdAt: dateFilter,
+    },
+    _sum: { commissionAmount: true },
+    _count: { id: true },
+    orderBy: { _sum: { commissionAmount: "desc" } },
+    take: limit,
+  });
+
+  if (groups.length === 0) return [];
+
+  const influencerIds = groups.map((g) => g.influencerId);
+  const influencers = await tx.influencer.findMany({
+    where: { id: { in: influencerIds } },
+    select: { id: true, name: true, referralCode: true, status: true },
+  });
+
+  // Merge in the order that groupBy returned (already sorted by earnings DESC)
+  const infMap = new Map(influencers.map((inf) => [inf.id.toString(), inf]));
+
+  return groups.map((g) => {
+    const inf = infMap.get(g.influencerId.toString())!;
+    return {
+      id: inf.id,
+      name: inf.name,
+      referralCode: inf.referralCode,
+      status: inf.status,
+      totalEarnings: g._sum.commissionAmount,   // earnings within range
+      _count: { sales: g._count.id },
+    };
+  });
+};
+
+/**
  * Returns platform-wide commission aggregates grouped by status.
  * Used for admin analytics. Single query.
+ * dateFilter is optional; omit for all-time aggregates.
  */
-export const getSalesAggregatesByStatus = (tx: TxClient) => {
+export const getSalesAggregatesByStatus = (
+  tx: TxClient,
+  dateFilter?: { gte?: Date; lte?: Date },
+) => {
   return tx.influencerSale.groupBy({
     by: ["status"],
+    where: dateFilter ? { createdAt: dateFilter } : undefined,
     _sum: { commissionAmount: true },
     _count: { id: true },
   });
@@ -248,11 +304,17 @@ export const getSalesAggregatesByStatus = (tx: TxClient) => {
 
 /**
  * Sum of totalPaid on all orders that have an influencer attached.
- * Represents total revenue influenced by the system.
+ * dateFilter applied to orders.createdAt.
  */
-export const getTotalInfluencedOrderValue = (tx: TxClient) => {
+export const getTotalInfluencedOrderValue = (
+  tx: TxClient,
+  dateFilter?: { gte?: Date; lte?: Date },
+) => {
   return tx.order.aggregate({
-    where: { influencerId: { not: null } },
+    where: {
+      influencerId: { not: null },
+      ...(dateFilter && { createdAt: dateFilter }),
+    },
     _sum: { totalPaid: true },
   });
 };
@@ -347,12 +409,15 @@ export const updateInfluencerSaleStatus = (
 export const findSalesForInfluencer = async (
   tx: TxClient,
   influencerId: bigint,
-  filters: { status?: InfluencerSaleStatus },
+  filters: { status?: InfluencerSaleStatus; dateFilter?: { gte?: Date; lte?: Date } },
   pagination: { page: number; limit: number },
 ) => {
   const where: Prisma.InfluencerSaleWhereInput = { influencerId };
   if (filters.status) {
     where.status = filters.status;
+  }
+  if (filters.dateFilter) {
+    where.createdAt = filters.dateFilter;
   }
 
   const skip = (pagination.page - 1) * pagination.limit;

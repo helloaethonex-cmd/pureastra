@@ -37,6 +37,46 @@ export const PAYOUT_METHOD = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DATE RANGE — reusable schema for all analytics / filter endpoints
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * z.string().date() enforces YYYY-MM-DD format (Zod v3.22+).
+ * The refinement ensures startDate <= endDate when both are provided.
+ * UTC boundary expansion (00:00:00 / 23:59:59.999) happens in buildDateFilter.
+ */
+export const dateRangeSchema = z
+  .object({
+    startDate: z.string().date("startDate must be YYYY-MM-DD").optional(),
+    endDate: z.string().date("endDate must be YYYY-MM-DD").optional(),
+  })
+  .refine(
+    (d) => {
+      if (d.startDate && d.endDate)
+        return new Date(d.startDate) <= new Date(d.endDate);
+      return true;
+    },
+    { message: "startDate must be ≤ endDate", path: ["startDate"] },
+  );
+
+export type DateRangeInput = z.infer<typeof dateRangeSchema>;
+
+/**
+ * Converts validated YYYY-MM-DD strings to UTC Date boundaries
+ * suitable for Prisma createdAt gte/lte filters.
+ */
+export const buildDateFilter = (
+  startDate?: string,
+  endDate?: string,
+): { gte?: Date; lte?: Date } | undefined => {
+  if (!startDate && !endDate) return undefined;
+  return {
+    ...(startDate && { gte: new Date(`${startDate}T00:00:00.000Z`) }),
+    ...(endDate   && { lte: new Date(`${endDate}T23:59:59.999Z`) }),
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ADMIN — Create Influencer
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -108,13 +148,24 @@ export type UpdateDashboardAccessInput = z.infer<
 // ADMIN — List Sales for Influencer
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const listSalesSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  status: z
-    .enum(["PENDING", "APPROVED", "PAID", "CANCELLED", "REFUNDED"])
-    .optional(),
-});
+export const listSalesSchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    status: z
+      .enum(["PENDING", "APPROVED", "PAID", "CANCELLED", "REFUNDED"])
+      .optional(),
+    startDate: z.string().date("startDate must be YYYY-MM-DD").optional(),
+    endDate: z.string().date("endDate must be YYYY-MM-DD").optional(),
+  })
+  .refine(
+    (d) => {
+      if (d.startDate && d.endDate)
+        return new Date(d.startDate) <= new Date(d.endDate);
+      return true;
+    },
+    { message: "startDate must be ≤ endDate", path: ["startDate"] },
+  );
 
 export type ListSalesInput = z.infer<typeof listSalesSchema>;
 
@@ -185,9 +236,39 @@ export type LinkUserInput = z.infer<typeof linkUserSchema>;
 // ADMIN — Analytics query params
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const analyticsQuerySchema = z.object({
-  topLimit: z.coerce.number().int().min(1).max(50).default(10),
-});
+export const analyticsQuerySchema = z
+  .object({
+    topLimit: z.coerce.number().int().min(1).max(50).default(10),
+    startDate: z.string().date("startDate must be YYYY-MM-DD").optional(),
+    endDate: z.string().date("endDate must be YYYY-MM-DD").optional(),
+  })
+  .refine(
+    (d) => {
+      if (d.startDate && d.endDate)
+        return new Date(d.startDate) <= new Date(d.endDate);
+      return true;
+    },
+    { message: "startDate must be ≤ endDate", path: ["startDate"] },
+  );
 
 export type AnalyticsQueryInput = z.infer<typeof analyticsQuerySchema>;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INFLUENCER DASHBOARD — query params
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const dashboardQuerySchema = z
+  .object({
+    startDate: z.string().date("startDate must be YYYY-MM-DD").optional(),
+    endDate: z.string().date("endDate must be YYYY-MM-DD").optional(),
+  })
+  .refine(
+    (d) => {
+      if (d.startDate && d.endDate)
+        return new Date(d.startDate) <= new Date(d.endDate);
+      return true;
+    },
+    { message: "startDate must be ≤ endDate", path: ["startDate"] },
+  );
+
+export type DashboardQueryInput = z.infer<typeof dashboardQuerySchema>;

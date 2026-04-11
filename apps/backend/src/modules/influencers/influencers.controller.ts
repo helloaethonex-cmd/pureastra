@@ -32,6 +32,7 @@ import {
   updatePayoutStatusSchema,
   linkUserSchema,
   analyticsQuerySchema,
+  dashboardQuerySchema,
   validateRefSchema,
 } from "./influencers.types";
 
@@ -213,12 +214,14 @@ export const validateRef = async (req: Request, res: Response) => {
 
 export const getMyDashboard = async (req: Request, res: Response) => {
   try {
-    const result = await getInfluencerDashboard(req.user!.id);
+    const query = dashboardQuerySchema.parse(req.query);
+    const result = await getInfluencerDashboard(req.user!.id, query);
     return res.status(200).json(result);
   } catch (err) {
     return handleError(req, res, err);
   }
 };
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN — Analytics

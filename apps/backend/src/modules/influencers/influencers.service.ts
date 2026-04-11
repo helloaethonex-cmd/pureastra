@@ -14,7 +14,9 @@ import {
   UpdatePayoutStatusInput,
   LinkUserInput,
   AnalyticsQueryInput,
+  DashboardQueryInput,
   INFLUENCER_SALE_STATUS,
+  buildDateFilter,
 } from "./influencers.types";
 import {
   createInfluencer,
@@ -26,6 +28,7 @@ import {
   findInfluencerSalesAggregates,
   findSalesForInfluencer,
   findTopInfluencersByEarnings,
+  findTopInfluencersByEarningsInRange,
   getSalesAggregatesByStatus,
   getTotalInfluencedOrderValue,
   getInfluencerCountsByStatus,
@@ -211,10 +214,12 @@ export const adminListSalesForInfluencer = async (
     throw new AppError(404, "Influencer not found", "INFLUENCER_NOT_FOUND");
   }
 
+  const dateFilter = buildDateFilter(input.startDate, input.endDate);
+
   const { sales, total } = await findSalesForInfluencer(
     prisma,
     BigInt(influencerId),
-    { status: input.status as any },
+    { status: input.status as any, dateFilter },
     { page: input.page, limit: input.limit },
   );
 
@@ -395,9 +400,14 @@ export const validateReferralCode = async (code: string) => {
 
 /**
  * Resolves the influencer from the authenticated userId and returns
- * the full dashboard payload in 3 parallel queries.
+ * the full dashboard payload.
+ * When a date filter is applied, earnings.total is computed from
+ * the filtered aggregates rather than the all-time denormalized counter.
  */
-export const getInfluencerDashboard = async (userId: string) => {
+export const getInfluencerDashboard = async (
+  userId: string,
+  query: DashboardQueryInput,
+) => {
   const influencer = await findInfluencerByUserId(prisma, BigInt(userId));
 
   if (!influencer) {
@@ -416,11 +426,17 @@ export const getInfluencerDashboard = async (userId: string) => {
     );
   }
 
-  // 3 parallel queries — no N+1
+  const dateFilter = buildDateFilter(query.startDate, query.endDate);
+  const isFiltered = dateFilter !== undefined;
+
+  // 2 parallel queries — no N+1
   const [aggregates, recentSales] = await Promise.all([
-    findInfluencerSalesAggregates(prisma, influencer.id),
+    findInfluencerSalesAggregates(prisma, influencer.id, dateFilter),
     prisma.influencerSale.findMany({
-      where: { influencerId: influencer.id },
+      where: {
+        influencerId: influencer.id,
+        ...(dateFilter && { createdAt: dateFilter }),
+      },
       select: {
         id: true,
         orderId: true,
@@ -439,11 +455,12 @@ export const getInfluencerDashboard = async (userId: string) => {
     }),
   ]);
 
-  // Build earnings and order counts from the groupBy result.
-  // Initialise all buckets to zero — handles influencer with no sales.
+  // Build earnings and order counts from groupBy.
+  // All buckets initialised to zero — handles influencer with 0 sales.
   const ZERO = new Prisma.Decimal(0);
   const earnings = { pending: ZERO, approved: ZERO, paid: ZERO };
   const counts = { total: 0, pending: 0, approved: 0, paid: 0, cancelled: 0 };
+  let computedTotal = ZERO;
 
   for (const row of aggregates) {
     const amount = row._sum.commissionAmount ?? ZERO;
@@ -454,14 +471,17 @@ export const getInfluencerDashboard = async (userId: string) => {
       case "PENDING":
         earnings.pending = amount;
         counts.pending = count;
+        computedTotal = computedTotal.add(amount);
         break;
       case "APPROVED":
         earnings.approved = amount;
         counts.approved = count;
+        computedTotal = computedTotal.add(amount);
         break;
       case "PAID":
         earnings.paid = amount;
         counts.paid = count;
+        computedTotal = computedTotal.add(amount);
         break;
       case "CANCELLED":
         counts.cancelled = count;
@@ -477,9 +497,16 @@ export const getInfluencerDashboard = async (userId: string) => {
       commissionRate: influencer.commissionRate.toString(),
       status: influencer.status,
     },
+    dateFilter: {
+      startDate: query.startDate ?? null,
+      endDate: query.endDate ?? null,
+    },
     earnings: {
-      // total from denormalized counter — O(1), atomic
-      total: influencer.totalEarnings.toString(),
+      // No date filter: use all-time denormalized counter (O(1), atomic).
+      // Date filter: computed from the filtered groupBy (cannot use counter).
+      total: isFiltered
+        ? computedTotal.toString()
+        : influencer.totalEarnings.toString(),
       pending: earnings.pending.toString(),
       approved: earnings.approved.toString(),
       paid: earnings.paid.toString(),
@@ -508,13 +535,20 @@ export const getInfluencerDashboard = async (userId: string) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const getAdminAnalytics = async (input: AnalyticsQueryInput) => {
-  // 4 parallel queries
-  const [topInfluencers, influencedRevenue, commissionByStatus, influencerCounts] =
+  const dateFilter = buildDateFilter(input.startDate, input.endDate);
+
+  // Top influencers: use denormalized counter (fast) when no date filter,
+  // switch to range-aware groupBy when date filter is present.
+  const topInfluencersResult = dateFilter
+    ? await findTopInfluencersByEarningsInRange(prisma, input.topLimit, dateFilter)
+    : await findTopInfluencersByEarnings(prisma, input.topLimit);
+
+  // Remaining 3 queries run in parallel
+  const [influencedRevenue, commissionByStatus, influencerCounts] =
     await Promise.all([
-      findTopInfluencersByEarnings(prisma, input.topLimit),
-      getTotalInfluencedOrderValue(prisma),
-      getSalesAggregatesByStatus(prisma),
-      getInfluencerCountsByStatus(prisma),
+      getTotalInfluencedOrderValue(prisma, dateFilter),
+      getSalesAggregatesByStatus(prisma, dateFilter),
+      getInfluencerCountsByStatus(prisma),   // status counts are always all-time
     ]);
 
   // Commission aggregates from groupBy
@@ -564,11 +598,15 @@ export const getAdminAnalytics = async (input: AnalyticsQueryInput) => {
       totalCommissionApproved: commission.approved.toString(),
     },
     influencers: infCounts,
-    topInfluencers: topInfluencers.map((inf) => ({
+    dateFilter: {
+      startDate: input.startDate ?? null,
+      endDate: input.endDate ?? null,
+    },
+    topInfluencers: topInfluencersResult.map((inf) => ({
       id: inf.id.toString(),
       name: inf.name,
       referralCode: inf.referralCode,
-      totalEarnings: inf.totalEarnings.toString(),
+      totalEarnings: (inf.totalEarnings ?? new Prisma.Decimal(0)).toString(),
       status: inf.status,
       totalOrders: inf._count.sales,
     })),
