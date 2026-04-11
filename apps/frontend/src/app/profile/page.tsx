@@ -101,6 +101,7 @@ export default function ProfilePage() {
             {[
                 { name: "Order Track", href: "/order-track" },
                 { name: "Order History", href: "/order-history" },
+              { name: "Influencer Dashboard", href: "/influencers" },
                 { name: "Cart", href: "/cart" },
             ].map((item, i) => (
                 <Link

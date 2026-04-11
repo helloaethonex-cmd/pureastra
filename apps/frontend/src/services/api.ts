@@ -411,6 +411,46 @@ export interface ReviewEligibility {
   canReview: boolean;
 }
 
+export interface InfluencerReferralValidationResponse {
+  valid: boolean;
+  name?: string;
+  referralCode?: string;
+}
+
+export interface InfluencerDashboardSale {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  commissionAmount: string;
+  status: "PENDING" | "APPROVED" | "PAID" | "CANCELLED";
+  orderTotal: string;
+  createdAt: string;
+}
+
+export interface InfluencerDashboardResponse {
+  influencer: {
+    id: string;
+    name: string;
+    referralCode: string;
+    commissionRate: string;
+    status: "ACTIVE" | "PAUSED" | "BANNED";
+  };
+  earnings: {
+    total: string;
+    pending: string;
+    approved: string;
+    paid: string;
+  };
+  orders: {
+    total: number;
+    pending: number;
+    approved: number;
+    paid: number;
+    cancelled: number;
+  };
+  recentSales: InfluencerDashboardSale[];
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export const listCategories = () =>
@@ -596,6 +636,7 @@ export const previewCheckout = (body: {
   addressId: string;
   note?: string;
   couponCode?: string;
+  referralCode?: string;
 }) =>
   apiFetch<CheckoutPreviewResponse>("/checkout/preview", {
     method: "POST",
@@ -620,6 +661,7 @@ export const previewBuyNowCheckout = (body: {
   addressId: string;
   note?: string;
   couponCode?: string;
+  referralCode?: string;
 }) =>
   apiFetch<CheckoutPreviewResponse>("/checkout/buy-now/preview", {
     method: "POST",
@@ -643,6 +685,14 @@ export const createOrder = (body: { addressId: string; note?: string }) =>
     method: "POST",
     body: JSON.stringify(body),
   });
+
+export const validateInfluencerReferral = (code: string) =>
+  apiFetch<InfluencerReferralValidationResponse>(
+    `/influencers/validate-ref?code=${encodeURIComponent(code)}`,
+  );
+
+export const getMyInfluencerDashboard = () =>
+  apiFetch<InfluencerDashboardResponse>("/influencers/me/dashboard");
 
 export const getOrderDetail = (orderNumber: string) =>
   apiFetch<OrderDetailResponse>(`/orders/${orderNumber}`);

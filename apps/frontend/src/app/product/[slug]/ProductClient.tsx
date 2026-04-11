@@ -57,6 +57,7 @@ import {
 } from "@/hooks/useReviews";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { getActiveReferralAttribution } from "@/lib/referral";
 
 // ─── Section Helper ────────────────────────────────────────────────────────────
 
@@ -695,6 +696,7 @@ function BuyNowPanel({
   const [preview, setPreview] = useState<{ grandTotal: string } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const activeReferral = getActiveReferralAttribution();
 
   // Auto-select the default address once addresses load
   useEffect(() => {
@@ -714,6 +716,7 @@ function BuyNowPanel({
         productVariantId,
         quantity,
         addressId: selectedId,
+        referralCode: activeReferral?.code,
       });
       setPreview({ grandTotal: data.totals.grandTotal });
       setStep("preview");
@@ -727,7 +730,12 @@ function BuyNowPanel({
   const handlePay = () => {
     if (!selectedId) return;
     buyNow.mutate(
-      { productVariantId, quantity, addressId: selectedId },
+      {
+        productVariantId,
+        quantity,
+        addressId: selectedId,
+        referralCode: activeReferral?.code,
+      },
       {
         onSuccess: ({ orderNumber }) => onSuccess(orderNumber),
       },
@@ -837,6 +845,12 @@ function BuyNowPanel({
                 <p className="text-xs text-[#9a7a65] mt-1">
                   Inclusive of all taxes &amp; FREE shipping
                 </p>
+                {activeReferral?.code && (
+                  <p className="text-xs text-[#5E2B15] mt-2">
+                    Referral applied:{" "}
+                    <span className="font-semibold">{activeReferral.code}</span>
+                  </p>
+                )}
               </div>
 
               {buyNow.isError && (
@@ -925,6 +939,7 @@ export default function ProductClient({ product }: { product: Product }) {
 
   const reviewSummary = reviewSummaryQuery.data;
   const reviewList = reviewsQuery.data?.data ?? [];
+  const allReviewImages = reviewList.flatMap((r) => r.images ?? []);
   const reviewEligibility = reviewEligibilityQuery.data;
 
   // Related products from same category
@@ -1678,6 +1693,29 @@ export default function ProductClient({ product }: { product: Product }) {
                     </div>
                   )}
 
+                  {/* REVIEW GALLERY */}
+                  {allReviewImages.length > 0 && (
+                    <div className="flex gap-2 mb-4 w-full overflow-x-auto">
+                      {allReviewImages.map((img) => (
+                        <a
+                          key={img.id}
+                          href={img.imageUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block rounded-lg overflow-hidden border border-[#D6C9B6] w-24 h-24"
+                        >
+                          <Image
+                            src={img.imageUrl}
+                            alt="review"
+                            width={96}
+                            height={96}
+                            className="w-24 h-24 object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
                   {/* REVIEW SLIDER */}
                   <div className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2">
                     {reviewsQuery.isLoading && (
@@ -1692,6 +1730,7 @@ export default function ProductClient({ product }: { product: Product }) {
                       </p>
                     )}
 
+                    {/** Render each review (images shown in a single gallery above) */}
                     {reviewList.map((review) => (
                       <motion.div
                         key={review.id}
@@ -1769,28 +1808,6 @@ export default function ProductClient({ product }: { product: Product }) {
                           <p className="text-[12px] md:text-[14px] text-[#5E2B16] italic leading-5">
                             {review.comment}
                           </p>
-                        )}
-
-                        {review.images.length > 0 && (
-                          <div className="grid grid-cols-3 gap-2">
-                            {review.images.map((image) => (
-                              <a
-                                key={image.id}
-                                href={image.imageUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block rounded-lg overflow-hidden border border-[#D6C9B6]"
-                              >
-                                <Image
-                                  src={image.imageUrl}
-                                  alt="review"
-                                  width={120}
-                                  height={120}
-                                  className="w-full h-20 object-cover"
-                                />
-                              </a>
-                            ))}
-                          </div>
                         )}
                       </motion.div>
                     ))}

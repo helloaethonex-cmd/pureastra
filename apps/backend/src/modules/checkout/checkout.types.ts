@@ -11,6 +11,7 @@ export const checkoutPreviewSchema = z.object({
   addressId: z.coerce.bigint(),
   note: z.string().trim().max(500).optional(),
   couponCode: z.string().trim().max(50).optional(),
+  referralCode: z.string().trim().max(30).optional(),
 });
 
 export type CheckoutPreviewInput = z.infer<typeof checkoutPreviewSchema>;
@@ -51,6 +52,7 @@ export type CheckoutPreviewRecord = {
     addressId: string;
     note: string | null;
     couponCode: string | null;
+    referralCode?: string | null;
     productVariantId?: string;
     quantity?: number;
   };
