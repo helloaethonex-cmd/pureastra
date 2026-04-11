@@ -1,37 +1,64 @@
+# ─── Version Control ─────────────────────────────────────────────────────────
 .git
 .github
+.gitignore
+
+# ─── Package manager cache ───────────────────────────────────────────────────
 .pnpm-store
 node_modules
 **/node_modules
+
+# ─── Build outputs (rebuilt inside Docker) ───────────────────────────────────
 **/dist
 **/.next
 **/coverage
 **/.turbo
 **/.cache
+**/.tsbuildinfo
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# ─── Environment files (injected at runtime, never baked in) ─────────────────
 .env
 **/.env
 **/.env.local
 **/.env.*.local
+**/.env.test
+
+# ─── Docs ────────────────────────────────────────────────────────────────────
 README.md
 BACKLOG.md
-infra/scripts
+docs/
+*.md
 
-# Testing
+# ─── Tests (not needed in image) ─────────────────────────────────────────────
 **/*.test.ts
 **/*.spec.ts
 **/__tests__
 **/test
+**/*.test.js
+**/*.spec.js
+**/jest.config.*
+**/vitest.config.*
 
-# IDE
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
 .vscode
 .idea
 *.swp
 *.swo
+.DS_Store
 
-# Reduce context size
+# ─── Docker files (not needed inside the image) ───────────────────────────────
+infra/scripts
+infra/docker-compose*.yml
+
+# ─── Packages workspace (only backend is built) ───────────────────────────────
 packages/*
 !packages/*/package.json
+
+# ─── Frontend (not needed for backend image) ─────────────────────────────────
+apps/frontend

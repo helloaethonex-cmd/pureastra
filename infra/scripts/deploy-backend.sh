@@ -43,7 +43,7 @@ BACKEND_TAG=${BACKEND_TAG}
 EOF
 
 echo "[deploy] cleaning stopped containers"
-docker container prune -f >/dev/null 2>&1 || true
+docker container prune -f > /dev/null 2>&1 || true
 
 echo "[deploy] pulling latest backend image"
 docker compose -f "${COMPOSE_FILE}" pull backend worker-inventory worker-email
@@ -57,7 +57,13 @@ docker compose -f "${COMPOSE_FILE}" run --rm backend npx prisma migrate deploy -
 echo "[deploy] deploying backend and workers"
 docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans backend worker-inventory worker-email
 
-echo "[deploy] cleaning dangling images only"
-docker image prune -f >/dev/null 2>&1 || true
+# Remove ALL unused images after deploy.
+# Safe because the new image is now running — old tagged builds are unused.
+# This is what prevents disk filling up over multiple deploys.
+echo "[deploy] cleaning unused images (dangling + old builds)"
+docker image prune -a -f > /dev/null 2>&1 || true
+
+echo "[deploy] disk usage after cleanup"
+df -h / | tail -1
 
 echo "[deploy] deployment complete"

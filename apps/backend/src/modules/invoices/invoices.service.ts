@@ -223,7 +223,7 @@ export const generateInvoicePdf = async (
   try {
     const ejs = await import("ejs");
     const path = await import("path");
-    const puppeteer = await import("puppeteer");
+    const puppeteer = await import("puppeteer-core");
 
     // Render EJS template
     const templatePath = path.join(__dirname, "templates", "invoice.ejs");
@@ -257,10 +257,24 @@ export const generateInvoicePdf = async (
       })),
     });
 
+    // Use system Chromium in production (installed via Alpine apk in Dockerfile).
+    // CHROMIUM_PATH env var is set by the Dockerfile to the apk binary path.
+    // Falls back to /usr/bin/chromium-browser for most Linux distros.
+    const executablePath =
+      process.env.CHROMIUM_PATH ?? "/usr/bin/chromium-browser";
+
     // HTML → PDF via Puppeteer
     const browser = await puppeteer.launch({
+      executablePath,
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-zygote",
+        "--single-process",
+      ],
     });
 
     try {
