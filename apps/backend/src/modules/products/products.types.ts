@@ -7,6 +7,7 @@ export const createVariantSchema = z.object({
   sku: z.string().optional(),
   price: z.coerce.number().positive().optional(),
   costPrice: z.coerce.number().positive().optional(),
+  gstRate: z.coerce.number().min(0).max(100).default(18),
   stockQuantity: z.coerce.number().int().min(0).optional(),
   weight: z.coerce.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
@@ -64,8 +65,12 @@ export const updateProductContentSectionSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export type CreateProductContentSectionInput = z.infer<typeof createProductContentSectionSchema>;
-export type UpdateProductContentSectionInput = z.infer<typeof updateProductContentSectionSchema>;
+export type CreateProductContentSectionInput = z.infer<
+  typeof createProductContentSectionSchema
+>;
+export type UpdateProductContentSectionInput = z.infer<
+  typeof updateProductContentSectionSchema
+>;
 
 // ─── Product ───────────────────────────────────────────────────────────────────
 
@@ -118,9 +123,7 @@ export const productQuerySchema = z.object({
     .optional(),
   minPrice: z.coerce.number().positive().optional(),
   maxPrice: z.coerce.number().positive().optional(),
-  sortBy: z
-    .enum(["createdAt", "name", "price"])
-    .default("createdAt"),
+  sortBy: z.enum(["createdAt", "name", "price"]).default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 

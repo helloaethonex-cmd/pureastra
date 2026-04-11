@@ -4,6 +4,7 @@ import { env } from "../../config/env";
 import { logger } from "../../lib/logger";
 import { AppError } from "../../lib/errors/app-error";
 import { uploadBufferToR2 } from "../../lib/r2";
+import { validateGstin } from "../../utils/gstin";
 import {
   incrementInvoiceNumberSequence,
   findInvoiceByOrderId,
@@ -16,7 +17,6 @@ import {
   formatInvoiceNumber,
   computeGstBreakdown,
   PDF_STATUS,
-  validateGstin,
 } from "./invoices.types";
 
 type TxClient = Prisma.TransactionClient;
@@ -50,6 +50,11 @@ type OrderForInvoice = {
     sku: string | null;
     quantity: number;
     priceAtPurchase: Prisma.Decimal;
+    lineTotal: Prisma.Decimal;
+    basePrice: Prisma.Decimal;
+    taxAmount: Prisma.Decimal;
+    gstRate: Prisma.Decimal;
+    hsnCode?: string | null;
   }[];
 };
 
@@ -102,10 +107,22 @@ export const createInvoiceInTx = async (
   if (gstin) {
     const gstinError = validateGstin(gstin.trim().toUpperCase());
     if (gstinError) {
-      // Warn but don't hard-fail — invoice is still legally required
+      if (env.NODE_ENV === "production") {
+        throw new AppError(
+          500,
+          `Invalid SELLER_GSTIN configuration: ${gstinError}`,
+          "INVALID_SELLER_GSTIN",
+        );
+      }
+
       logger.warn(
-        { orderId: order.id.toString(), gstin, error: gstinError },
-        "[invoice] SELLER_GSTIN failed format validation",
+        {
+          orderId: order.id.toString(),
+          gstin,
+          error: gstinError,
+          nodeEnv: env.NODE_ENV,
+        },
+        "[invoice] SELLER_GSTIN failed format validation (non-production)",
       );
     }
   }
@@ -143,7 +160,13 @@ export const createInvoiceInTx = async (
     sku: item.sku,
     quantity: item.quantity,
     unitPrice: item.priceAtPurchase,
-    totalPrice: item.priceAtPurchase.mul(item.quantity).toDecimalPlaces(2),
+    totalPrice: item.lineTotal,
+    gstRate: item.gstRate,
+    taxableValue: item.lineTotal
+      .minus(item.taxAmount)
+      .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP),
+    taxAmount: item.taxAmount,
+    hsnCode: item.hsnCode ?? null,
   }));
 
   // ── Create ────────────────────────────────────────────────────────────────
@@ -207,7 +230,10 @@ export const generateInvoicePdf = async (
   });
 
   if (!invoice) {
-    logger.error({ invoiceId: invoiceId.toString() }, "[invoice-pdf] invoice not found");
+    logger.error(
+      { invoiceId: invoiceId.toString() },
+      "[invoice-pdf] invoice not found",
+    );
     return;
   }
 
@@ -260,8 +286,7 @@ export const generateInvoicePdf = async (
     // Use system Chromium in production (installed via Alpine apk in Dockerfile).
     // CHROMIUM_PATH env var is set by the Dockerfile to /usr/bin/chromium.
     // Falls back to /usr/bin/chromium for most Linux distros.
-    const executablePath =
-      process.env.CHROMIUM_PATH ?? "/usr/bin/chromium";
+    const executablePath = process.env.CHROMIUM_PATH ?? "/usr/bin/chromium";
 
     // HTML → PDF via Puppeteer
     const browser = await puppeteer.launch({
@@ -308,18 +333,24 @@ export const generateInvoicePdf = async (
     }
   } catch (err) {
     // Mark as FAILED so admin dashboard and monitoring can surface it
-    await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: { pdfStatus: PDF_STATUS.FAILED },
-    }).catch((updateErr) => {
-      logger.error(
-        { invoiceId: invoiceId.toString(), err: updateErr },
-        "[invoice] failed to mark pdf_status=FAILED",
-      );
-    });
+    await prisma.invoice
+      .update({
+        where: { id: invoiceId },
+        data: { pdfStatus: PDF_STATUS.FAILED },
+      })
+      .catch((updateErr) => {
+        logger.error(
+          { invoiceId: invoiceId.toString(), err: updateErr },
+          "[invoice] failed to mark pdf_status=FAILED",
+        );
+      });
 
     logger.error(
-      { invoiceId: invoiceId.toString(), invoiceNumber: invoice.invoiceNumber, err },
+      {
+        invoiceId: invoiceId.toString(),
+        invoiceNumber: invoice.invoiceNumber,
+        err,
+      },
       "[invoice] pdf failed",
     );
 
@@ -374,6 +405,10 @@ export const getInvoiceByOrderId = async (orderId: bigint) => {
       quantity: item.quantity,
       unitPrice: item.unitPrice.toString(),
       totalPrice: item.totalPrice.toString(),
+      gstRate: item.gstRate.toString(),
+      taxableValue: item.taxableValue.toString(),
+      taxAmount: item.taxAmount.toString(),
+      hsnCode: item.hsnCode,
     })),
   };
 };

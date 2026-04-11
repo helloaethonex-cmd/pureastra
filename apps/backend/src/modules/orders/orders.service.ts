@@ -3,6 +3,7 @@ import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../lib/errors/app-error";
 import { logger } from "../../lib/logger";
+import { computeOrderTotalsFromInclusivePricing } from "../../utils/gst";
 import {
   CART_STATUS,
   CreateOrderInput,
@@ -49,19 +50,9 @@ const TX_OPTIONS = {
   timeout: 10000,
 } as const;
 
-const SHIPPING_AMOUNT_CENTS = 0;
-const TAX_AMOUNT_CENTS = 0;
-const DISCOUNT_AMOUNT_CENTS = 0;
-
-const centsToDecimal = (cents: number) =>
-  new Prisma.Decimal((cents / 100).toFixed(2));
-
-const toCents = (value: Prisma.Decimal | number | null | undefined) => {
-  if (value === null || value === undefined) return 0;
-
-  const amount = typeof value === "number" ? value : value.toNumber();
-  return Math.round(amount * 100);
-};
+const ZERO_DECIMAL = new Prisma.Decimal(0);
+const SHIPPING_AMOUNT_INCLUSIVE = new Prisma.Decimal(0);
+const DISCOUNT_AMOUNT_INCLUSIVE = new Prisma.Decimal(0);
 
 const formatOrderNumber = (year: number, sequence: number) =>
   `PA-${year}-${String(sequence).padStart(6, "0")}`;
@@ -103,6 +94,7 @@ const buildPreparedItems = (
       variantName: string | null;
       sku: string | null;
       price: Prisma.Decimal | null;
+      gstRate: Prisma.Decimal;
       costPrice: Prisma.Decimal | null;
       stockQuantity: number | null;
       stockReserved: number;
@@ -122,8 +114,8 @@ const buildPreparedItems = (
       );
     }
 
-    const unitPriceCents = toCents(item.priceSnapshot ?? variant.price);
-    if (unitPriceCents <= 0) {
+    const unitPrice = item.priceSnapshot ?? variant.price;
+    if (!unitPrice || unitPrice.lte(ZERO_DECIMAL)) {
       throw new AppError(
         400,
         `Invalid price for variant ${variant.id.toString()}`,
@@ -137,8 +129,9 @@ const buildPreparedItems = (
       productName: variant.product.name,
       variantName: variant.variantName ?? null,
       sku: variant.sku ?? null,
-      unitPriceCents,
-      costPriceCents: toCents(variant.costPrice),
+      unitPrice,
+      gstRate: variant.gstRate,
+      costPrice: variant.costPrice ?? ZERO_DECIMAL,
     };
   });
 };
@@ -176,9 +169,16 @@ const createOrderInTx = async (
   }
 
   const preparedItems = buildPreparedItems(cart.items);
-  const productTotalCents = preparedItems.reduce(
-    (sum, item) => sum + item.unitPriceCents * item.quantity,
-    0,
+  const shippingGstRate = new Prisma.Decimal(env.SHIPPING_GST_RATE);
+  const pricing = computeOrderTotalsFromInclusivePricing(
+    preparedItems.map((item) => ({
+      quantity: item.quantity,
+      unitInclusivePrice: item.unitPrice,
+      gstRate: item.gstRate,
+    })),
+    DISCOUNT_AMOUNT_INCLUSIVE,
+    SHIPPING_AMOUNT_INCLUSIVE,
+    shippingGstRate,
   );
 
   const sequence = await incrementOrderNumberSequence(tx, year);
@@ -196,11 +196,11 @@ const createOrderInTx = async (
     shippingPostalCode: address.postalCode,
     shippingCountry: address.country,
 
-    productTotal: centsToDecimal(productTotalCents),
-    shippingAmount: centsToDecimal(SHIPPING_AMOUNT_CENTS),
-    taxAmount: centsToDecimal(TAX_AMOUNT_CENTS),
-    discountAmount: centsToDecimal(DISCOUNT_AMOUNT_CENTS),
-    totalPaid: centsToDecimal(0),
+    productTotal: pricing.productBaseAmount,
+    shippingAmount: pricing.shippingBaseAmount,
+    taxAmount: pricing.taxAmount,
+    discountAmount: pricing.discountApplied,
+    totalPaid: ZERO_DECIMAL,
 
     orderStatus: ORDER_STATUS.PLACED,
     paymentStatus: PAYMENT_STATUS.PENDING,
@@ -215,16 +215,23 @@ const createOrderInTx = async (
 
   await createOrderItems(
     tx,
-    preparedItems.map((item) => ({
-      orderId: order.id,
-      productVariantId: item.productVariantId,
-      quantity: item.quantity,
-      productName: item.productName,
-      variantName: item.variantName,
-      sku: item.sku,
-      priceAtPurchase: centsToDecimal(item.unitPriceCents),
-      costPriceAtPurchase: centsToDecimal(item.costPriceCents),
-    })),
+    preparedItems.map((item, index) => {
+      const linePricing = pricing.lines[index];
+      return {
+        orderId: order.id,
+        productVariantId: item.productVariantId,
+        quantity: item.quantity,
+        productName: item.productName,
+        variantName: item.variantName,
+        sku: item.sku,
+        priceAtPurchase: linePricing.unitInclusivePrice,
+        lineTotal: linePricing.lineInclusiveAfterDiscount,
+        basePrice: linePricing.unitBasePrice,
+        taxAmount: linePricing.lineTaxAmount,
+        gstRate: linePricing.gstRate,
+        costPriceAtPurchase: item.costPrice,
+      };
+    }),
   );
 
   const expiresAt = new Date(
@@ -454,11 +461,7 @@ const updateOrderStatusInTx = async (
       (influencerSale.status === INFLUENCER_SALE_STATUS.PENDING ||
         influencerSale.status === INFLUENCER_SALE_STATUS.APPROVED)
     ) {
-      await updateInfluencerSaleStatus(
-        tx,
-        influencerSale.id,
-        "CANCELLED",
-      );
+      await updateInfluencerSaleStatus(tx, influencerSale.id, "CANCELLED");
       await decrementInfluencerEarningsSafe(
         tx,
         influencerSale.influencerId,

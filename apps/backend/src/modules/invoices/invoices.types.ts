@@ -1,4 +1,6 @@
 import { Prisma } from "../../generated/prisma/client";
+import { roundMoney } from "../../utils/gst";
+import { toStateCode } from "../../utils/state";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INVOICE NUMBER FORMAT
@@ -24,29 +26,6 @@ export const PDF_STATUS = {
 export type PdfStatusValue = (typeof PDF_STATUS)[keyof typeof PDF_STATUS];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GSTIN VALIDATION
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Validate Indian GSTIN format:
- *   - Must be exactly 15 characters
- *   - Must be alphanumeric (uppercase letters + digits)
- *   - Returns null if valid, error message string if invalid
- *
- * We return a message rather than throwing so callers can decide
- * how to handle it (warn vs. hard fail) based on context.
- */
-export const validateGstin = (gstin: string): string | null => {
-  if (gstin.length !== 15) {
-    return `GSTIN must be exactly 15 characters, got ${gstin.length}`;
-  }
-  if (!/^[A-Z0-9]{15}$/.test(gstin)) {
-    return "GSTIN must be alphanumeric (uppercase letters and digits only)";
-  }
-  return null;
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // GST COMPUTATION
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -54,8 +33,7 @@ export const validateGstin = (gstin: string): string | null => {
  * Normalize state name for comparison (uppercase, trimmed).
  * Prevents mismatches from casing or whitespace differences.
  */
-export const normalizeState = (state: string): string =>
-  state.trim().toUpperCase();
+export const normalizeState = (state: string): string => toStateCode(state);
 
 export type GstBreakdown = {
   cgst: Prisma.Decimal | null;
@@ -90,12 +68,10 @@ export const computeGstBreakdown = (
 
   if (isSameState) {
     // Intra-state: split equally into CGST + SGST
-    const half = taxAmount
-      .div(2)
-      .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+    const half = roundMoney(taxAmount.div(2));
     return { cgst: half, sgst: half, igst: null };
   }
 
   // Inter-state: full IGST
-  return { cgst: null, sgst: null, igst: taxAmount };
+  return { cgst: null, sgst: null, igst: roundMoney(taxAmount) };
 };

@@ -426,7 +426,11 @@ export const confirmPaymentAttempt = async (
           "[commission] skipped — influencer record not found",
         );
       }
-    } else if (fullyPaid && payment.order.influencerId != null && payment.order.orderStatus === ORDER_STATUS.CANCELLED) {
+    } else if (
+      fullyPaid &&
+      payment.order.influencerId != null &&
+      payment.order.orderStatus === ORDER_STATUS.CANCELLED
+    ) {
       // Race: cancel beat this webhook — commission intentionally suppressed.
       logger.info(
         { orderId: payment.orderId.toString() },
@@ -447,6 +451,10 @@ export const confirmPaymentAttempt = async (
           sku: true,
           quantity: true,
           priceAtPurchase: true,
+          lineTotal: true,
+          basePrice: true,
+          taxAmount: true,
+          gstRate: true,
         },
       });
 

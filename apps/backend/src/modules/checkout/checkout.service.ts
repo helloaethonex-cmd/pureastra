@@ -5,7 +5,15 @@ import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis/client";
 import { AppError } from "../../lib/errors/app-error";
 import { logger } from "../../lib/logger";
-import { ORDER_STATUS, PAYMENT_STATUS, INVENTORY_RESERVATION_STATUS } from "../orders/orders.types";
+import {
+  computeOrderTotalsFromInclusivePricing,
+  roundMoney,
+} from "../../utils/gst";
+import {
+  ORDER_STATUS,
+  PAYMENT_STATUS,
+  INVENTORY_RESERVATION_STATUS,
+} from "../orders/orders.types";
 import { findActiveInfluencerByCode } from "../influencers/influencers.repository";
 import { ensureProviderOrderForPaymentAttempt } from "../payments/payments.service";
 import {
@@ -61,9 +69,9 @@ redis.call('SET', key, encoded, 'PXAT', tonumber(decoded['expiresAt']))
 return encoded
 `;
 
-const SHIPPING_AMOUNT_CENTS = 0;
-const TAX_AMOUNT_CENTS = 0;
-const DISCOUNT_AMOUNT_CENTS = 0;
+const ZERO_DECIMAL = new Prisma.Decimal(0);
+const SHIPPING_AMOUNT_INCLUSIVE = new Prisma.Decimal(0);
+const DISCOUNT_AMOUNT_INCLUSIVE = new Prisma.Decimal(0);
 
 type PreparedLineItem = {
   productVariantId: bigint;
@@ -71,8 +79,9 @@ type PreparedLineItem = {
   variantName: string | null;
   sku: string | null;
   quantity: number;
-  unitPriceCents: number;
-  lineTotalCents: number;
+  unitPrice: Prisma.Decimal;
+  gstRate: Prisma.Decimal;
+  lineTotal: Prisma.Decimal;
 };
 
 type CheckoutIdempotencyRecord = {
@@ -114,16 +123,8 @@ type CheckoutConfirmResponse = {
   };
 };
 
-const toCents = (value: Prisma.Decimal | number | null | undefined) => {
-  if (value === null || value === undefined) return 0;
-  const amount = typeof value === "number" ? value : value.toNumber();
-  return Math.round(amount * 100);
-};
-
-const centsToDecimal = (cents: number) =>
-  new Prisma.Decimal((cents / 100).toFixed(2));
-
-const centsToString = (cents: number) => (cents / 100).toFixed(2);
+const decimalToString = (value: Prisma.Decimal) =>
+  value.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP).toFixed(2);
 
 const formatOrderNumber = (year: number, sequence: number) =>
   `PA-${year}-${String(sequence).padStart(6, "0")}`;
@@ -149,7 +150,9 @@ const previewLockKey = (token: string) => `${PREVIEW_LOCK_PREFIX}${token}`;
 const hashPayload = (payload: object) =>
   crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 
-const groupByVariant = (items: Array<{ productVariantId: bigint; quantity: number }>) => {
+const groupByVariant = (
+  items: Array<{ productVariantId: bigint; quantity: number }>,
+) => {
   const map = new Map<string, { productVariantId: bigint; quantity: number }>();
   for (const item of items) {
     const key = item.productVariantId.toString();
@@ -158,7 +161,10 @@ const groupByVariant = (items: Array<{ productVariantId: bigint; quantity: numbe
       existing.quantity += item.quantity;
       continue;
     }
-    map.set(key, { productVariantId: item.productVariantId, quantity: item.quantity });
+    map.set(key, {
+      productVariantId: item.productVariantId,
+      quantity: item.quantity,
+    });
   }
   return [...map.values()];
 };
@@ -173,6 +179,7 @@ const buildPreparedLineItems = (
       variantName: string | null;
       sku: string | null;
       price: Prisma.Decimal | null;
+      gstRate: Prisma.Decimal;
       stockQuantity: number | null;
       stockReserved: number;
       isActive: boolean;
@@ -186,7 +193,11 @@ const buildPreparedLineItems = (
   for (const row of rows) {
     const variant = row.productVariant;
     if (!variant.isActive || variant.deletedAt) {
-      throw new AppError(409, "One or more cart variants are unavailable", "VARIANT_UNAVAILABLE");
+      throw new AppError(
+        409,
+        "One or more cart variants are unavailable",
+        "VARIANT_UNAVAILABLE",
+      );
     }
 
     const available = (variant.stockQuantity ?? 0) - variant.stockReserved;
@@ -198,8 +209,8 @@ const buildPreparedLineItems = (
       );
     }
 
-    const unitPriceCents = toCents(row.priceSnapshot ?? variant.price);
-    if (unitPriceCents <= 0) {
+    const unitPrice = row.priceSnapshot ?? variant.price;
+    if (!unitPrice || unitPrice.lte(ZERO_DECIMAL)) {
       throw new AppError(400, "Invalid product price", "INVALID_PRICE");
     }
 
@@ -209,12 +220,15 @@ const buildPreparedLineItems = (
       variantName: variant.variantName,
       sku: variant.sku,
       quantity: row.quantity,
-      unitPriceCents,
-      lineTotalCents: unitPriceCents * row.quantity,
+      unitPrice: roundMoney(unitPrice),
+      gstRate: roundMoney(variant.gstRate),
+      lineTotal: roundMoney(unitPrice.mul(row.quantity)),
     });
   }
 
-  return items.sort((a, b) => a.productVariantId.toString().localeCompare(b.productVariantId.toString()));
+  return items.sort((a, b) =>
+    a.productVariantId.toString().localeCompare(b.productVariantId.toString()),
+  );
 };
 
 const buildBuyNowPreparedLineItem = (
@@ -223,6 +237,7 @@ const buildBuyNowPreparedLineItem = (
     variantName: string | null;
     sku: string | null;
     price: Prisma.Decimal | null;
+    gstRate: Prisma.Decimal;
     stockQuantity: number | null;
     stockReserved: number;
     isActive: boolean;
@@ -231,8 +246,17 @@ const buildBuyNowPreparedLineItem = (
   },
   quantity: number,
 ): PreparedLineItem => {
-  if (!variant.isActive || variant.deletedAt || !variant.product.isActive || variant.product.deletedAt) {
-    throw new AppError(409, "Variant is unavailable for buy-now", "VARIANT_UNAVAILABLE");
+  if (
+    !variant.isActive ||
+    variant.deletedAt ||
+    !variant.product.isActive ||
+    variant.product.deletedAt
+  ) {
+    throw new AppError(
+      409,
+      "Variant is unavailable for buy-now",
+      "VARIANT_UNAVAILABLE",
+    );
   }
 
   const available = (variant.stockQuantity ?? 0) - variant.stockReserved;
@@ -240,8 +264,7 @@ const buildBuyNowPreparedLineItem = (
     throw new AppError(409, "Insufficient stock", "INSUFFICIENT_STOCK");
   }
 
-  const unitPriceCents = toCents(variant.price);
-  if (unitPriceCents <= 0) {
+  if (!variant.price || variant.price.lte(ZERO_DECIMAL)) {
     throw new AppError(400, "Invalid product price", "INVALID_PRICE");
   }
 
@@ -251,23 +274,33 @@ const buildBuyNowPreparedLineItem = (
     variantName: variant.variantName,
     sku: variant.sku,
     quantity,
-    unitPriceCents,
-    lineTotalCents: unitPriceCents * quantity,
+    unitPrice: roundMoney(variant.price),
+    gstRate: roundMoney(variant.gstRate),
+    lineTotal: roundMoney(variant.price.mul(quantity)),
   };
 };
 
 const buildTotals = (items: PreparedLineItem[]) => {
-  const productTotalCents = items.reduce((sum, item) => sum + item.lineTotalCents, 0);
-  const grandTotalCents =
-    productTotalCents + SHIPPING_AMOUNT_CENTS + TAX_AMOUNT_CENTS - DISCOUNT_AMOUNT_CENTS;
+  const shippingGstRate = new Prisma.Decimal(env.SHIPPING_GST_RATE);
+  const pricing = computeOrderTotalsFromInclusivePricing(
+    items.map((item) => ({
+      quantity: item.quantity,
+      unitInclusivePrice: item.unitPrice,
+      gstRate: item.gstRate,
+    })),
+    DISCOUNT_AMOUNT_INCLUSIVE,
+    SHIPPING_AMOUNT_INCLUSIVE,
+    shippingGstRate,
+  );
 
   return {
-    productTotalCents,
-    shippingAmountCents: SHIPPING_AMOUNT_CENTS,
-    taxAmountCents: TAX_AMOUNT_CENTS,
-    discountAmountCents: DISCOUNT_AMOUNT_CENTS,
-    grandTotalCents,
-    outstandingCents: grandTotalCents,
+    productTotal: pricing.productBaseAmount,
+    shippingAmount: pricing.shippingBaseAmount,
+    taxAmount: pricing.taxAmount,
+    discountAmount: pricing.discountApplied,
+    grandTotal: pricing.grandTotal,
+    outstanding: pricing.grandTotal,
+    linePricing: pricing.lines,
   };
 };
 
@@ -284,22 +317,25 @@ const buildPreviewResponse = (
 
   return {
     flowType: input.flowType,
-    items: items.map((item) => ({
-      productVariantId: item.productVariantId.toString(),
-      productName: item.productName,
-      variantName: item.variantName,
-      sku: item.sku,
-      quantity: item.quantity,
-      unitPrice: centsToString(item.unitPriceCents),
-      lineTotal: centsToString(item.lineTotalCents),
-    })),
+    items: items.map((item, index) => {
+      const linePricing = totals.linePricing[index];
+      return {
+        productVariantId: item.productVariantId.toString(),
+        productName: item.productName,
+        variantName: item.variantName,
+        sku: item.sku,
+        quantity: item.quantity,
+        unitPrice: decimalToString(linePricing.unitInclusivePrice),
+        lineTotal: decimalToString(linePricing.lineInclusiveAfterDiscount),
+      };
+    }),
     totals: {
-      productTotal: centsToString(totals.productTotalCents),
-      shippingAmount: centsToString(totals.shippingAmountCents),
-      taxAmount: centsToString(totals.taxAmountCents),
-      discountAmount: centsToString(totals.discountAmountCents),
-      grandTotal: centsToString(totals.grandTotalCents),
-      outstandingAmount: centsToString(totals.outstandingCents),
+      productTotal: decimalToString(totals.productTotal),
+      shippingAmount: decimalToString(totals.shippingAmount),
+      taxAmount: decimalToString(totals.taxAmount),
+      discountAmount: decimalToString(totals.discountAmount),
+      grandTotal: decimalToString(totals.grandTotal),
+      outstandingAmount: decimalToString(totals.outstanding),
     },
     ...couponPlaceholder(input.couponCode),
     previewToken: input.token,
@@ -322,16 +358,28 @@ const consumePreviewAtomic = async (token: string) => {
   );
 
   if (result === "__MISSING__") {
-    throw new AppError(400, "Preview token is invalid or expired", "PREVIEW_TOKEN_INVALID");
+    throw new AppError(
+      400,
+      "Preview token is invalid or expired",
+      "PREVIEW_TOKEN_INVALID",
+    );
   }
   if (result === "__CONSUMED__") {
-    throw new AppError(409, "Preview token already consumed", "PREVIEW_TOKEN_CONSUMED");
+    throw new AppError(
+      409,
+      "Preview token already consumed",
+      "PREVIEW_TOKEN_CONSUMED",
+    );
   }
   if (result === "__EXPIRED__") {
     throw new AppError(400, "Preview token expired", "PREVIEW_TOKEN_EXPIRED");
   }
   if (typeof result !== "string") {
-    throw new AppError(500, "Failed to consume preview token", "PREVIEW_TOKEN_CONSUME_FAILED");
+    throw new AppError(
+      500,
+      "Failed to consume preview token",
+      "PREVIEW_TOKEN_CONSUME_FAILED",
+    );
   }
 
   const parsed = JSON.parse(result) as CheckoutPreviewRecord;
@@ -378,14 +426,17 @@ const buildCartHashSource = (
     items: items.map((item) => ({
       productVariantId: item.productVariantId.toString(),
       quantity: item.quantity,
-      unitPriceCents: item.unitPriceCents,
+      unitPrice: item.unitPrice.toFixed(2),
+      gstRate: item.gstRate.toFixed(2),
     })),
   };
 };
 
 const buildBuyNowHashSource = (
   previewInput: BuyNowPreviewInput,
-  variant: NonNullable<Awaited<ReturnType<typeof findVariantForBuyNowCheckout>>>,
+  variant: NonNullable<
+    Awaited<ReturnType<typeof findVariantForBuyNowCheckout>>
+  >,
 ) => {
   const item = buildBuyNowPreparedLineItem(variant, previewInput.quantity);
 
@@ -403,7 +454,8 @@ const buildBuyNowHashSource = (
       {
         productVariantId: item.productVariantId.toString(),
         quantity: item.quantity,
-        unitPriceCents: item.unitPriceCents,
+        unitPrice: item.unitPrice.toFixed(2),
+        gstRate: item.gstRate.toFixed(2),
       },
     ],
   };
@@ -433,10 +485,16 @@ const createOrderAndPaymentInTx = async (
     cartIdForCheckout = cart.id;
     lineItems = buildPreparedLineItems(cart.items);
   } else {
-    const productVariantId = request.productVariantId ? BigInt(request.productVariantId) : null;
+    const productVariantId = request.productVariantId
+      ? BigInt(request.productVariantId)
+      : null;
     const quantity = request.quantity;
     if (!productVariantId || !quantity) {
-      throw new AppError(400, "Invalid buy-now payload", "BUY_NOW_PAYLOAD_INVALID");
+      throw new AppError(
+        400,
+        "Invalid buy-now payload",
+        "BUY_NOW_PAYLOAD_INVALID",
+      );
     }
 
     const variant = await findVariantForBuyNowCheckout(tx, productVariantId);
@@ -478,11 +536,11 @@ const createOrderAndPaymentInTx = async (
     shippingState: address.state,
     shippingPostalCode: address.postalCode,
     shippingCountry: address.country,
-    productTotal: centsToDecimal(totals.productTotalCents),
-    shippingAmount: centsToDecimal(totals.shippingAmountCents),
-    taxAmount: centsToDecimal(totals.taxAmountCents),
-    discountAmount: centsToDecimal(totals.discountAmountCents),
-    totalPaid: centsToDecimal(0),
+    productTotal: totals.productTotal,
+    shippingAmount: totals.shippingAmount,
+    taxAmount: totals.taxAmount,
+    discountAmount: totals.discountAmount,
+    totalPaid: ZERO_DECIMAL,
     orderStatus: ORDER_STATUS.PLACED,
     paymentStatus: PAYMENT_STATUS.PENDING,
     placedAt: now,
@@ -495,19 +553,28 @@ const createOrderAndPaymentInTx = async (
 
   await createOrderItems(
     tx,
-    lineItems.map((item) => ({
-      orderId: order.id,
-      productVariantId: item.productVariantId,
-      quantity: item.quantity,
-      productName: item.productName,
-      variantName: item.variantName,
-      sku: item.sku,
-      priceAtPurchase: centsToDecimal(item.unitPriceCents),
-      costPriceAtPurchase: centsToDecimal(0),
-    })),
+    lineItems.map((item, index) => {
+      const linePricing = totals.linePricing[index];
+      return {
+        orderId: order.id,
+        productVariantId: item.productVariantId,
+        quantity: item.quantity,
+        productName: item.productName,
+        variantName: item.variantName,
+        sku: item.sku,
+        priceAtPurchase: linePricing.unitInclusivePrice,
+        lineTotal: linePricing.lineInclusiveAfterDiscount,
+        basePrice: linePricing.unitBasePrice,
+        taxAmount: linePricing.lineTaxAmount,
+        gstRate: linePricing.gstRate,
+        costPriceAtPurchase: ZERO_DECIMAL,
+      };
+    }),
   );
 
-  const expiresAt = new Date(now.getTime() + env.ORDER_RESERVATION_TTL_MINUTES * 60 * 1000);
+  const expiresAt = new Date(
+    now.getTime() + env.ORDER_RESERVATION_TTL_MINUTES * 60 * 1000,
+  );
   await createInventoryReservations(
     tx,
     lineItems.map((item) => ({
@@ -522,7 +589,12 @@ const createOrderAndPaymentInTx = async (
 
   await incrementVariantStockReservedBulk(
     tx,
-    groupByVariant(lineItems.map((item) => ({ productVariantId: item.productVariantId, quantity: item.quantity }))),
+    groupByVariant(
+      lineItems.map((item) => ({
+        productVariantId: item.productVariantId,
+        quantity: item.quantity,
+      })),
+    ),
   );
 
   await createOrderStatusHistory(tx, {
@@ -541,7 +613,7 @@ const createOrderAndPaymentInTx = async (
     order: { connect: { id: order.id } },
     paymentProvider: env.PAYMENT_PROVIDER_DEFAULT,
     paymentMethod: "razorpay",
-    amount: centsToDecimal(totals.outstandingCents),
+    amount: totals.outstanding,
     paymentStatus: PAYMENT_STATUS.PENDING,
   });
 
@@ -550,7 +622,9 @@ const createOrderAndPaymentInTx = async (
 
 const buildConfirmResponse = async (
   orderId: bigint,
-  paymentResult: Awaited<ReturnType<typeof ensureProviderOrderForPaymentAttempt>>,
+  paymentResult: Awaited<
+    ReturnType<typeof ensureProviderOrderForPaymentAttempt>
+  >,
   couponCode: string | null,
 ): Promise<CheckoutConfirmResponse> => {
   const order = await prisma.order.findUnique({
@@ -583,11 +657,18 @@ const buildConfirmResponse = async (
   };
 };
 
-const withConfirmLock = async <T>(previewToken: string, operation: () => Promise<T>) => {
+const withConfirmLock = async <T>(
+  previewToken: string,
+  operation: () => Promise<T>,
+) => {
   const lockKey = previewLockKey(previewToken);
   const acquired = await redisClient.set(lockKey, "1", "PX", 30000, "NX");
   if (!acquired) {
-    throw new AppError(409, "Checkout confirm already in progress", "CHECKOUT_CONFIRM_IN_PROGRESS");
+    throw new AppError(
+      409,
+      "Checkout confirm already in progress",
+      "CHECKOUT_CONFIRM_IN_PROGRESS",
+    );
   }
 
   try {
@@ -656,7 +737,10 @@ export const previewCheckoutBuyNow = async (
       throw new AppError(400, "Invalid address", "ADDRESS_INVALID");
     }
 
-    const variant = await findVariantForBuyNowCheckout(tx, input.productVariantId);
+    const variant = await findVariantForBuyNowCheckout(
+      tx,
+      input.productVariantId,
+    );
     if (!variant) {
       throw new AppError(404, "Product variant not found", "VARIANT_NOT_FOUND");
     }
@@ -713,7 +797,9 @@ const confirmCheckoutByFlow = async (
     }
 
     if (existingIdem && !existingIdem.responsePayload) {
-      const providerPayload = await ensureProviderOrderForPaymentAttempt(BigInt(existingIdem.paymentId));
+      const providerPayload = await ensureProviderOrderForPaymentAttempt(
+        BigInt(existingIdem.paymentId),
+      );
       const payload = await buildConfirmResponse(
         BigInt(existingIdem.orderId),
         providerPayload,
@@ -733,7 +819,11 @@ const confirmCheckoutByFlow = async (
     const consumedPreview = await consumePreviewAtomic(input.previewToken);
 
     if (consumedPreview.userId !== userId) {
-      throw new AppError(403, "Preview token does not belong to user", "PREVIEW_TOKEN_FORBIDDEN");
+      throw new AppError(
+        403,
+        "Preview token does not belong to user",
+        "PREVIEW_TOKEN_FORBIDDEN",
+      );
     }
     if (consumedPreview.flowType !== flow) {
       throw new AppError(409, "Preview flow mismatch", "PREVIEW_FLOW_MISMATCH");
@@ -761,12 +851,20 @@ const confirmCheckoutByFlow = async (
         : null;
       const quantity = consumedPreview.request.quantity;
       if (!productVariantId || !quantity) {
-        throw new AppError(400, "Invalid buy-now payload", "BUY_NOW_PAYLOAD_INVALID");
+        throw new AppError(
+          400,
+          "Invalid buy-now payload",
+          "BUY_NOW_PAYLOAD_INVALID",
+        );
       }
 
       const variant = await findVariantForBuyNowCheckout(tx, productVariantId);
       if (!variant) {
-        throw new AppError(404, "Product variant not found", "VARIANT_NOT_FOUND");
+        throw new AppError(
+          404,
+          "Product variant not found",
+          "VARIANT_NOT_FOUND",
+        );
       }
 
       const requestInput: BuyNowPreviewInput = {
@@ -782,11 +880,21 @@ const confirmCheckoutByFlow = async (
 
     const recomputedHash = hashPayload(hashPayloadSource);
     if (recomputedHash !== consumedPreview.payloadHash) {
-      throw new AppError(409, "Checkout preview no longer matches current data", "PREVIEW_HASH_MISMATCH");
+      throw new AppError(
+        409,
+        "Checkout preview no longer matches current data",
+        "PREVIEW_HASH_MISMATCH",
+      );
     }
 
     const createResult = await prisma.$transaction(
-      (tx) => createOrderAndPaymentInTx(tx, BigInt(userId), flow, consumedPreview.request),
+      (tx) =>
+        createOrderAndPaymentInTx(
+          tx,
+          BigInt(userId),
+          flow,
+          consumedPreview.request,
+        ),
       TX_OPTIONS,
     );
 
@@ -801,9 +909,13 @@ const confirmCheckoutByFlow = async (
     };
     await saveIdempotencyRecord(idemKey, interimRecord);
 
-    let providerPayload: Awaited<ReturnType<typeof ensureProviderOrderForPaymentAttempt>>;
+    let providerPayload: Awaited<
+      ReturnType<typeof ensureProviderOrderForPaymentAttempt>
+    >;
     try {
-      providerPayload = await ensureProviderOrderForPaymentAttempt(createResult.paymentId);
+      providerPayload = await ensureProviderOrderForPaymentAttempt(
+        createResult.paymentId,
+      );
     } catch (error) {
       logger.error(
         {
@@ -841,10 +953,22 @@ export const confirmCheckoutFromCart = async (
   userId: string,
   input: CheckoutConfirmInput,
   idempotencyKeyHeader: string,
-) => confirmCheckoutByFlow(userId, CHECKOUT_FLOW.CART, input, idempotencyKeyHeader);
+) =>
+  confirmCheckoutByFlow(
+    userId,
+    CHECKOUT_FLOW.CART,
+    input,
+    idempotencyKeyHeader,
+  );
 
 export const confirmCheckoutBuyNow = async (
   userId: string,
   input: CheckoutConfirmInput,
   idempotencyKeyHeader: string,
-) => confirmCheckoutByFlow(userId, CHECKOUT_FLOW.BUY_NOW, input, idempotencyKeyHeader);
+) =>
+  confirmCheckoutByFlow(
+    userId,
+    CHECKOUT_FLOW.BUY_NOW,
+    input,
+    idempotencyKeyHeader,
+  );
