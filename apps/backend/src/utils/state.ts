@@ -81,7 +81,15 @@ const STATE_CODE_MAP: Record<string, string> = {
 const normalizeStateInput = (value: string) =>
   value.trim().toUpperCase().replace(/\./g, "").replace(/\s+/g, " ");
 
+export const toStateCodeOrNull = (value: string): string | null => {
+  const normalized = normalizeStateInput(value);
+  return STATE_CODE_MAP[normalized] ?? null;
+};
+
 export const toStateCode = (value: string): string => {
   const normalized = normalizeStateInput(value);
   return STATE_CODE_MAP[normalized] ?? normalized;
 };
+
+export const isKnownIndianState = (value: string): boolean =>
+  toStateCodeOrNull(value) !== null;

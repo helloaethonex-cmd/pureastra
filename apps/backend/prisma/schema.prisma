@@ -469,6 +469,7 @@ model OrderItem {
 
   priceAtPurchase     Decimal @map("price_at_purchase") @db.Decimal(10, 2)
   lineTotal           Decimal @default(0) @map("line_total") @db.Decimal(10, 2)
+  discountAmount      Decimal? @map("discount_amount") @db.Decimal(10, 2)
   basePrice           Decimal @default(0) @map("base_price") @db.Decimal(10, 2)
   taxAmount           Decimal @default(0) @map("tax_amount") @db.Decimal(10, 2)
   gstRate             Decimal @default(18) @map("gst_rate") @db.Decimal(5, 2)
@@ -868,6 +869,7 @@ model Invoice {
 
   @@index([orderId])
   @@index([createdAt])
+  @@index([issuedAt])
   @@map("invoices")
 }
 

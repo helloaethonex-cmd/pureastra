@@ -1,6 +1,6 @@
 import { Prisma } from "../../generated/prisma/client";
 import { roundMoney } from "../../utils/gst";
-import { toStateCode } from "../../utils/state";
+import { toStateCodeOrNull } from "../../utils/state";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INVOICE NUMBER FORMAT
@@ -33,7 +33,8 @@ export type PdfStatusValue = (typeof PDF_STATUS)[keyof typeof PDF_STATUS];
  * Normalize state name for comparison (uppercase, trimmed).
  * Prevents mismatches from casing or whitespace differences.
  */
-export const normalizeState = (state: string): string => toStateCode(state);
+export const normalizeState = (state: string): string =>
+  toStateCodeOrNull(state) ?? state.trim().toUpperCase();
 
 export type GstBreakdown = {
   cgst: Prisma.Decimal | null;
@@ -63,13 +64,18 @@ export const computeGstBreakdown = (
     return { cgst: null, sgst: null, igst: null };
   }
 
+  const customerStateCode = toStateCodeOrNull(customerState);
+  const sellerStateCode = toStateCodeOrNull(sellerState);
   const isSameState =
-    normalizeState(customerState) === normalizeState(sellerState);
+    customerStateCode !== null &&
+    sellerStateCode !== null &&
+    customerStateCode === sellerStateCode;
 
   if (isSameState) {
-    // Intra-state: split equally into CGST + SGST
-    const half = roundMoney(taxAmount.div(2));
-    return { cgst: half, sgst: half, igst: null };
+    // Intra-state: residual split prevents cgst+sgst drift by 0.01.
+    const cgst = roundMoney(taxAmount.div(2));
+    const sgst = roundMoney(taxAmount.minus(cgst));
+    return { cgst, sgst, igst: null };
   }
 
   // Inter-state: full IGST

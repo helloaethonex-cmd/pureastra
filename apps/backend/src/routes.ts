@@ -21,6 +21,7 @@ import {
   invoiceAdminRouter,
 } from "./modules/invoices/invoices.route";
 import reportsAdminRoute from "./modules/reports/reports.route";
+import { env } from "./config/env";
 
 const router = Router();
 
@@ -48,9 +49,11 @@ router.get("/health", (req, res) => {
  *                   type: string
  *                   example: Internal server error
  */
-router.get("/debug-sentry", (req, res) => {
-  throw new Error("Sentry test error - This is intentional!");
-});
+if (env.NODE_ENV !== "production") {
+  router.get("/debug-sentry", (req, res) => {
+    throw new Error("Sentry test error - This is intentional!");
+  });
+}
 
 // Customer routes
 router.use("/users", usersRoute);

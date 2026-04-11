@@ -5,6 +5,7 @@ import { logger } from "../../lib/logger";
 import { AppError } from "../../lib/errors/app-error";
 import { uploadBufferToR2 } from "../../lib/r2";
 import { validateGstin } from "../../utils/gstin";
+import { computeGstForInclusivePriceLine, roundMoney } from "../../utils/gst";
 import {
   incrementInvoiceNumberSequence,
   findInvoiceByOrderId,
@@ -60,6 +61,34 @@ type OrderForInvoice = {
 
 type PaymentForInvoice = {
   paidAt: Date | null;
+};
+
+const ZERO = new Prisma.Decimal(0);
+
+const buildInvoiceLineSnapshot = (item: OrderForInvoice["items"][number]) => {
+  const recomputed = computeGstForInclusivePriceLine(
+    item.priceAtPurchase,
+    item.quantity,
+    item.gstRate,
+  );
+
+  const totalPrice = item.lineTotal.gt(ZERO)
+    ? item.lineTotal
+    : recomputed.lineInclusiveAmount;
+
+  const hasStoredTax = item.taxAmount.gt(ZERO);
+  const taxAmount = hasStoredTax ? item.taxAmount : recomputed.lineTaxAmount;
+
+  const hasStoredBase = item.basePrice.gt(ZERO);
+  const taxableValue = hasStoredBase
+    ? roundMoney(item.basePrice.mul(item.quantity))
+    : roundMoney(totalPrice.minus(taxAmount));
+
+  return {
+    totalPrice: roundMoney(totalPrice),
+    taxableValue: roundMoney(taxableValue),
+    taxAmount: roundMoney(taxAmount),
+  };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,20 +183,21 @@ export const createInvoiceInTx = async (
   const totalAmount = order.totalPaid;
 
   // ── Invoice item snapshots ────────────────────────────────────────────────
-  const invoiceItems = order.items.map((item) => ({
-    productName: item.productName,
-    variantName: item.variantName,
-    sku: item.sku,
-    quantity: item.quantity,
-    unitPrice: item.priceAtPurchase,
-    totalPrice: item.lineTotal,
-    gstRate: item.gstRate,
-    taxableValue: item.lineTotal
-      .minus(item.taxAmount)
-      .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP),
-    taxAmount: item.taxAmount,
-    hsnCode: item.hsnCode ?? null,
-  }));
+  const invoiceItems = order.items.map((item) => {
+    const lineSnapshot = buildInvoiceLineSnapshot(item);
+    return {
+      productName: item.productName,
+      variantName: item.variantName,
+      sku: item.sku,
+      quantity: item.quantity,
+      unitPrice: item.priceAtPurchase,
+      totalPrice: lineSnapshot.totalPrice,
+      gstRate: item.gstRate,
+      taxableValue: lineSnapshot.taxableValue,
+      taxAmount: lineSnapshot.taxAmount,
+      hsnCode: item.hsnCode ?? null,
+    };
+  });
 
   // ── Create ────────────────────────────────────────────────────────────────
   const invoice = await createInvoice(tx, {
@@ -277,7 +307,11 @@ export const generateInvoicePdf = async (
         productName: item.productName,
         variantName: item.variantName,
         sku: item.sku,
+        hsnCode: item.hsnCode,
         quantity: item.quantity,
+        gstRate: item.gstRate.toString(),
+        taxableValue: item.taxableValue.toString(),
+        taxAmount: item.taxAmount.toString(),
         unitPrice: item.unitPrice.toString(),
         totalPrice: item.totalPrice.toString(),
       })),

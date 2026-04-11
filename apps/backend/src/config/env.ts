@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env" });
 import { z } from "zod";
 import pino from "pino";
+import { validateGstin } from "../utils/gstin";
+import { toStateCodeOrNull } from "../utils/state";
 
 const bootstrapLogger = pino({
   level: process.env.LOG_LEVEL ?? "info",
@@ -122,6 +124,33 @@ export const envSchema = z
         code: "custom",
         message: "Provide REDIS_URL or both REDIS_HOST and REDIS_PORT",
         path: ["REDIS_URL"],
+      });
+    }
+
+    if (value.NODE_ENV === "production") {
+      if (!value.SELLER_GSTIN) {
+        ctx.addIssue({
+          code: "custom",
+          message: "SELLER_GSTIN is required in production",
+          path: ["SELLER_GSTIN"],
+        });
+      } else {
+        const gstinError = validateGstin(value.SELLER_GSTIN);
+        if (gstinError) {
+          ctx.addIssue({
+            code: "custom",
+            message: `Invalid SELLER_GSTIN: ${gstinError}`,
+            path: ["SELLER_GSTIN"],
+          });
+        }
+      }
+    }
+
+    if (!toStateCodeOrNull(value.SELLER_STATE)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "SELLER_STATE must be a valid Indian state/UT name or code",
+        path: ["SELLER_STATE"],
       });
     }
   });

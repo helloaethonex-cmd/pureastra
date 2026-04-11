@@ -2,6 +2,7 @@ import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { logger } from "../../lib/logger";
 import { redisClient } from "../../lib/redis/client";
+import { AppError } from "../../lib/errors/app-error";
 import { roundMoney } from "../../utils/gst";
 import {
   buildUtcDateRange,
@@ -23,6 +24,7 @@ import {
 
 const ZERO = new Prisma.Decimal(0);
 const REPORT_CACHE_TTL_SECONDS = 300;
+const MAX_EXPORT_ALL_ROWS = 20000;
 
 const asMoney = (value: Prisma.Decimal | null | undefined): Prisma.Decimal =>
   roundMoney(value ?? ZERO);
@@ -91,6 +93,7 @@ export const getGstReportSummary = async (
     page: input.page,
     limit: input.limit,
     sort: input.sort,
+    exportAll: false,
   });
 
   return withReportCache(cacheKey, async () => {
@@ -136,6 +139,14 @@ export const getGstReportDetailed = async (
       getGstDetailedTotalsAggregates(prisma, issuedAt),
     ]);
 
+    if (exportAll && totalRows > MAX_EXPORT_ALL_ROWS) {
+      throw new AppError(
+        413,
+        `Requested export has ${totalRows} rows. Maximum allowed is ${MAX_EXPORT_ALL_ROWS}. Narrow the date range or use pagination.`,
+        "REPORT_EXPORT_TOO_LARGE",
+      );
+    }
+
     const page = exportAll ? 1 : requestedPage;
     const limit = exportAll ? Math.max(totalRows, 1) : requestedLimit;
     const lineRows =
@@ -155,7 +166,7 @@ export const getGstReportDetailed = async (
       const isInterState = !!row.invoice.igst && !row.invoice.igst.equals(ZERO);
       const lineTax = asMoney(row.taxAmount);
       const cgst = isInterState ? ZERO : roundMoney(lineTax.div(2));
-      const sgst = isInterState ? ZERO : roundMoney(lineTax.div(2));
+      const sgst = isInterState ? ZERO : roundMoney(lineTax.minus(cgst));
       const igst = isInterState ? lineTax : ZERO;
 
       return {
@@ -172,10 +183,12 @@ export const getGstReportDetailed = async (
     });
 
     const intraTax = asMoney(totalsAgg.intraTax._sum.taxAmount);
+    const totalCgst = roundMoney(intraTax.div(2));
+    const totalSgst = roundMoney(intraTax.minus(totalCgst));
     const totals: GstDetailedReportTotals = {
       taxableValue: toMoneyString(totalsAgg.taxable._sum.taxableValue),
-      cgst: toMoneyString(roundMoney(intraTax.div(2))),
-      sgst: toMoneyString(roundMoney(intraTax.div(2))),
+      cgst: toMoneyString(totalCgst),
+      sgst: toMoneyString(totalSgst),
       igst: toMoneyString(totalsAgg.interTax._sum.taxAmount),
     };
 

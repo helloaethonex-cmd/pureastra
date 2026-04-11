@@ -226,6 +226,7 @@ const createOrderInTx = async (
         sku: item.sku,
         priceAtPurchase: linePricing.unitInclusivePrice,
         lineTotal: linePricing.lineInclusiveAfterDiscount,
+        discountAmount: linePricing.discountShare,
         basePrice: linePricing.unitBasePrice,
         taxAmount: linePricing.lineTaxAmount,
         gstRate: linePricing.gstRate,

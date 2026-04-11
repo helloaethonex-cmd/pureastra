@@ -179,7 +179,11 @@
         <th>#</th>
         <th>Item</th>
         <th>SKU</th>
+        <th>HSN/SAC</th>
         <th class="right">Qty</th>
+        <th class="right">GST %</th>
+        <th class="right">Taxable (₹)</th>
+        <th class="right">Tax (₹)</th>
         <th class="right">Unit Price (₹)</th>
         <th class="right">Total (₹)</th>
       </tr>
@@ -195,7 +199,11 @@
             <% } %>
           </td>
           <td><%= item.sku || '—' %></td>
+          <td><%= item.hsnCode || '—' %></td>
           <td class="right"><%= item.quantity %></td>
+          <td class="right"><%= parseFloat(item.gstRate).toFixed(2) %></td>
+          <td class="right"><%= parseFloat(item.taxableValue).toFixed(2) %></td>
+          <td class="right"><%= parseFloat(item.taxAmount).toFixed(2) %></td>
           <td class="right"><%= parseFloat(item.unitPrice).toFixed(2) %></td>
           <td class="right"><%= parseFloat(item.totalPrice).toFixed(2) %></td>
         </tr>

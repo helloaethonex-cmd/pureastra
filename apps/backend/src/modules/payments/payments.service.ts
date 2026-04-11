@@ -48,8 +48,33 @@ const centsToDecimal = (cents: number) =>
 
 const toCents = (value: Prisma.Decimal | number | null | undefined) => {
   if (value === null || value === undefined) return 0;
-  const amount = typeof value === "number" ? value : value.toNumber();
-  return Math.round(amount * 100);
+  const decimalValue =
+    typeof value === "number"
+      ? new Prisma.Decimal(value.toFixed(2))
+      : value.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const fixed = decimalValue.toFixed(2);
+  const isNegative = fixed.startsWith("-");
+  const absolute = isNegative ? fixed.slice(1) : fixed;
+  const [rupeesPart, paisePart = "00"] = absolute.split(".");
+  const paise = Number(`${rupeesPart}${paisePart.padEnd(2, "0").slice(0, 2)}`);
+  return isNegative ? -paise : paise;
+};
+
+const triggerOverpaymentRefundWorkflow = async (input: {
+  orderId: bigint;
+  paymentId: bigint;
+  providerPaymentId?: string;
+  providerOrderId?: string;
+}) => {
+  logger.warn(
+    {
+      orderId: input.orderId.toString(),
+      paymentId: input.paymentId.toString(),
+      providerPaymentId: input.providerPaymentId,
+      providerOrderId: input.providerOrderId,
+    },
+    "[payments] overpayment detected — refund workflow stub invoked",
+  );
 };
 
 const grandTotalCents = (order: {
@@ -261,7 +286,8 @@ export const confirmPaymentAttempt = async (
 
     if (
       payment.paymentStatus === PAYMENT_STATUS.SUCCESS ||
-      payment.paymentStatus === PAYMENT_STATUS.FAILED
+      payment.paymentStatus === PAYMENT_STATUS.FAILED ||
+      payment.paymentStatus === PAYMENT_STATUS.OVERPAID
     ) {
       if (
         (body.providerEventId && !payment.providerEventId) ||
@@ -295,7 +321,36 @@ export const confirmPaymentAttempt = async (
       payment.orderId,
     );
     if (existingSuccess && existingSuccess.id !== payment.id) {
-      return payment;
+      const overpaidPayment = await updatePayment(tx, payment.id, {
+        paymentStatus: PAYMENT_STATUS.OVERPAID,
+        failureReason: "OVERPAID_SECOND_CAPTURE",
+        providerEventId: body.providerEventId ?? null,
+        providerPaymentId:
+          body.providerPaymentId ?? body.gatewayTransactionId ?? undefined,
+        providerOrderId: body.providerOrderId ?? undefined,
+        providerSignature: body.providerSignature ?? undefined,
+        gatewayTransactionId: body.gatewayTransactionId,
+      });
+
+      await triggerOverpaymentRefundWorkflow({
+        orderId: payment.orderId,
+        paymentId: payment.id,
+        providerPaymentId: body.providerPaymentId ?? body.gatewayTransactionId,
+        providerOrderId: body.providerOrderId,
+      });
+
+      logger.error(
+        {
+          orderId: payment.orderId.toString(),
+          paymentId: payment.id.toString(),
+          existingSuccessPaymentId: existingSuccess.id.toString(),
+          providerPaymentId: body.providerPaymentId,
+          providerOrderId: body.providerOrderId,
+        },
+        "[payments] secondary success capture marked as OVERPAID",
+      );
+
+      return overpaidPayment;
     }
 
     const grand = grandTotalCents(payment.order);
@@ -329,6 +384,17 @@ export const confirmPaymentAttempt = async (
 
     const nextTotalPaid = paidSoFar + paymentAmount;
     const fullyPaid = nextTotalPaid >= grand;
+
+    logger.info(
+      {
+        orderId: payment.orderId.toString(),
+        paymentId: payment.id.toString(),
+        paymentAmountPaise: paymentAmount,
+        outstandingBeforePaise: outstanding,
+        fullyPaid,
+      },
+      "[payments] payment marked successful",
+    );
 
     await updateOrderForPaymentSuccess(tx, payment.orderId, {
       totalPaid: { increment: centsToDecimal(paymentAmount) },

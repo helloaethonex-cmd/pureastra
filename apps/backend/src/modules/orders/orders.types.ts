@@ -14,6 +14,7 @@ export const PAYMENT_STATUS = {
   SUCCESS: 1,
   FAILED: 2,
   REFUNDED: 3,
+  OVERPAID: 4,
 } as const;
 
 export const INVENTORY_RESERVATION_STATUS = {
@@ -61,7 +62,7 @@ export const adminListOrdersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   orderStatus: z.coerce.number().int().min(0).max(5).optional(),
-  paymentStatus: z.coerce.number().int().min(0).max(3).optional(),
+  paymentStatus: z.coerce.number().int().min(0).max(4).optional(),
   search: z.string().trim().max(50).optional(),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });

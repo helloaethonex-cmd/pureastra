@@ -7,6 +7,24 @@ import {
   setDefaultAddress,
 } from "./address.repository";
 import { CreateAddressInput, UpdateAddressInput } from "./address.types";
+import { AppError } from "../../lib/errors/app-error";
+import { toStateCodeOrNull } from "../../utils/state";
+
+const withNormalizedState = <T extends { state?: string }>(payload: T): T => {
+  if (payload.state === undefined) {
+    return payload;
+  }
+
+  const normalized = toStateCodeOrNull(payload.state);
+  if (!normalized) {
+    throw new AppError(400, "Invalid Indian state/UT", "INVALID_STATE");
+  }
+
+  return {
+    ...payload,
+    state: normalized,
+  };
+};
 
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
@@ -17,17 +35,25 @@ export const getUserAddresses = async (userId: string) => {
 export const getUserAddress = async (id: string, userId: string) => {
   const address = await findAddressById(BigInt(id));
   if (!address) throw { status: 404, message: "Address not found" };
-  if (address.userId !== BigInt(userId)) throw { status: 403, message: "Forbidden" };
+  if (address.userId !== BigInt(userId))
+    throw { status: 403, message: "Forbidden" };
   return address;
 };
 
-export const createUserAddress = async (userId: string, data: CreateAddressInput) => {
-  return createAddress(BigInt(userId), data);
+export const createUserAddress = async (
+  userId: string,
+  data: CreateAddressInput,
+) => {
+  return createAddress(BigInt(userId), withNormalizedState(data));
 };
 
-export const updateUserAddress = async (id: string, userId: string, data: UpdateAddressInput) => {
+export const updateUserAddress = async (
+  id: string,
+  userId: string,
+  data: UpdateAddressInput,
+) => {
   await getUserAddress(id, userId); // ownership check
-  return updateAddress(BigInt(id), BigInt(userId), data);
+  return updateAddress(BigInt(id), BigInt(userId), withNormalizedState(data));
 };
 
 export const deleteUserAddress = async (id: string, userId: string) => {
