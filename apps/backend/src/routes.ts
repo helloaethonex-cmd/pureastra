@@ -16,7 +16,11 @@ import ordersAdminRoute from "./modules/orders/orders.admin.route";
 import reviewsAdminRoute from "./modules/reviews/reviews.admin.route";
 import influencersAdminRoute from "./modules/influencers/influencers.admin.route";
 import influencersRoute from "./modules/influencers/influencers.route";
-import { invoiceUserRouter, invoiceAdminRouter } from "./modules/invoices/invoices.route";
+import {
+  invoiceUserRouter,
+  invoiceAdminRouter,
+} from "./modules/invoices/invoices.route";
+import reportsAdminRoute from "./modules/reports/reports.route";
 
 const router = Router();
 
@@ -67,6 +71,7 @@ router.use("/admin/orders", ordersAdminRoute);
 router.use("/admin/orders", invoiceAdminRouter);
 router.use("/admin/reviews", reviewsAdminRoute);
 router.use("/admin/influencers", influencersAdminRoute);
+router.use("/admin/reports", reportsAdminRoute);
 
 // Influencer public routes
 router.use("/influencers", influencersRoute);
