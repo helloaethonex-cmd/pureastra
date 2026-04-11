@@ -1,4 +1,3 @@
-[dotenv@17.3.1] injecting env (33) from .env -- tip: ⚙️  override existing env vars with { override: true }
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -87,6 +86,7 @@ CREATE TABLE "verifications" (
 CREATE TABLE "roles" (
     "id" BIGSERIAL NOT NULL,
     "name" TEXT NOT NULL,
+    "role" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
