@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -25,6 +24,10 @@ import {
   type Address,
   type CheckoutPreviewResponse,
 } from "@/services/api";
+import {
+  getActiveReferralAttribution,
+  type ReferralAttribution,
+} from "@/lib/referral";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 type Step = "address" | "preview" | "paying";
@@ -230,12 +233,14 @@ function AddressStep({
 // ── Preview Step ──────────────────────────────────────────────────────────────
 function PreviewStep({
   addressId,
+  referral,
   onBack,
   onPay,
   isPaying,
   payError,
 }: {
   addressId: string;
+  referral: ReferralAttribution | null;
   onBack: () => void;
   onPay: () => void;
   isPaying: boolean;
@@ -249,11 +254,14 @@ function PreviewStep({
     let cancelled = false;
     setIsLoading(true);
     setFetchError(null);
-    previewCheckout({ addressId })
+    previewCheckout({
+      addressId,
+      referralCode: referral?.code,
+    })
       .then((data) => { if (!cancelled) { setPreview(data); setIsLoading(false); } })
       .catch((err: Error) => { if (!cancelled) { setFetchError(err.message ?? "Failed to load order preview"); setIsLoading(false); } });
     return () => { cancelled = true; };
-  }, [addressId]);
+  }, [addressId, referral?.code]);
 
   if (isLoading) {
     return (
@@ -331,6 +339,13 @@ function PreviewStep({
       {Number(tot.discountAmount) > 0 && (
         <div className="bg-[#DCE9D8] text-[#2E7D32] px-4 py-3 rounded-xl mt-3 text-sm font-medium flex items-center gap-2">
           🎉 You save ₹{Number(tot.discountAmount).toFixed(2)} on this order!
+        </div>
+      )}
+
+      {referral?.code && (
+        <div className="bg-[#F5F0E6] border border-[#D6C9B6] text-[#5E2B15] px-4 py-3 rounded-xl mt-3 text-sm">
+          Referral applied: <span className="font-bold">{referral.code}</span>
+          {referral.influencerName ? ` (${referral.influencerName})` : ""}
         </div>
       )}
 
@@ -417,6 +432,7 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<Step>("address");
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const checkout = useCheckout();
+  const activeReferral = getActiveReferralAttribution();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -428,7 +444,10 @@ export default function CheckoutPage() {
   const handlePay = () => {
     if (!selectedAddressId) return;
     checkout.mutate(
-      { addressId: selectedAddressId },
+      {
+        addressId: selectedAddressId,
+        referralCode: activeReferral?.code,
+      },
       {
         onSuccess: ({ orderNumber }) => {
           router.push(`/order-history?order=${encodeURIComponent(orderNumber)}`);
@@ -480,6 +499,7 @@ export default function CheckoutPage() {
           {(step === "preview" || step === "paying") && selectedAddressId && (
             <PreviewStep
               addressId={selectedAddressId}
+              referral={activeReferral}
               onBack={() => setStep("address")}
               onPay={handlePay}
               isPaying={checkout.isPending}

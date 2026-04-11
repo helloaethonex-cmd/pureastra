@@ -6,6 +6,7 @@ import { redisClient } from "../../lib/redis/client";
 import { AppError } from "../../lib/errors/app-error";
 import { logger } from "../../lib/logger";
 import { ORDER_STATUS, PAYMENT_STATUS, INVENTORY_RESERVATION_STATUS } from "../orders/orders.types";
+import { findActiveInfluencerByCode } from "../influencers/influencers.repository";
 import { ensureProviderOrderForPaymentAttempt } from "../payments/payments.service";
 import {
   createInventoryReservations,
@@ -370,6 +371,7 @@ const buildCartHashSource = (
       addressId: previewInput.addressId.toString(),
       note: normalizeOptionalText(previewInput.note),
       couponCode: normalizeOptionalText(previewInput.couponCode),
+      referralCode: normalizeOptionalText(previewInput.referralCode),
     },
     cartId: cart.id.toString(),
     flowType: CHECKOUT_FLOW.CART,
@@ -392,6 +394,7 @@ const buildBuyNowHashSource = (
       addressId: previewInput.addressId.toString(),
       note: normalizeOptionalText(previewInput.note),
       couponCode: normalizeOptionalText(previewInput.couponCode),
+      referralCode: normalizeOptionalText(previewInput.referralCode),
       productVariantId: previewInput.productVariantId.toString(),
       quantity: previewInput.quantity,
     },
@@ -447,6 +450,20 @@ const createOrderAndPaymentInTx = async (
     throw new AppError(400, "Checkout has no items", "CHECKOUT_EMPTY");
   }
 
+  // Referral attribution is best-effort and never blocks checkout.
+  let influencerId: bigint | undefined;
+  let referralCode: string | undefined;
+  if (request.referralCode) {
+    const influencer = await findActiveInfluencerByCode(
+      tx,
+      request.referralCode.toUpperCase(),
+    );
+    if (influencer) {
+      influencerId = influencer.id;
+      referralCode = influencer.referralCode;
+    }
+  }
+
   const totals = buildTotals(lineItems);
   const year = now.getFullYear();
   const sequence = await incrementOrderNumberSequence(tx, year);
@@ -469,6 +486,11 @@ const createOrderAndPaymentInTx = async (
     orderStatus: ORDER_STATUS.PLACED,
     paymentStatus: PAYMENT_STATUS.PENDING,
     placedAt: now,
+
+    ...(influencerId && {
+      influencer: { connect: { id: influencerId } },
+      referralCode,
+    }),
   });
 
   await createOrderItems(
@@ -606,6 +628,7 @@ export const previewCheckoutFromCart = async (
         addressId: input.addressId.toString(),
         note: normalizeOptionalText(input.note),
         couponCode: normalizeOptionalText(input.couponCode),
+        referralCode: normalizeOptionalText(input.referralCode),
       },
     };
 
@@ -653,6 +676,7 @@ export const previewCheckoutBuyNow = async (
         addressId: input.addressId.toString(),
         note: normalizeOptionalText(input.note),
         couponCode: normalizeOptionalText(input.couponCode),
+        referralCode: normalizeOptionalText(input.referralCode),
         productVariantId: input.productVariantId.toString(),
         quantity: input.quantity,
       },
@@ -727,6 +751,7 @@ const confirmCheckoutByFlow = async (
           addressId: BigInt(consumedPreview.request.addressId),
           note: consumedPreview.request.note ?? undefined,
           couponCode: consumedPreview.request.couponCode ?? undefined,
+          referralCode: consumedPreview.request.referralCode ?? undefined,
         };
         return buildCartHashSource(requestInput, cart);
       }
@@ -750,6 +775,7 @@ const confirmCheckoutByFlow = async (
         addressId: BigInt(consumedPreview.request.addressId),
         note: consumedPreview.request.note ?? undefined,
         couponCode: consumedPreview.request.couponCode ?? undefined,
+        referralCode: consumedPreview.request.referralCode ?? undefined,
       };
       return buildBuyNowHashSource(requestInput, variant);
     }, TX_OPTIONS);

@@ -2,7 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSession } from "@/hooks/useAuth";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import ReferralAttributionHydrator from "@/components/ReferralAttributionHydrator";
 
 function SessionHydrator({ children }: { children: React.ReactNode }) {
   useSession();
@@ -21,7 +22,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionHydrator>{children}</SessionHydrator>
+      <SessionHydrator>
+        <Suspense fallback={null}>
+          <ReferralAttributionHydrator />
+        </Suspense>
+        {children}
+      </SessionHydrator>
     </QueryClientProvider>
   );
 }

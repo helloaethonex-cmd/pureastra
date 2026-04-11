@@ -92,10 +92,19 @@ export const useCheckout = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ addressId }: { addressId: string }) => {
+    mutationFn: async ({
+      addressId,
+      referralCode,
+    }: {
+      addressId: string;
+      referralCode?: string;
+    }) => {
       await ensureRazorpayLoaded();
 
-      const checkoutPreview = await previewCheckout({ addressId });
+      const checkoutPreview = await previewCheckout({
+        addressId,
+        referralCode,
+      });
 
       const checkoutResult = await confirmCheckout(
         { previewToken: checkoutPreview.previewToken },
@@ -175,10 +184,12 @@ export const useBuyNowCheckout = () => {
       productVariantId,
       quantity,
       addressId,
+      referralCode,
     }: {
       productVariantId: string;
       quantity: number;
       addressId: string;
+      referralCode?: string;
     }) => {
       await ensureRazorpayLoaded();
 
@@ -186,6 +197,7 @@ export const useBuyNowCheckout = () => {
         productVariantId,
         quantity,
         addressId,
+        referralCode,
       });
 
       const checkoutResult = await confirmBuyNowCheckout(
