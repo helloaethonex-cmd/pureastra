@@ -70,10 +70,12 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Tell puppeteer-core to use the apk-installed Chromium binary
-ENV CHROMIUM_PATH=/usr/bin/chromium-browser
+# Alpine's Chromium binary is /usr/bin/chromium (NOT chromium-browser)
+ENV CHROMIUM_PATH=/usr/bin/chromium
 # Prevent any accidental Chromium download attempt
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+# Limit Node.js heap to prevent memory spikes in containers
+ENV NODE_OPTIONS="--max-old-space-size=512"
 
 # Install system Chromium + required fonts/libs for PDF generation.
 # These are the minimum packages needed on Alpine for Chromium to run headless.
@@ -95,7 +97,7 @@ RUN apk add --no-cache \
 RUN corepack enable
 
 # Workspace manifests (needed for pnpm workspace symlink resolution at runtime)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json pnpm-lock.yaml ./
 COPY apps/backend/package.json apps/backend/package.json
 
 # Production node_modules
@@ -115,5 +117,9 @@ WORKDIR /app/apps/backend
 USER nodejs
 
 EXPOSE 5050
+
+# Docker healthcheck — restarts container if app becomes unhealthy
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:5050/api/v1/health || exit 1
 
 CMD ["node", "dist/server.js"]

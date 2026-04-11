@@ -29,6 +29,9 @@ services:
         condition: service_healthy
     ports:
       - "5050:5050"
+    # Chromium needs at least 512MB of shared memory for stable PDF rendering.
+    # Without this, /dev/shm fills up and Chromium crashes mid-render.
+    shm_size: "1gb"
     command: ["node", "--require", "./dist/instrument.js", "dist/server.js"]
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:5050/api/v1/health || exit 1"]

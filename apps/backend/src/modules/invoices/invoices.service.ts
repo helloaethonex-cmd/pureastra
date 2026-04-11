@@ -258,10 +258,10 @@ export const generateInvoicePdf = async (
     });
 
     // Use system Chromium in production (installed via Alpine apk in Dockerfile).
-    // CHROMIUM_PATH env var is set by the Dockerfile to the apk binary path.
-    // Falls back to /usr/bin/chromium-browser for most Linux distros.
+    // CHROMIUM_PATH env var is set by the Dockerfile to /usr/bin/chromium.
+    // Falls back to /usr/bin/chromium for most Linux distros.
     const executablePath =
-      process.env.CHROMIUM_PATH ?? "/usr/bin/chromium-browser";
+      process.env.CHROMIUM_PATH ?? "/usr/bin/chromium";
 
     // HTML → PDF via Puppeteer
     const browser = await puppeteer.launch({
@@ -272,8 +272,6 @@ export const generateInvoicePdf = async (
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
-        "--no-zygote",
-        "--single-process",
       ],
     });
 
