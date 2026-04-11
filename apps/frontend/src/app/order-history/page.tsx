@@ -75,25 +75,20 @@ function OrderConfirmationCard({ orderNumber }: { orderNumber: string }) {
       setIsDownloadingInvoice(true);
       const invoice = await getOrderInvoice(order.orderNumber);
 
-      if (!invoice.pdfUrl) {
-        toast.error("Invoice is being generated. Please try again shortly.");
+      if (invoice.pdfStatus === 2) {
+        // PDF generation failed on the server
+        toast.error("Invoice PDF generation failed. Please contact support.");
         return;
       }
 
-      const response = await fetch(invoice.pdfUrl);
-      if (!response.ok) {
-        throw new Error("Unable to download invoice right now.");
+      if (!invoice.pdfUrl || invoice.pdfStatus !== 1) {
+        // Still pending (pdfStatus === 0)
+        toast.error("Invoice is being generated. Please try again in a moment.");
+        return;
       }
 
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = `${invoice.invoiceNumber}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(objectUrl);
+      // Open directly in a new tab — avoids CORS (browser nav is not subject to CORS)
+      window.open(invoice.pdfUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to download invoice.";
       toast.error(message);
