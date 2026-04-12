@@ -25,6 +25,15 @@ export const getOrCreateCart = async (userId?: string, sessionId?: string) => {
     );
   }
 
+  // If user is authenticated and a guest session exists, merge first so cart
+  // continuity is preserved after signup/login.
+  if (userId && sessionId) {
+    const merged = await mergeGuestCart(BigInt(userId), sessionId);
+    if (merged) {
+      return merged;
+    }
+  }
+
   const uid = userId ? BigInt(userId) : undefined;
   return findOrCreateCart(uid, sessionId);
 };

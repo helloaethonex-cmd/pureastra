@@ -93,8 +93,8 @@ export default function AboutPage() {
             src="/img/founder.webp"
             alt="founder"
             width={500}
-            height={400}
-            className="w-full h-[250px] sm:h-[300px] md:h-auto object-cover"
+            height={600}
+            className="w-full h-[500px] sm:h-[300px] md:h-auto object-cover"
           />
         </div>
 

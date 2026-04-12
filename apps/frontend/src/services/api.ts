@@ -151,6 +151,7 @@ export interface CartProduct {
   id: string;
   name: string;
   slug: string;
+  images?: ProductImage[];
 }
 
 export interface CartVariantImage {

@@ -16,7 +16,14 @@ const cartFullInclude = {
     include: {
       productVariant: {
         include: {
-          product: { select: { id: true, name: true, slug: true } },
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              images: { take: 1, orderBy: { position: "asc" as const } },
+            },
+          },
           images: { take: 1, orderBy: { position: "asc" as const } },
         },
       },
@@ -101,7 +108,14 @@ export const upsertCartItem = async (
       include: {
         productVariant: {
           include: {
-            product: { select: { id: true, name: true, slug: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                images: { take: 1, orderBy: { position: "asc" as const } },
+              },
+            },
           },
         },
       },
@@ -117,7 +131,16 @@ export const upsertCartItem = async (
     },
     include: {
       productVariant: {
-        include: { product: { select: { id: true, name: true, slug: true } } },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              images: { take: 1, orderBy: { position: "asc" as const } },
+            },
+          },
+        },
       },
     },
   });
@@ -145,7 +168,16 @@ export const updateCartItemQuantityForUser = async (
     data: { quantity: data.quantity },
     include: {
       productVariant: {
-        include: { product: { select: { id: true, name: true, slug: true } } },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              images: { take: 1, orderBy: { position: "asc" as const } },
+            },
+          },
+        },
       },
     },
   });

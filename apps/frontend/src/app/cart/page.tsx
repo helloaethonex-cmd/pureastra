@@ -128,6 +128,7 @@ export default function OrderPage() {
                   const product = item.productVariant.product;
                   const itemImage =
                     item.productVariant.images?.[0]?.imageUrl ||
+                    product?.images?.[0]?.imageUrl ||
                     "/img/facewash.webp";
                   const itemName = product?.name || "Product";
                   const itemPrice = toPriceNumber(
