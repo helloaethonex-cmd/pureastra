@@ -1340,7 +1340,8 @@ export default function ProductClient({ product }: { product: Product }) {
         {/* ── TOP HEADER BANNER ── */}
         <div
           className="relative px-4 sm:px-6 md:px-12 py-6 md:py-10 flex items-center justify-between bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${displayImages[0]})` }}
+          // style={{ backgroundImage: `url(${displayImages[0]})` }}
+          style={{ backgroundImage: `url('/img/facecare-banner.png')` }}
         >
           {/* Overlay */}
           <div className="absolute inset-0 bg-black/30" />
