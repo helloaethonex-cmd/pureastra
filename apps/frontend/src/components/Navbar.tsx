@@ -19,7 +19,6 @@ import {
   faTags,
   faPercent,
   faCircleInfo,
-  faBlog,
   faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -68,8 +67,7 @@ export default function Navbar() {
   // Static menu items for non-category pages
   const staticMenuItems = [
     { name: "Home", path: "/", icon: faHouse },
-    { name: "About", path: "/category/about", icon: faCircleInfo },
-    { name: "Blog", path: "/category/blogs", icon: faBlog },
+    { name: "About", path: "/category/about", icon: faCircleInfo }
   ];
 
   function handleUserIconClick() {
