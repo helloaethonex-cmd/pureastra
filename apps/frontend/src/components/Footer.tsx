@@ -1,12 +1,45 @@
 "use client";
 
+import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowRight,
   faEnvelope,
   faPhone,
 } from "@fortawesome/free-solid-svg-icons";
 import { faFacebookF, faInstagram ,  faLinkedinIn } from "@fortawesome/free-brands-svg-icons";
+
+const footerSections = [
+  {
+    title: "Top Categories",
+    links: [
+      { label: "Face Care", href: "/category/face-care" },
+      { label: "Hair Care", href: "/category/hair-care" },
+      { label: "Body Care", href: "/category/body-care" },
+      { label: "Combos", href: "/category/combos" },
+      { label: "Mini Products", href: "/category/mini-products" },
+    ],
+  },
+  {
+    title: "Policies",
+    links: [
+      { label: "Terms & Conditions", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy-policy" },
+      { label: "Refund Policy", href: "/refund-policy" },
+      { label: "Cancellation Policy", href: "/cancellation-policy" },
+      { label: "Shipping Policy", href: "/shipping" },
+    ],
+  },
+  {
+    title: "Quick Links",
+    links: [
+      { label: "Track Order", href: "/order-track" },
+      { label: "Order History", href: "/order-history" },
+      { label: "My Profile", href: "/profile" },
+      { label: "Wishlist", href: "/wishlist" },
+      { label: "Cart", href: "/cart" },
+    ],
+  },
+];
 
 export default function Footer() {
   return (
@@ -15,34 +48,32 @@ export default function Footer() {
       <div className="max-w-[1200px] mx-auto">
 
         {/* GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
 
           {/* BRAND */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl md:text-3xl font-bold">Pureastra</h2>
 
             <p className="my-4 text-sm md:text-base">
-              Sign up to get 10% off on your first order
+              Gentle, effective skincare inspired by nature and backed by care.
             </p>
-
-            {/* EMAIL */}
-            <div className="flex bg-white/10 rounded-full overflow-hidden w-full max-w-[300px]">
-              <input
-                type="email"
-                placeholder="E-mail"
-                className="px-4 py-2 flex-1 bg-transparent text-white outline-none placeholder:text-[#ddd]"
-              />
-              <button className="w-12 flex items-center justify-center bg-white/20">
-                <FontAwesomeIcon icon={faArrowRight} />
-              </button>
-            </div>
 
             {/* SOCIAL */}
             <div className="mt-4 flex gap-4 text-lg">
-              <a href="https://www.facebook.com/share/1Ho4ajBRTp/" className="hover:scale-110 transition">
+              <a
+                href="https://www.facebook.com/share/1Ho4ajBRTp/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:scale-110 transition"
+              >
                 <FontAwesomeIcon icon={faFacebookF} />
               </a>
-              <a href="https://www.instagram.com/pureastra.in?igsh=aWExMTVwamJraWNx" className="hover:scale-110 transition">
+              <a
+                href="https://www.instagram.com/pureastra.in?igsh=aWExMTVwamJraWNx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:scale-110 transition"
+              >
                 <FontAwesomeIcon icon={faInstagram} />
               </a>
               <a
@@ -57,33 +88,18 @@ export default function Footer() {
           </div>
 
           {/* LINKS SECTIONS */}
-          {[
-            {
-              title: "Top Categories",
-              links: ["Face Care", "Hair Care", "Body Care", "Combos", "Mini Products"],
-            },
-            {
-              title: "Policies",
-              links: ["Terms & Conditions", "Privacy Policy", "Refund Policy", "Cancellation Policy", "Shipping Policy"],
-            },
-            {
-              title: "Best Sellers",
-              links: ["Vitamin C Face Wash", "Brightening Serum", "Hair Growth Oil", "Face Mask"],
-            },
-            {
-              title: "Info",
-              links: ["About Us", "Contact Us", "Track Order", "Blogs", "Careers"],
-            },
-          ].map((section, idx) => (
+          {footerSections.map((section, idx) => (
             <div key={idx}>
               <h4 className="mb-3 text-base md:text-lg font-semibold">
                 {section.title}
               </h4>
 
               <ul className="space-y-2 text-sm text-[#f1f1f1] break-words">
-                {section.links.map((item, i) => (
-                  <li key={i} className="hover:underline cursor-pointer">
-                    {item}
+                {section.links.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href} className="hover:underline">
+                      {item.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -95,15 +111,15 @@ export default function Footer() {
         {/* CONTACT */}
         <div className="mt-8 flex flex-col sm:flex-row sm:justify-between gap-4 text-sm">
 
-          <p className="flex items-center gap-2">
+          <a href="mailto:support@pureastra.in" className="flex items-center gap-2 hover:underline">
             <FontAwesomeIcon icon={faEnvelope} />
             support@pureastra.in
-          </p>
+          </a>
 
-          <p className="flex items-center gap-2">
+          <a href="tel:+919400206479" className="flex items-center gap-2 hover:underline">
             <FontAwesomeIcon icon={faPhone} />
             +91 94002 06479
-          </p>
+          </a>
 
         </div>
 
