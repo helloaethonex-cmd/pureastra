@@ -46,7 +46,7 @@ export default function Testimonial() {
       </h2>
 
       <Swiper
-        spaceBetween={20} // mobile default
+        spaceBetween={20} 
         centeredSlides={true}
         centeredSlidesBounds={true}
         loop={true}
@@ -59,7 +59,7 @@ export default function Testimonial() {
           0: { slidesPerView: 1, spaceBetween: 20 },
           576: { slidesPerView: 2, spaceBetween: 30 },
           768: { slidesPerView: 2, spaceBetween: 40 },
-          1024: { slidesPerView: 3, spaceBetween: 80 }, // desktop SAME
+          1024: { slidesPerView: 3, spaceBetween: 80 }, 
         }}
         className="py-5 px-2"
       >
@@ -69,7 +69,7 @@ export default function Testimonial() {
             {/* CARD */}
             <div className="
               relative bg-white w-full 
-              min-h-[180px] md:h-45   /* FIXED */
+              min-h-[180px] md:h-45  
               mb-5 rounded-3xl 
               px-5 sm:px-6 md:px-7.5 
               pt-6 md:pt-7.5 
@@ -77,7 +77,7 @@ export default function Testimonial() {
               pl-14 sm:pl-16 md:pl-17.5
               shadow-[0_8px_0_#e8dfd2] 
               transition-all duration-300 z-20
-            ">
+            "> 
 
               {/* QUOTE ICON */}
               <div className="absolute -top-2 right-4 md:right-6 text-4xl md:text-6xl text-[#5e2b15]">
@@ -88,7 +88,7 @@ export default function Testimonial() {
               <div className="flex gap-3 items-center">
 
                 {/* IMAGE */}
-                <div
+                {/* <div
                   className="
                     absolute 
                     -left-5 sm:-left-6 md:-left-7.5 
@@ -100,7 +100,20 @@ export default function Testimonial() {
                     border-[4px] md:border-[6px] border-[#f5efe6] 
                     overflow-hidden
                   "
-                >
+                > */}
+                <div
+  className="
+    absolute 
+    -left-8 md:-left-10   /* ADJUSTED */
+    top-8 md:top-10 
+    w-16 h-16 
+    sm:w-20 sm:h-20 
+    md:w-24 md:h-24 
+    rounded-full 
+    border-[4px] md:border-[6px] border-[#f5efe6] 
+    overflow-hidden
+  "
+>
                   <Image
                     src={item.image}
                     alt={item.name}

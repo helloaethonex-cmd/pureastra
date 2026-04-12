@@ -15,7 +15,7 @@ import {
   faHandHoldingHeart,
   faGlobe,
   faPaw,
-  faClipboardCheck,
+  faClipboardCheck, faHandSparkles,
   faSnowflake,
   faArrowRight,
   faBolt,
@@ -29,6 +29,7 @@ import {
   faBuilding,
   faBalanceScale,
   faTrash,
+  faShieldAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -155,77 +156,111 @@ function BenefitsSection({
 
 // ─── Ingredients Grid Section ─────────────────────────────────────────────────
 
-const defaultIngredientIcons = [
-  faSun,
-  faBolt,
-  faLeaf,
-  faCheckCircle,
-  faDroplet,
-  faDroplet,
-];
-
 function IngredientsGridSection({
   section,
 }: {
   section: ProductContentSection | undefined;
 }) {
   const content = section?.content as any;
+
   const list: string[] = content?.list ?? [];
   const text: string = content?.text ?? "";
-
-  // Rich card items — from DB or fallback
-  const cardItems: { title: string; desc: string }[] = content?.cardItems ?? [];
+  const cardItems: { title: string; desc: string }[] =
+    content?.cardItems ?? [];
 
   if (!list.length && !text && !cardItems.length) return null;
 
+  // Map ingredient → image
+  const ingredientImages: Record<string, string> = {
+    "Vitamin C": "/img/ingredients/vitamin-c.png",
+    "Papaya Extract": "/img/ingredients/papaya.png",
+    "Tangerine Extract": "/img/ingredients/tangerine.png",
+    "Vitamin E": "/img/ingredients/vitamin-e.png",
+    "Glycerine": "/img/ingredients/glycerine.png",
+    "Sodium PCA": "/img/ingredients/sodium-pca.png",
+  };
+
   return (
-    <div className="mt-10">
-      <h3 className="text-[#819744] font-bold text-[22px] mb-6">
-        INGREDIENTS:
+    <div className="mt-12">
+      {/* HEADING */}
+      <h3 className="text-[#819744] font-bold text-[22px] mb-8 tracking-wide">
+        INGREDIENTS
       </h3>
 
-      {/* Card grid view */}
+      {/* CARDS */}
       {cardItems.length > 0 && (
-        <div className="grid md:grid-cols-2 gap-5 text-[14px]">
-          {cardItems.map((item: { title: string; desc: string }, i: number) => (
-            <motion.div
-              key={i}
-              whileHover={{ scale: 1.05 }}
-              className="bg-[#D9DFC8] border border-[#E6E6E6] rounded-xl p-4 flex items-start gap-3 shadow-sm"
-            >
-              <div className="w-[36px] h-[36px] rounded-full bg-[#EBF1DC] flex items-center justify-center shrink-0">
-                <FontAwesomeIcon
-                  icon={
-                    defaultIngredientIcons[i % defaultIngredientIcons.length]
+        <div className="grid md:grid-cols-2 gap-6">
+          {cardItems.map((item, i) => (
+           <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            viewport={{ once: true }}
+            whileHover={{ y: -4 }}
+            className="
+              group
+              bg-[#F3F6EA]/70 
+              backdrop-blur-sm
+              rounded-2xl 
+              px-5 py-5 
+              flex items-center gap-4
+              border border-[#e5ead7]/60
+              hover:shadow-md
+              transition
+            "
+          >
+              {/* IMAGE (FIXED) */}
+              
+              <div className="
+                w-14 h-14 
+                rounded-full 
+                overflow-hidden 
+                shrink-0
+                border border-[#e0e6d0]
+                flex items-center justify-center
+                bg-transparent
+              ">
+                <img
+                  src={
+                    ingredientImages[item.title] ||
+                    "/img/ingredients/default.png"
                   }
-                  className="text-[#819744]"
+                  alt={item.title}
+                  className="
+                    w-full h-full 
+                    object-cover 
+                    object-center
+                    scale-125
+                    mix-blend-multiply
+                    transition duration-300
+                    group-hover:scale-140
+                  "
                 />
               </div>
+
+              {/* TEXT */}
               <div>
-                <h4 className="font-semibold text-[#2C2C2C]">{item.title}</h4>
-                <p className="text-sm text-gray-600">{item.desc}</p>
+                <h4 className="font-semibold text-[#5e2b16] text-[16px]">
+                  {item.title}
+                </h4>
+
+                <p className="text-[#8b5e3c] text-[14px] mt-1 leading-relaxed">
+                  {item.desc}
+                </p>
               </div>
             </motion.div>
           ))}
         </div>
       )}
 
-      {/* Tag list view */}
-      {list.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {list.map((ing, i) => (
-            <li
-              key={i}
-              className="bg-[#EBF1DC] text-[#5C6936] text-xs px-3 py-1 rounded-full font-medium"
-            >
-              {ing}
-            </li>
-          ))}
-        </ul>
-      )}
 
-      {/* Full text */}
-      {text && <p className="mt-4 text-sm text-[#5f5f5f] leading-6">{text}</p>}
+      {/* DESCRIPTION */}
+      {text && (
+        <p className="mt-5 text-[#8b5e3c] text-[14px] leading-7 max-w-[90%]">
+          {text}
+        </p>
+      )}
     </div>
   );
 }
@@ -238,22 +273,112 @@ function ResultsSection({
   section: ProductContentSection | undefined;
 }) {
   const content = section?.content as any;
-  const stats: string[] = content?.stats ?? [
+
+  const rawStats: string[] = content?.stats ?? [
     "Week 1: 60% feel hydrated & soft",
     "Week 2: 75% notice reduced dullness",
     "Week 3: 95% see brighter skin",
   ];
 
+  // convert string → structured data
+  const stats = rawStats.map((item, i) => {
+    const [weekPart, rest] = item.split(":");
+
+    const percentMatch = rest?.match(/\d+%/);
+    const percent = percentMatch ? parseInt(percentMatch[0]) : 0;
+
+    const text = rest?.replace(/\d+%/, "").trim();
+
+    // fallback images
+    const images = [
+      "/img/week-1.png",
+      "/img/week-2.png",
+      "/img/week-3.png",
+    ];
+
+    return {
+      week: weekPart,
+      percent,
+      text,
+      image: images[i % images.length],
+    };
+  });
+
   return (
-    <div className="mt-6 md:mt-8 space-y-2 md:space-y-3">
+    <div className="mt-8 space-y-5">
       {stats.map((item, i) => (
-        <div
+        <motion.div
           key={i}
-          className="bg-[#D9DFC8] px-3 md:px-4 py-2 md:py-3 rounded-lg text-[#5E2B16] text-[12px] md:text-[14px] flex items-center gap-2"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.2 }}
+          viewport={{ once: true }}
+          whileHover={{ scale: 1.02 }}
+          className="
+            flex items-center gap-4
+            bg-white/40 backdrop-blur-md
+            border border-white/30
+            rounded-2xl
+            px-5 py-4
+            shadow-[0_10px_25px_rgba(0,0,0,0.06)]
+          "
         >
-          <FontAwesomeIcon icon={faCheckCircle} className="text-[#819744]" />
-          {item}
-        </div>
+          {/* IMAGE */}
+          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#819744] shrink-0">
+            <img
+              src={item.image}
+              alt={item.week}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* TEXT */}
+          <div className="flex-1">
+            <p className="text-[#819744] font-semibold text-sm">
+              {item.week}
+            </p>
+
+            <p className="text-[#8b5e3c] text-[14px] md:text-[16px]">
+              {item.text}
+            </p>
+
+            {/* PROGRESS BAR */}
+            <div className="mt-2 h-2 bg-[#e5ead7] rounded-full overflow-hidden relative">
+              
+              {/* MAIN FILL */}
+              <motion.div
+                initial={{ width: 0 }}
+                whileInView={{ width: `${item.percent}%` }}
+                transition={{
+                  duration: 1.2,
+                  ease: "easeOut",
+                  delay: i * 0.2,
+                }}
+                className="h-full bg-[#819744] rounded-full relative overflow-hidden"
+              >
+                
+                {/* SHIMMER EFFECT (moving light) */}
+                <motion.div
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                />
+
+              </motion.div>
+
+            </div>
+          </div>
+
+          {/* % */}
+          <div className="text-[#5E2B16] font-bold text-lg md:text-2xl">
+            {item.percent}%
+          </div>
+        </motion.div>
       ))}
     </div>
   );
@@ -351,6 +476,7 @@ function SuitableForSection({
   section: ProductContentSection | undefined;
 }) {
   const content = section?.content as any;
+
   const fields: { label: string; value: string }[] = content?.fields ?? [
     {
       label: "Skin Type",
@@ -370,29 +496,43 @@ function SuitableForSection({
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -40 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6 }}
-      viewport={{ once: true }}
-    >
-      <h3 className="text-[#819744] font-bold text-[18px] sm:text-[20px] md:text-[24px] font-['Roboto_Flex'] mb-5 tracking-wide">
+    <div>
+      {/* HEADING */}
+      <h3 className="text-[#819744] font-bold text-[18px] sm:text-[20px] md:text-[24px] font-['Roboto_Flex'] mb-6 tracking-wide">
         SUITABLE FOR:
       </h3>
-      <div className="space-y-3 text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[16px]">
+
+      <div className="space-y-4">
         {fields.map((f, i) => (
-          <motion.p
+          <motion.div
             key={i}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: i * 0.15 }}
+            viewport={{ once: true }}
+            whileHover={{ scale: 1.02 }}
+            className="
+              bg-white/40 
+              backdrop-blur-md 
+              border border-white/30 
+              rounded-2xl 
+              px-5 py-4 
+              shadow-[0_8px_20px_rgba(0,0,0,0.05)]
+              hover:shadow-[0_12px_25px_rgba(0,0,0,0.08)]
+              transition
+            "
           >
-            <span className="text-[#5C6936] font-semibold">{f.label}:</span>{" "}
-            {f.value}
-          </motion.p>
+            <h4 className="font-semibold text-[#5E2B16] text-[15px] md:text-[18px]">
+              {f.label}
+            </h4>
+
+            <p className="text-[#8B5E3C] text-[13px] md:text-[16px] mt-1 leading-relaxed">
+              {f.value}
+            </p>
+          </motion.div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -404,37 +544,73 @@ function UsageInstructionSection({
   section: ProductContentSection | undefined;
 }) {
   const content = section?.content as any;
+
   const steps: string[] = content?.steps ?? [
+    "Wet your face with lukewarm water. Take a coin-sized amount of face wash.",
+    "Gently massage in circular motions for 30–60 seconds, avoiding the eye area.",
+    "Rinse thoroughly and pat dry. Follow with a moisturizer.",
     "Always patch test before first use, especially if you have sensitive skin.",
     "Store in a cool, dry place away from direct sunlight.",
-    "Handle with care—natural ingredients may separate slightly, which is normal.",
   ];
-  const stepIcons = [faClipboardCheck, faSnowflake, faLeaf];
+
+  const stepIcons = [
+    faDroplet,
+    faHandSparkles,
+    faLeaf,
+    faShieldAlt,
+    faSnowflake,
+  ];
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      whileInView={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
       viewport={{ once: true }}
     >
-      <h3 className="text-[#819744] font-bold text-[18px] sm:text-[20px] md:text-[24px] font-['Roboto_Flex'] mb-5 tracking-wide">
+      {/* HEADING */}
+      <h3 className="text-[#819744] font-bold text-[18px] sm:text-[20px] md:text-[24px] mb-8 tracking-wide">
         USAGE INSTRUCTION:
       </h3>
-      <div className="space-y-4 text-[#5C6936] text-[13px] sm:text-[14px] md:text-[16px]">
+
+      <div className="space-y-6">
         {steps.map((step, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.15 }}
-            className="flex gap-3 items-start"
+            viewport={{ once: true }}
+            whileHover={{ scale: 1.02 }}
+            className="relative"
           >
-            <FontAwesomeIcon
-              icon={stepIcons[i % stepIcons.length]}
-              className="mt-1 text-[#819744]"
-            />
-            <p>{step}</p>
+            {/* CARD */}
+            <div className="
+              bg-white/40 backdrop-blur-md 
+              border border-white/30 
+              rounded-2xl 
+              px-6 py-5 
+              shadow-[0_10px_25px_rgba(0,0,0,0.06)]
+              hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)]
+              transition
+            ">
+              <p className="text-[#8b5e3c] text-[14px] md:text-[16px] leading-relaxed pl-10">
+                {step}
+              </p>
+            </div>
+
+            {/* FLOATING ICON */}
+            <div className="
+              absolute 
+              -left-4 top-1/2 -translate-y-1/2 
+              w-12 h-12 
+              flex items-center justify-center 
+              rounded-full 
+              bg-[#819744] text-white 
+              shadow-lg
+            ">
+              <FontAwesomeIcon icon={stepIcons[i % stepIcons.length]} />
+            </div>
           </motion.div>
         ))}
       </div>
@@ -1298,15 +1474,15 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             {/* Description */}
-            <motion.p
+            
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-[14px] text-[#5E2B16] leading-6 mb-6 max-w-[500px]"
+              transition={{ duration: 0.4 }}
+              className="text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[15px] leading-5 md:leading-6 max-w-full md:max-w-[600px] mb-6"
             >
-              {product.description ??
-                "A thoughtfully crafted product by Pureastra."}
-            </motion.p>
+              Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C, natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle, toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula cleanses effectively while keeping your skin balanced, refreshed, and nourished. Say goodbye to dullness and uneven skin, lock in moisture for soft, supple skin, and enjoy balanced care that leaves your face feeling clean, energized, and healthy. Safe for all skin types, including sensitive skin, teens, and beginners, it delivers hydration, natural glow, and gentle daily care you can trust.
+            </motion.div>
 
             {/* Variants / Size */}
             {product.variants.length > 0 && (
@@ -1405,15 +1581,7 @@ export default function ProductClient({ product }: { product: Product }) {
               </div>
             </div>
 
-            {/* Description */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[15px] leading-5 md:leading-6 max-w-full md:max-w-[600px]"
-            >
-              Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C, natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle, toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula cleanses effectively while keeping your skin balanced, refreshed, and nourished. Say goodbye to dullness and uneven skin, lock in moisture for soft, supple skin, and enjoy balanced care that leaves your face feeling clean, energized, and healthy. Safe for all skin types, including sensitive skin, teens, and beginners, it delivers hydration, natural glow, and gentle daily care you can trust.
-            </motion.div>
+           
           </div>
         </div>
 
