@@ -3,8 +3,11 @@ import {
   findCartById,
   upsertCartItem,
   findActiveCartByUserId,
+  findActiveCartBySessionId,
   updateCartItemQuantityForUser,
+  updateCartItemQuantityForSession,
   removeCartItemForUser,
+  removeCartItemForSession,
   clearCartItems,
   mergeGuestCart,
 } from "./cart.repository";
@@ -41,14 +44,22 @@ export const addItemToCart = async (userId: string | undefined, sessionId: strin
 
 export const updateItem = async (
   userId: string | undefined,
+  sessionId: string | undefined,
   itemId: string,
   data: UpdateCartItemInput,
 ) => {
-  if (!userId) {
-    throw new AppError(401, "Unauthorized", "UNAUTHORIZED");
+  if (!userId && !sessionId) {
+    throw new AppError(
+      400,
+      "Session ID is required for guest cart operations",
+      "SESSION_ID_REQUIRED",
+    );
   }
 
-  const updated = await updateCartItemQuantityForUser(BigInt(itemId), BigInt(userId), data);
+  const updated = userId
+    ? await updateCartItemQuantityForUser(BigInt(itemId), BigInt(userId), data)
+    : await updateCartItemQuantityForSession(BigInt(itemId), sessionId!, data);
+
   if (!updated) {
     throw new AppError(404, "Cart item not found", "CART_ITEM_NOT_FOUND");
   }
@@ -56,23 +67,44 @@ export const updateItem = async (
   return updated;
 };
 
-export const removeItem = async (userId: string | undefined, itemId: string) => {
-  if (!userId) {
-    throw new AppError(401, "Unauthorized", "UNAUTHORIZED");
+export const removeItem = async (
+  userId: string | undefined,
+  sessionId: string | undefined,
+  itemId: string,
+) => {
+  if (!userId && !sessionId) {
+    throw new AppError(
+      400,
+      "Session ID is required for guest cart operations",
+      "SESSION_ID_REQUIRED",
+    );
   }
 
-  const removed = await removeCartItemForUser(BigInt(itemId), BigInt(userId));
+  const removed = userId
+    ? await removeCartItemForUser(BigInt(itemId), BigInt(userId))
+    : await removeCartItemForSession(BigInt(itemId), sessionId!);
+
   if (!removed) {
     throw new AppError(404, "Cart item not found", "CART_ITEM_NOT_FOUND");
   }
 };
 
-export const clearCart = async (userId: string | undefined, _sessionId?: string) => {
-  if (!userId) {
-    throw new AppError(401, "Unauthorized", "UNAUTHORIZED");
+export const clearCart = async (
+  userId: string | undefined,
+  sessionId?: string,
+) => {
+  if (!userId && !sessionId) {
+    throw new AppError(
+      400,
+      "Session ID is required for guest cart operations",
+      "SESSION_ID_REQUIRED",
+    );
   }
 
-  const cart = await findActiveCartByUserId(BigInt(userId));
+  const cart = userId
+    ? await findActiveCartByUserId(BigInt(userId))
+    : await findActiveCartBySessionId(sessionId!);
+
   if (!cart) {
     return { count: 0 };
   }

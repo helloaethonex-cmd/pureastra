@@ -72,11 +72,11 @@ export default function BlogPage() {
             {/* CONTENT */}
             <div className="p-5">
 
-              <h3 className="font-semibold text-lg text-[#3e2a1f] mb-2 group-hover:text-[#819744] transition">
+              <h3 className="font-semibold text-lg text-[#819744] mb-2 group-hover:text-[#819744] transition">
                 {blog.title}
               </h3>
 
-              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+              <p className="text-sm text-[#5e2b16] mb-4 leading-relaxed">
                 {blog.desc}
               </p>
 

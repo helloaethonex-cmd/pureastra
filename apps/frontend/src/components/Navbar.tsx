@@ -56,7 +56,7 @@ export default function Navbar() {
   const signOut = useSignOut();
   const { data: isAdmin } = useIsAdmin();
   const { data: categories, isLoading: categoriesLoading } = useCategories();
-  const { data: cart } = useCart(Boolean(user));
+  const { data: cart } = useCart();
   const { data: wishlist } = useWishlist(Boolean(user));
 
   const cartCount = (cart?.items ?? []).reduce(
@@ -102,11 +102,11 @@ export default function Navbar() {
   return (
     <>
       {/* ================= TOP BAR ================= */}
-      <div className="border-b border-gray-200 py-2 px-4 bg-white">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+      <div className="border-b border-gray-200 py-2 px-3 sm:px-4 bg-white overflow-x-hidden">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-2 min-w-0">
 
           {/* LEFT (MOBILE MENU + SEARCH) */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
 
             {/* HAMBURGER (mobile only) */}
             <button
@@ -128,19 +128,19 @@ export default function Navbar() {
           </div>
 
           {/* LOGO */}
-          <Link href="/" className="flex justify-center items-center">
+          <Link href="/" className="flex justify-center items-center min-w-0">
             <Image
               src="/img/pureastra.webp"
               alt="Pureastra Logo"
               width={150}
               height={50}
-              className="object-contain"
+              className="object-contain w-[110px] sm:w-[140px] md:w-[150px] h-auto"
               priority
             />
           </Link>
 
           {/* RIGHT ICONS */}
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
 
             <Link href="/wishlist">
               <button className="relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full border border-[#E6D5C3] text-[#8B543E] hover:bg-[#F5EFE9] transition">
@@ -307,7 +307,7 @@ export default function Navbar() {
         {/* MENU ITEMS */}
         {/* <div className="absolute top-[110px] left-[36px] w-[320px] z-[40] flex flex-col gap-4"> */}
 {/* <div className="absolute top-[110px] left-0 w-full px-6 z-[40] flex flex-col gap-4 items-left"> */}
-<div className="absolute top-[110px] left-0 w-full px-6 z-[40] flex flex-col gap-6 items-start">
+<div className="absolute top-[110px] left-0 w-full px-6 z-[40] flex flex-col gap-6 items-start overflow-x-hidden">
           {[...staticMenuItems, ...(categories?.filter((c) => !c.parentId) || [])].map(
             (item: any, index) => {
               const name = item.name;

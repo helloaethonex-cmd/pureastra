@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -18,6 +18,7 @@ import {
   useUpdateCartItem,
 } from "@/hooks/useCart";
 import { useRouter } from "next/navigation";
+import AuthModal from "@/components/AuthModal";
 
 const toPriceNumber = (value: number | string | null | undefined) => {
   const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
@@ -37,13 +38,23 @@ export default function OrderPage() {
     isLoading: cartLoading,
     isError,
     error,
-  } = useCart(isAuthenticated);
+  } = useCart();
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveCartItem();
   const clearCart = useClearCart();
 
   const [showCheckout, setShowCheckout] = useState(false);
   void showCheckout; // kept for future use - checkout is now a page
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [resumeCheckoutAfterLogin, setResumeCheckoutAfterLogin] =
+    useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && resumeCheckoutAfterLogin) {
+      setResumeCheckoutAfterLogin(false);
+      router.push("/checkout");
+    }
+  }, [isAuthenticated, resumeCheckoutAfterLogin, router]);
 
   const increase = (itemId: string, quantity: number) => {
     updateItem.mutate({ itemId, quantity: quantity + 1 });
@@ -55,6 +66,14 @@ export default function OrderPage() {
       return;
     }
     updateItem.mutate({ itemId, quantity: quantity - 1 });
+  };
+
+  const handleRemove = (itemId: string) => {
+    removeItem.mutate(itemId);
+  };
+
+  const handleClearCart = () => {
+    clearCart.mutate();
   };
 
   const items = cart?.items ?? [];
@@ -81,21 +100,9 @@ export default function OrderPage() {
 
           <div className="mb-6 border-t border-[#D6C9B6]" />
 
-          {authLoading || (isAuthenticated && cartLoading) ? (
+          {authLoading || cartLoading ? (
             <div className="py-20 text-center text-[#5E2B15]">
               Loading cart...
-            </div>
-          ) : !isAuthenticated ? (
-            <div className="text-center py-20">
-              <h2 className="text-xl text-[#5E2B15] mb-4">
-                Please sign in to view and manage your cart.
-              </h2>
-              <Link
-                href="/"
-                className="inline-flex bg-[#819744] text-white px-6 py-2 rounded-md"
-              >
-                Continue Shopping
-              </Link>
             </div>
           ) : isError ? (
             <div className="text-center py-20 text-red-600">
@@ -181,7 +188,7 @@ export default function OrderPage() {
                             </button>
                           </div>
                           <button
-                            onClick={() => removeItem.mutate(item.id)}
+                            onClick={() => handleRemove(item.id)}
                             disabled={removeItem.isPending}
                             className="ml-4 text-white bg-[#5E2B15] text-sm px-3 py-1 hover:text-red-300 transition"
                           >
@@ -214,7 +221,7 @@ export default function OrderPage() {
               </div>
 
               <button
-                onClick={() => clearCart.mutate()}
+                onClick={handleClearCart}
                 disabled={clearCart.isPending}
                 className="w-full mt-4 border border-[#5E2B15] text-[#5E2B15] py-2 font-medium hover:bg-[#efe2cf] transition"
               >
@@ -225,7 +232,14 @@ export default function OrderPage() {
               <div className="mt-4">
                 <button
                   id="proceed-to-checkout-btn"
-                  onClick={() => router.push("/checkout")}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      setResumeCheckoutAfterLogin(true);
+                      setIsAuthModalOpen(true);
+                      return;
+                    }
+                    router.push("/checkout");
+                  }}
                   className="block w-full bg-[#819744] text-center text-white py-3 font-semibold hover:bg-[#6f873a] transition"
                 >
                   Proceed to Checkout
@@ -251,6 +265,11 @@ export default function OrderPage() {
           animation: fade-in 0.2s ease;
         }
       `}</style>
+
+      <AuthModal
+        open={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </>
   );
 }

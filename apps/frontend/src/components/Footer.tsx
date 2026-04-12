@@ -10,7 +10,7 @@ import { faFacebookF, faInstagram ,  faLinkedinIn } from "@fortawesome/free-bran
 
 export default function Footer() {
   return (
-    <footer className="bg-[#8B543E] text-white px-5 sm:px-8 md:px-10 py-10 font-sans w-full overflow-x-hidden!">
+    <footer className="bg-[#8B543E] text-white px-5 sm:px-8 md:px-10 py-10 font-sans w-full overflow-x-hidden">
 
       <div className="max-w-[1200px] mx-auto">
 
@@ -80,7 +80,7 @@ export default function Footer() {
                 {section.title}
               </h4>
 
-              <ul className="space-y-2 text-sm text-[#f1f1f1]">
+              <ul className="space-y-2 text-sm text-[#f1f1f1] break-words">
                 {section.links.map((item, i) => (
                   <li key={i} className="hover:underline cursor-pointer">
                     {item}

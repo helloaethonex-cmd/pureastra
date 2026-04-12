@@ -71,8 +71,13 @@ export const patchItem = async (req: Request, res: Response) => {
   try {
     const params = cartItemParamsSchema.parse(req.params);
     const data = updateCartItemSchema.parse(req.body);
-    const userId = req.user?.id?.toString();
-    const item = await updateItem(userId, params.itemId.toString(), data);
+    const { userId, sessionId } = resolveContext(req);
+    const item = await updateItem(
+      userId,
+      sessionId,
+      params.itemId.toString(),
+      data,
+    );
     res.status(200).json(item);
   } catch (err) {
     handleError(req, res, err);
@@ -83,8 +88,8 @@ export const patchItem = async (req: Request, res: Response) => {
 export const deleteItem = async (req: Request, res: Response) => {
   try {
     const params = cartItemParamsSchema.parse(req.params);
-    const userId = req.user?.id?.toString();
-    await removeItem(userId, params.itemId.toString());
+    const { userId, sessionId } = resolveContext(req);
+    await removeItem(userId, sessionId, params.itemId.toString());
     res.status(200).json({ message: "Item removed from cart" });
   } catch (err) {
     handleError(req, res, err);

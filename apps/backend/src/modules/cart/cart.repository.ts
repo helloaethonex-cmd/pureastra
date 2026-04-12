@@ -66,6 +66,13 @@ export const findActiveCartByUserId = async (userId: bigint) => {
   });
 };
 
+export const findActiveCartBySessionId = async (sessionId: string) => {
+  return prisma.cart.findFirst({
+    where: { sessionId, status: CART_STATUS.ACTIVE },
+    include: cartFullInclude,
+  });
+};
+
 // ─── Cart Items ───────────────────────────────────────────────────────────────
 
 /** Adds an item to the cart. If the variant already exists, increments quantity. */
@@ -144,12 +151,57 @@ export const updateCartItemQuantityForUser = async (
   });
 };
 
+export const updateCartItemQuantityForSession = async (
+  itemId: bigint,
+  sessionId: string,
+  data: UpdateCartItemInput,
+) => {
+  const existing = await prisma.cartItem.findFirst({
+    where: {
+      id: itemId,
+      cart: {
+        sessionId,
+        status: CART_STATUS.ACTIVE,
+      },
+    },
+  });
+
+  if (!existing) return null;
+
+  return prisma.cartItem.update({
+    where: { id: itemId },
+    data: { quantity: data.quantity },
+    include: {
+      productVariant: {
+        include: { product: { select: { id: true, name: true, slug: true } } },
+      },
+    },
+  });
+};
+
 export const removeCartItemForUser = async (itemId: bigint, userId: bigint) => {
   const deleted = await prisma.cartItem.deleteMany({
     where: {
       id: itemId,
       cart: {
         userId,
+        status: CART_STATUS.ACTIVE,
+      },
+    },
+  });
+
+  return deleted.count > 0;
+};
+
+export const removeCartItemForSession = async (
+  itemId: bigint,
+  sessionId: string,
+) => {
+  const deleted = await prisma.cartItem.deleteMany({
+    where: {
+      id: itemId,
+      cart: {
+        sessionId,
         status: CART_STATUS.ACTIVE,
       },
     },

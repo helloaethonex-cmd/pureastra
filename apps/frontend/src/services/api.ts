@@ -1342,12 +1342,18 @@ export const addCartItem = (body: { productVariantId: string; quantity: number }
 export const updateCartItemQuantity = (itemId: string, quantity: number) =>
   apiFetch<CartItem>(`/cart/items/${itemId}`, {
     method: "PATCH",
+    headers: getGuestCartSessionId()
+      ? { "x-session-id": getGuestCartSessionId() as string }
+      : undefined,
     body: JSON.stringify({ quantity }),
   });
 
 export const removeCartItem = (itemId: string) =>
   apiFetch<{ message: string }>(`/cart/items/${itemId}`, {
     method: "DELETE",
+    headers: getGuestCartSessionId()
+      ? { "x-session-id": getGuestCartSessionId() as string }
+      : undefined,
   });
 
 export const clearCart = () =>

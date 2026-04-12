@@ -1,7 +1,7 @@
 "use client";
 import toast from "react-hot-toast";
 
-import { useState, useEffect, type ChangeEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -59,6 +59,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { getActiveReferralAttribution } from "@/lib/referral";
+import AuthModal from "@/components/AuthModal";
 
 // ─── Section Helper ────────────────────────────────────────────────────────────
 
@@ -921,12 +922,12 @@ function BuyNowPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-end sm:justify-center">
+    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-end sm:justify-center overflow-x-hidden">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full sm:w-[480px] max-h-screen sm:max-h-[90vh] bg-[#FDF8F1] sm:rounded-2xl shadow-2xl overflow-y-auto flex flex-col">
+      <div className="relative z-10 w-full sm:w-[92vw] sm:max-w-[480px] max-h-screen sm:max-h-[90vh] bg-[#FDF8F1] sm:rounded-2xl shadow-2xl overflow-y-auto flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#D6C9B6] shrink-0">
           <h2 className="text-xl font-bold text-[#5E2B15]">
@@ -1084,6 +1085,8 @@ export default function ProductClient({ product }: { product: Product }) {
     product.variants[0]?.id ?? null,
   );
   const [showBuyNow, setShowBuyNow] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [resumeBuyNowAfterLogin, setResumeBuyNowAfterLogin] = useState(false);
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
   const reviewsQuery = useProductReviews(product.id, {
@@ -1181,10 +1184,6 @@ export default function ProductClient({ product }: { product: Product }) {
   const bestSuitedFor = suitableContent?.skinType as string | undefined;
 
   const handleAddToCart = () => {
-    if (!user) {
-      toast.error("Please sign in to add items to your cart.");
-      return;
-    }
     if (!activeVariant?.id) {
       toast.error("Please select a valid variant.");
       return;
@@ -1202,15 +1201,12 @@ export default function ProductClient({ product }: { product: Product }) {
     );
   };
 
-  const handleBuyNow = () => {
-    if (!user) {
-      toast.error("Please sign in to continue.");
-      return;
-    }
+  const continueBuyNow = useCallback(() => {
     if (!activeVariant?.id) {
       toast.error("Please select a valid variant.");
       return;
     }
+
     addCartItem.mutate(
       { productVariantId: activeVariant.id, quantity: qty },
       {
@@ -1222,6 +1218,21 @@ export default function ProductClient({ product }: { product: Product }) {
         },
       },
     );
+  }, [activeVariant?.id, qty, addCartItem, router]);
+
+  useEffect(() => {
+    if (!user || !resumeBuyNowAfterLogin) return;
+    setResumeBuyNowAfterLogin(false);
+    continueBuyNow();
+  }, [user, resumeBuyNowAfterLogin, continueBuyNow]);
+
+  const handleBuyNow = () => {
+    if (!user) {
+      setResumeBuyNowAfterLogin(true);
+      setIsAuthModalOpen(true);
+      return;
+    }
+    continueBuyNow();
   };
 
   const handleSubmitReview = () => {
@@ -1325,7 +1336,7 @@ export default function ProductClient({ product }: { product: Product }) {
 
   return (
     <>
-      <section className="bg-[#FAF3E2]">
+      <section className="bg-[#FAF3E2] overflow-x-hidden w-full max-w-full">
         {/* ── TOP HEADER BANNER ── */}
         <div
           className="relative px-4 sm:px-6 md:px-12 py-6 md:py-10 flex items-center justify-between bg-cover bg-center bg-no-repeat"
@@ -1334,11 +1345,11 @@ export default function ProductClient({ product }: { product: Product }) {
           {/* Overlay */}
           <div className="absolute inset-0 bg-black/30" />
           {/* Content */}
-          <div className="relative z-10 flex items-center justify-between w-full">
-            <h1 className="text-white text-[18px] sm:text-[22px] md:text-[34px] font-semibold md:font-bold font-['Roboto',serif]">
+          <div className="relative z-10 flex items-center justify-between w-full min-w-0 gap-2">
+            <h1 className="text-white text-[18px] sm:text-[22px] md:text-[34px] font-semibold md:font-bold font-['Roboto',serif] leading-tight break-words pr-2 min-w-0">
               {product.categories?.[0]?.category?.name ?? product.name}
             </h1>
-            <div className="w-[70px] h-[70px] sm:w-[60px] sm:h-[60px] md:w-[90px] md:h-[90px] bg-white rounded-full flex items-center justify-center shadow-md">
+            <div className="w-14 h-14 sm:w-[60px] sm:h-[60px] md:w-[90px] md:h-[90px] bg-white rounded-full flex items-center justify-center shadow-md shrink-0">
               <Image
                 src="/img/thumb.png"
                 alt="product"
@@ -1360,7 +1371,7 @@ export default function ProductClient({ product }: { product: Product }) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
               whileHover={{ scale: 1.05 }}
-              className="w-full h-[500px] sm:h-[320px] md:h-[500px] flex items-center justify-center overflow-hidden"
+              className="w-full h-[380px] sm:h-[320px] md:h-[500px] flex items-center justify-center overflow-hidden"
               onTouchStart={(e) => (startX = e.touches[0].clientX)}
               onTouchEnd={(e) => {
                 const endX = e.changedTouches[0].clientX;
@@ -1384,7 +1395,7 @@ export default function ProductClient({ product }: { product: Product }) {
             </motion.div>
 
             {/* Thumbnails */}
-            <div className="flex gap-4 mt-4 overflow-x-auto scroll-smooth pb-2">
+            <div className="flex gap-3 mt-4 overflow-x-auto scroll-smooth pb-2 max-w-full">
               {displayImages.map((img, i) => (
                 <motion.div
                   key={i}
@@ -1393,7 +1404,7 @@ export default function ProductClient({ product }: { product: Product }) {
                   transition={{ delay: i * 0.15 }}
                   whileHover={{ scale: 1.05 }}
                   onClick={() => setActiveImg(i)}
-                  className={`min-w-[90px] h-[90px] sm:min-w-[70px] sm:h-[70px] md:w-[90px] md:h-[90px] rounded-lg overflow-hidden cursor-pointer border ${
+                  className={`min-w-[78px] h-[78px] sm:min-w-[70px] sm:h-[70px] md:w-[90px] md:h-[90px] rounded-lg overflow-hidden cursor-pointer border ${
                     activeImg === i ? "border-2 border-[#819744]" : "opacity-70"
                   }`}
                 >
@@ -1586,18 +1597,18 @@ export default function ProductClient({ product }: { product: Product }) {
         </div>
 
         {/* ── STICKY MOBILE BAR ── */}
-        <div className="fixed bottom-0 left-0 w-full bg-white border-t p-3 flex items-center justify-between md:hidden z-50">
-          <div>
-            <p className="text-[#5E2B16] font-bold">
+        <div className="fixed inset-x-0 bottom-0 w-full max-w-full overflow-x-hidden bg-white border-t px-2 py-2 flex items-center gap-2 md:hidden z-50">
+          <div className="shrink-0 min-w-0 max-w-[34%]">
+            <p className="text-[#5E2B16] font-bold truncate text-sm">
               {activePrice != null ? `₹${activePrice}` : ""}
             </p>
-            <p className="text-[11px] text-[#8B5E3C]">Inclusive of taxes</p>
+            <p className="text-[10px] text-[#8B5E3C] truncate">Inclusive of taxes</p>
           </div>
-          <div className="flex gap-2 flex-1 ml-3">
+          <div className="min-w-0 flex flex-1 gap-2">
             <button
               onClick={handleAddToCart}
               disabled={addCartItem.isPending}
-              className="flex-1 bg-[#E5EAD9] text-[#5E2B16] py-3 rounded-lg flex items-center justify-center gap-2 font-semibold text-[14px] disabled:opacity-70"
+              className="min-w-0 flex-1 bg-[#E5EAD9] text-[#5E2B16] py-2.5 rounded-lg flex items-center justify-center gap-1 font-semibold text-[12px] disabled:opacity-70"
             >
               <FontAwesomeIcon icon={faCartShopping} />
               {addCartItem.isPending ? "Adding..." : "Add to Cart"}
@@ -1605,7 +1616,7 @@ export default function ProductClient({ product }: { product: Product }) {
             <button
               onClick={handleBuyNow}
               disabled={addCartItem.isPending}
-              className="flex-1 bg-[#819744] text-white py-3 rounded-lg flex items-center justify-center gap-2 font-semibold text-[14px] disabled:opacity-70"
+              className="min-w-0 flex-1 bg-[#819744] text-white py-2.5 rounded-lg flex items-center justify-center gap-1 font-semibold text-[12px] disabled:opacity-70"
             >
               <FontAwesomeIcon icon={faBolt} />
               Buy Now
@@ -2214,6 +2225,11 @@ export default function ProductClient({ product }: { product: Product }) {
             />
           );
         })()}
+
+      <AuthModal
+        open={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </>
   );
 }

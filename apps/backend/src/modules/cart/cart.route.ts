@@ -111,7 +111,7 @@ router.get("/", optionalAuth, getCart);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete("/", requireAuth, emptyCart);
+router.delete("/", optionalAuth, emptyCart);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CART ITEM ROUTES
@@ -285,8 +285,8 @@ router.post("/items", optionalAuth, addItem);
  *               error: "Cart item not found"
  *               code: "CART_ITEM_NOT_FOUND"
  */
-router.patch("/items/:itemId", requireAuth, patchItem);
-router.delete("/items/:itemId", requireAuth, deleteItem);
+router.patch("/items/:itemId", optionalAuth, patchItem);
+router.delete("/items/:itemId", optionalAuth, deleteItem);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MERGE ROUTE
