@@ -24,6 +24,8 @@ const toPriceNumber = (value: number | string | null | undefined) => {
   return Number.isFinite(parsed) ? Number(parsed) : 0;
 };
 
+const SHIPPING_CHARGE = 49;
+
 // ── Main cart page ─────────────────────────────────────────────────────────────
 export default function OrderPage() {
   const router = useRouter();
@@ -63,6 +65,7 @@ export default function OrderPage() {
     );
     return acc + unitPrice * item.quantity;
   }, 0);
+  const estimatedTotal = subtotal + SHIPPING_CHARGE;
 
   return (
     <>
@@ -199,14 +202,14 @@ export default function OrderPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Delivery cost</span>
-                  <span className="text-[#819744] font-medium">FREE</span>
+                  <span className="text-[#5E2B15] font-medium">₹{SHIPPING_CHARGE.toFixed(2)}</span>
                 </div>
                 <p className="text-xs text-[#9a7a65]">
                   Final prices, taxes & discounts will be confirmed at checkout.
                 </p>
                 <div className="flex justify-between font-semibold text-lg border-t border-[#D6C9B6] pt-2">
                   <span>Estimated Total</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>₹{estimatedTotal.toFixed(2)}</span>
                 </div>
               </div>
 

@@ -109,6 +109,7 @@ export const envSchema = z
     SELLER_ADDRESS: z.string().min(1).default("India"),
     SELLER_GSTIN: z.string().min(1).optional(),
     SELLER_STATE: z.string().min(1).default("MAHARASHTRA"),
+    FLAT_SHIPPING_CHARGE_INCLUSIVE: z.coerce.number().min(0).default(49),
     SHIPPING_GST_RATE: z.coerce.number().min(0).max(100).default(18),
 
     // R2 (Cloudflare) object storage

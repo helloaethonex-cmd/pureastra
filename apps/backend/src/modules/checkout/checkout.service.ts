@@ -70,7 +70,9 @@ return encoded
 `;
 
 const ZERO_DECIMAL = new Prisma.Decimal(0);
-const SHIPPING_AMOUNT_INCLUSIVE = new Prisma.Decimal(0);
+const SHIPPING_AMOUNT_INCLUSIVE = new Prisma.Decimal(
+  env.FLAT_SHIPPING_CHARGE_INCLUSIVE,
+);
 const DISCOUNT_AMOUNT_INCLUSIVE = new Prisma.Decimal(0);
 
 type PreparedLineItem = {
