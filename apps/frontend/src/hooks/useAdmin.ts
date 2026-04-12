@@ -2,8 +2,10 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  createAdminInfluencer,
   checkAdminAccess,
   createCategory,
+  downloadAdminGstReportCsv,
   updateCategory,
   deleteCategory,
   createProduct,
@@ -12,7 +14,18 @@ import {
   addProductImage,
   deleteProductImage,
   uploadImageToR2,
+  getAdminOverviewReport,
+  getAdminGstReportSummary,
+  getAdminGstReportDetailed,
+  getAdminInfluencerAnalytics,
+  listAdminInfluencers,
   listAdminOrders,
+  listAdminInfluencerPayouts,
+  recordAdminInfluencerPayout,
+  updateAdminInfluencerCommission,
+  updateAdminInfluencerDashboardAccess,
+  updateAdminInfluencerPayoutStatus,
+  updateAdminInfluencerStatus,
   updateAdminOrderStatus,
 } from "@/services/api";
 
@@ -192,6 +205,179 @@ export function useUpdateAdminOrderStatus() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminOrders"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+}
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+
+export function useAdminOverviewReport(params?: { from?: string; to?: string }) {
+  return useQuery({
+    queryKey: ["adminReports", "overview", params],
+    queryFn: () => getAdminOverviewReport(params),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdminGstSummary(params: { from: string; to: string; sort?: "issuedAt:asc" | "issuedAt:desc" }) {
+  return useQuery({
+    queryKey: ["adminReports", "gst", "summary", params],
+    queryFn: () => getAdminGstReportSummary(params),
+    enabled: Boolean(params.from && params.to),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdminGstDetailed(params: {
+  from: string;
+  to: string;
+  page?: number;
+  limit?: number;
+  sort?: "issuedAt:asc" | "issuedAt:desc";
+}) {
+  return useQuery({
+    queryKey: ["adminReports", "gst", "detailed", params],
+    queryFn: () => getAdminGstReportDetailed(params),
+    enabled: Boolean(params.from && params.to),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useDownloadAdminGstCsv() {
+  return useMutation({
+    mutationFn: (params: {
+      from: string;
+      to: string;
+      page?: number;
+      limit?: number;
+      sort?: "issuedAt:asc" | "issuedAt:desc";
+      exportAll?: boolean;
+    }) => downloadAdminGstReportCsv(params),
+  });
+}
+
+// ─── Influencers ─────────────────────────────────────────────────────────────
+
+export function useAdminInfluencerAnalytics(params?: {
+  topLimit?: number;
+  startDate?: string;
+  endDate?: string;
+}) {
+  return useQuery({
+    queryKey: ["adminInfluencers", "analytics", params],
+    queryFn: () => getAdminInfluencerAnalytics(params),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdminInfluencers(params?: {
+  page?: number;
+  limit?: number;
+  status?: "ACTIVE" | "PAUSED" | "BANNED";
+  sortOrder?: "asc" | "desc";
+}) {
+  return useQuery({
+    queryKey: ["adminInfluencers", "list", params],
+    queryFn: () => listAdminInfluencers(params),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useCreateAdminInfluencer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: {
+      name: string;
+      email: string;
+      referralCode: string;
+      commissionRate: number;
+    }) => createAdminInfluencer(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "analytics"] });
+    },
+  });
+}
+
+export function useUpdateAdminInfluencerStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ influencerId, status }: { influencerId: string; status: "ACTIVE" | "PAUSED" | "BANNED" }) =>
+      updateAdminInfluencerStatus(influencerId, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "analytics"] });
+    },
+  });
+}
+
+export function useUpdateAdminInfluencerCommission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ influencerId, commissionRate }: { influencerId: string; commissionRate: number }) =>
+      updateAdminInfluencerCommission(influencerId, { commissionRate }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "analytics"] });
+    },
+  });
+}
+
+export function useUpdateAdminInfluencerDashboardAccess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ influencerId, canViewDashboard }: { influencerId: string; canViewDashboard: boolean }) =>
+      updateAdminInfluencerDashboardAccess(influencerId, { canViewDashboard }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
+    },
+  });
+}
+
+export function useAdminInfluencerPayouts(
+  influencerId: string | null,
+  params?: { page?: number; limit?: number },
+) {
+  return useQuery({
+    queryKey: ["adminInfluencers", "payouts", influencerId, params],
+    queryFn: () => listAdminInfluencerPayouts(influencerId!, params),
+    enabled: Boolean(influencerId),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useRecordAdminInfluencerPayout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ influencerId, amount, referenceNote }: { influencerId: string; amount: number; referenceNote?: string }) =>
+      recordAdminInfluencerPayout(influencerId, { amount, referenceNote }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({
+        queryKey: ["adminInfluencers", "payouts", variables.influencerId],
+      });
+      qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
+    },
+  });
+}
+
+export function useUpdateAdminInfluencerPayoutStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      influencerId,
+      payoutId,
+      status,
+      referenceNote,
+    }: {
+      influencerId: string;
+      payoutId: string;
+      status: "COMPLETED" | "FAILED";
+      referenceNote?: string;
+    }) => updateAdminInfluencerPayoutStatus(payoutId, { status, referenceNote }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({
+        queryKey: ["adminInfluencers", "payouts", variables.influencerId],
+      });
     },
   });
 }

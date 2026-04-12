@@ -283,7 +283,7 @@ function OrderConfirmationCard({ orderNumber }: { orderNumber: string }) {
           Continue Shopping
         </Link>
         <Link
-          href={`/order-track`}
+          href={`/order-track?order=${encodeURIComponent(order.orderNumber)}`}
           className="flex-1 text-center border-2 border-[#5E2B15] text-[#5E2B15] py-3 rounded-xl font-semibold hover:bg-[#efe2cf] transition"
         >
           Track Order

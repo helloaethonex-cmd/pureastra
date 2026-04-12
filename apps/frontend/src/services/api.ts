@@ -33,6 +33,19 @@ export interface ProductVariant {
   isActive: boolean;
 }
 
+export interface ProductVariantDetail {
+  id: string;
+  variantName?: string | null;
+  sku?: string | null;
+  price?: number | null;
+  costPrice?: number | null;
+  stockQuantity?: number | null;
+  reservedQuantity?: number | null;
+  weight?: number | null;
+  isActive: boolean;
+  images?: ProductImage[];
+}
+
 export interface ProductImage {
   id: string;
   imageUrl: string;
@@ -51,10 +64,15 @@ export type ProductContentSectionType =
   | "CUSTOM";
 
 export interface ProductContentSection {
+  id?: string;
+  productId?: string;
   sectionType: ProductContentSectionType;
   title?: string | null;
   content: unknown;
   position: number;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Product {
@@ -164,6 +182,28 @@ export interface Cart {
   createdAt: string;
   updatedAt: string;
 }
+
+const GUEST_CART_SESSION_KEY = "pureastra_guest_cart_session_id";
+
+const getGuestCartSessionId = (): string | null => {
+  if (typeof window === "undefined") return null;
+
+  const existing = window.localStorage.getItem(GUEST_CART_SESSION_KEY);
+  if (existing) return existing;
+
+  const generated =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  window.localStorage.setItem(GUEST_CART_SESSION_KEY, generated);
+  return generated;
+};
+
+const clearGuestCartSessionId = () => {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(GUEST_CART_SESSION_KEY);
+};
 
 export interface CreatedOrder {
   id: string;
@@ -495,6 +535,133 @@ export interface InfluencerDashboardResponse {
   recentSales: InfluencerDashboardSale[];
 }
 
+export interface AdminReportOverviewResponse {
+  from: string | null;
+  to: string | null;
+  totalRevenue: string;
+  totalGST: string;
+  shippingRevenue: string;
+  discounts: string;
+  influencerCommission: string;
+  profit: string;
+}
+
+export interface AdminGstSummaryResponse {
+  type: "summary";
+  from: string;
+  to: string;
+  totalInvoices: number;
+  totalTaxableValue: string;
+  totalGST: string;
+  totalCGST: string;
+  totalSGST: string;
+  totalIGST: string;
+}
+
+export interface AdminGstDetailedRow {
+  invoiceNumber: string;
+  issuedAt: string;
+  customerState: string;
+  taxableValue: string;
+  gstRate: string;
+  cgst: string;
+  sgst: string;
+  igst: string;
+  totalAmount: string;
+}
+
+export interface AdminGstDetailedResponse {
+  type: "detailed";
+  from: string;
+  to: string;
+  sort: "issuedAt:asc" | "issuedAt:desc";
+  rows: AdminGstDetailedRow[];
+  totals: {
+    taxableValue: string;
+    cgst: string;
+    sgst: string;
+    igst: string;
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    totalRows: number;
+    totalPages: number;
+  };
+}
+
+export type AdminInfluencerStatus = "ACTIVE" | "PAUSED" | "BANNED";
+
+export interface AdminInfluencer {
+  id: string;
+  name: string;
+  email: string;
+  referralCode: string;
+  commissionRate: string;
+  totalEarnings: string;
+  canViewDashboard: boolean;
+  status: AdminInfluencerStatus;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminInfluencerListResponse {
+  data: AdminInfluencer[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface AdminInfluencerAnalyticsResponse {
+  revenue: {
+    totalInfluencedOrderValue: string;
+    totalCommissionIssued: string;
+    totalCommissionPaid: string;
+    totalCommissionPending: string;
+    totalCommissionApproved: string;
+  };
+  influencers: {
+    total: number;
+    active: number;
+    paused: number;
+    banned: number;
+  };
+  dateFilter: {
+    startDate: string | null;
+    endDate: string | null;
+  };
+  topInfluencers: Array<{
+    id: string;
+    name: string;
+    referralCode: string;
+    totalEarnings: string;
+    status: AdminInfluencerStatus;
+    totalOrders: number;
+  }>;
+}
+
+export interface AdminInfluencerPayout {
+  id: string;
+  amount: string;
+  status: "INITIATED" | "COMPLETED" | "FAILED";
+  referenceNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminInfluencerPayoutListResponse {
+  data: AdminInfluencerPayout[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 // ─── Categories ───────────────────────────────────────────────────────────────
 
 export const listCategories = () =>
@@ -596,6 +763,134 @@ export const addProductImage = (
 
 export const deleteProductImage = (productId: string, imageId: string) =>
   apiFetch<void>(`/products/${productId}/images/${imageId}`, {
+    method: "DELETE",
+  });
+
+export const setProductImagePosition = async (
+  productId: string,
+  image: { id: string; imageUrl: string; variantId?: string | null },
+  position: number,
+) => {
+  const created = await addProductImage(productId, {
+    imageUrl: image.imageUrl,
+    variantId: image.variantId ?? undefined,
+    position,
+  });
+
+  await deleteProductImage(productId, image.id);
+  return created;
+};
+
+export const setProductCoverImage = async (
+  productId: string,
+  image: { id: string; imageUrl: string; variantId?: string | null },
+) => setProductImagePosition(productId, image, 0);
+
+export const assignProductCategories = (
+  productId: string,
+  categoryIds: string[],
+) =>
+  apiFetch<Array<{ id: string; productId: string; categoryId: string }>>(
+    `/products/${productId}/categories`,
+    {
+      method: "POST",
+      body: JSON.stringify({ categoryIds }),
+    },
+  );
+
+export const removeProductCategory = (productId: string, categoryId: string) =>
+  apiFetch<{ message: string }>(`/products/${productId}/categories/${categoryId}`, {
+    method: "DELETE",
+  });
+
+export const addProductVariant = (
+  productId: string,
+  body: {
+    variantName?: string;
+    sku?: string;
+    price?: number;
+    costPrice?: number;
+    stockQuantity?: number;
+    reservedQuantity?: number;
+    weight?: number;
+    isActive?: boolean;
+  },
+) =>
+  apiFetch<ProductVariantDetail>(`/products/${productId}/variants`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateProductVariant = (
+  productId: string,
+  variantId: string,
+  body: {
+    variantName?: string;
+    sku?: string;
+    price?: number;
+    costPrice?: number;
+    stockQuantity?: number;
+    reservedQuantity?: number;
+    weight?: number;
+    isActive?: boolean;
+  },
+) =>
+  apiFetch<ProductVariantDetail>(`/products/${productId}/variants/${variantId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const deleteProductVariant = (productId: string, variantId: string) =>
+  apiFetch<{ message: string }>(`/products/${productId}/variants/${variantId}`, {
+    method: "DELETE",
+  });
+
+export const adjustProductVariantStock = (
+  productId: string,
+  variantId: string,
+  body: { quantity: number; reason?: string },
+) =>
+  apiFetch<ProductVariantDetail>(`/products/${productId}/variants/${variantId}/stock`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const listProductContentSectionsAdmin = (productId: string) =>
+  apiFetch<ProductContentSection[]>(`/products/${productId}/content-sections/admin`);
+
+export const createProductContentSection = (
+  productId: string,
+  body: {
+    sectionType: ProductContentSectionType;
+    title?: string;
+    content: unknown;
+    position?: number;
+    isActive?: boolean;
+  },
+) =>
+  apiFetch<ProductContentSection>(`/products/${productId}/content-sections`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateProductContentSection = (
+  productId: string,
+  sectionId: string,
+  body: {
+    sectionType?: ProductContentSectionType;
+    title?: string;
+    content?: unknown;
+    position?: number;
+    isActive?: boolean;
+  },
+) =>
+  apiFetch<ProductContentSection>(`/products/${productId}/content-sections/${sectionId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const deleteProductContentSection = (productId: string, sectionId: string) =>
+  apiFetch<{ message: string }>(`/products/${productId}/content-sections/${sectionId}`, {
     method: "DELETE",
   });
 
@@ -744,6 +1039,20 @@ export const getOrderDetail = (orderNumber: string) =>
 export const getOrderInvoice = (orderNumber: string) =>
   apiFetch<OrderInvoiceResponse>(`/orders/${orderNumber}/invoice`);
 
+export const getAdminOrderInvoice = (orderNumber: string) =>
+  apiFetch<OrderInvoiceResponse>(`/admin/orders/${orderNumber}/invoice`);
+
+export const regenerateAdminInvoicePdf = (
+  orderNumber: string,
+  force = false,
+) =>
+  apiFetch<{ message: string; invoiceNumber: string; force: boolean }>(
+    `/admin/orders/${orderNumber}/invoice/regenerate-pdf${force ? "?force=true" : ""}`,
+    {
+      method: "POST",
+    },
+  );
+
 // Alias for explicit full-detail fetching
 export const getFullOrderDetail = getOrderDetail;
 
@@ -823,13 +1132,210 @@ export const updateAdminOrderStatus = (
     body: JSON.stringify(body),
   });
 
+// ─── Admin Reports ──────────────────────────────────────────────────────────
+
+export const getAdminOverviewReport = (params?: {
+  from?: string;
+  to?: string;
+}) => {
+  const q = new URLSearchParams();
+  if (params?.from) q.set("from", params.from);
+  if (params?.to) q.set("to", params.to);
+  const suffix = q.toString();
+  return apiFetch<AdminReportOverviewResponse>(
+    `/admin/reports/overview${suffix ? `?${suffix}` : ""}`,
+  );
+};
+
+export const getAdminGstReportSummary = (params: {
+  from: string;
+  to: string;
+  sort?: "issuedAt:asc" | "issuedAt:desc";
+}) => {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  q.set("type", "summary");
+  if (params.sort) q.set("sort", params.sort);
+  return apiFetch<AdminGstSummaryResponse>(`/admin/reports/gst?${q.toString()}`);
+};
+
+export const getAdminGstReportDetailed = (params: {
+  from: string;
+  to: string;
+  page?: number;
+  limit?: number;
+  sort?: "issuedAt:asc" | "issuedAt:desc";
+}) => {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  q.set("type", "detailed");
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.sort) q.set("sort", params.sort);
+  return apiFetch<AdminGstDetailedResponse>(`/admin/reports/gst?${q.toString()}`);
+};
+
+export const downloadAdminGstReportCsv = async (params: {
+  from: string;
+  to: string;
+  page?: number;
+  limit?: number;
+  sort?: "issuedAt:asc" | "issuedAt:desc";
+  exportAll?: boolean;
+}) => {
+  const q = new URLSearchParams();
+  q.set("from", params.from);
+  q.set("to", params.to);
+  q.set("type", "detailed");
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.sort) q.set("sort", params.sort);
+  q.set("exportAll", String(Boolean(params.exportAll)));
+
+  const res = await fetch(`${BASE}/admin/reports/gst/export?${q.toString()}`, {
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? `API error ${res.status}`);
+  }
+
+  return res.blob();
+};
+
+// ─── Admin Influencers ──────────────────────────────────────────────────────
+
+export const listAdminInfluencers = (params?: {
+  page?: number;
+  limit?: number;
+  status?: AdminInfluencerStatus;
+  sortOrder?: "asc" | "desc";
+}) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.status) q.set("status", params.status);
+  if (params?.sortOrder) q.set("sortOrder", params.sortOrder);
+  const suffix = q.toString();
+  return apiFetch<AdminInfluencerListResponse>(
+    `/admin/influencers${suffix ? `?${suffix}` : ""}`,
+  );
+};
+
+export const createAdminInfluencer = (body: {
+  name: string;
+  email: string;
+  referralCode: string;
+  commissionRate: number;
+}) =>
+  apiFetch<AdminInfluencer>("/admin/influencers", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateAdminInfluencerStatus = (
+  influencerId: string,
+  body: { status: AdminInfluencerStatus },
+) =>
+  apiFetch<AdminInfluencer>(`/admin/influencers/${influencerId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const updateAdminInfluencerCommission = (
+  influencerId: string,
+  body: { commissionRate: number },
+) =>
+  apiFetch<AdminInfluencer>(`/admin/influencers/${influencerId}/commission`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const updateAdminInfluencerDashboardAccess = (
+  influencerId: string,
+  body: { canViewDashboard: boolean },
+) =>
+  apiFetch<AdminInfluencer>(`/admin/influencers/${influencerId}/dashboard-access`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const getAdminInfluencerAnalytics = (params?: {
+  topLimit?: number;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const q = new URLSearchParams();
+  if (typeof params?.topLimit === "number") q.set("topLimit", String(params.topLimit));
+  if (params?.startDate) q.set("startDate", params.startDate);
+  if (params?.endDate) q.set("endDate", params.endDate);
+  const suffix = q.toString();
+  return apiFetch<AdminInfluencerAnalyticsResponse>(
+    `/admin/influencers/analytics${suffix ? `?${suffix}` : ""}`,
+  );
+};
+
+export const listAdminInfluencerPayouts = (
+  influencerId: string,
+  params?: { page?: number; limit?: number },
+) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  const suffix = q.toString();
+  return apiFetch<AdminInfluencerPayoutListResponse>(
+    `/admin/influencers/${influencerId}/payouts${suffix ? `?${suffix}` : ""}`,
+  );
+};
+
+export const recordAdminInfluencerPayout = (
+  influencerId: string,
+  body: { amount: number; referenceNote?: string },
+) =>
+  apiFetch<{
+    id: string;
+    influencerId: string;
+    amount: string;
+    status: string;
+    referenceNote: string | null;
+    createdAt: string;
+  }>(`/admin/influencers/${influencerId}/payouts`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const updateAdminInfluencerPayoutStatus = (
+  payoutId: string,
+  body: { status: "COMPLETED" | "FAILED"; referenceNote?: string },
+) =>
+  apiFetch<{
+    id: string;
+    status: string;
+    referenceNote: string | null;
+    updatedAt: string;
+  }>(`/admin/influencers/payouts/${payoutId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 
 export const getCart = () => apiFetch<Cart>("/cart");
 
+export const getCartWithGuestSession = async () => {
+  const sessionId = getGuestCartSessionId();
+  return apiFetch<Cart>(`/cart${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ""}`);
+};
+
 export const addCartItem = (body: { productVariantId: string; quantity: number }) =>
   apiFetch<CartItem>("/cart/items", {
     method: "POST",
+    headers: getGuestCartSessionId()
+      ? { "x-session-id": getGuestCartSessionId() as string }
+      : undefined,
     body: JSON.stringify(body),
   });
 
@@ -847,7 +1353,23 @@ export const removeCartItem = (itemId: string) =>
 export const clearCart = () =>
   apiFetch<{ message: string }>("/cart", {
     method: "DELETE",
+    headers: getGuestCartSessionId()
+      ? { "x-session-id": getGuestCartSessionId() as string }
+      : undefined,
   });
+
+export const mergeGuestCart = async () => {
+  const sessionId = getGuestCartSessionId();
+  if (!sessionId) return null;
+
+  const merged = await apiFetch<Cart>("/cart/merge", {
+    method: "POST",
+    body: JSON.stringify({ sessionId }),
+  });
+
+  clearGuestCartSessionId();
+  return merged;
+};
 
 // ─── Wishlist ────────────────────────────────────────────────────────────────
 

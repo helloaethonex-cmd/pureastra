@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useIsAdmin,
   useCreateProduct,
@@ -15,17 +16,36 @@ import { useCategories } from "@/hooks/useProducts";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
+  faArrowDown,
+  faArrowUp,
   faBoxOpen,
   faEdit,
   faTrash,
   faPlus,
   faSave,
+  faStar,
   faTimes,
   faImage,
   faUpload,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
-import type { Product } from "@/services/api";
+import {
+  addProductVariant,
+  adjustProductVariantStock,
+  assignProductCategories,
+  createProductContentSection,
+  deleteProductContentSection,
+  deleteProductVariant,
+  listProductContentSectionsAdmin,
+  removeProductCategory,
+  setProductCoverImage,
+  setProductImagePosition,
+  type Product,
+  type ProductContentSection,
+  type ProductVariant,
+  updateProductContentSection,
+  updateProductVariant,
+} from "@/services/api";
 import Image from "next/image";
 
 function slugify(str: string) {
@@ -44,6 +64,7 @@ type Variant = {
 
 export default function ProductsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const { data: productsData, isLoading: productsLoading } = useProducts({ limit: 100 });
   const { data: categories } = useCategories();
@@ -70,8 +91,16 @@ export default function ProductsPage() {
   ]);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [contentSectionsByProduct, setContentSectionsByProduct] = useState<
+    Record<string, ProductContentSection[]>
+  >({});
+  const [loadingContentFor, setLoadingContentFor] = useState<string | null>(null);
 
   const addImageMutation = useAddProductImage(uploadingImageFor || "");
+
+  const refreshProducts = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["products"] });
+  };
 
   if (adminLoading) {
     return (
@@ -218,7 +247,17 @@ export default function ProductsPage() {
         return;
       }
 
-      await addImageMutation.mutateAsync({ file: imageFile });
+      const product = products.find((p) => p.id === productId);
+      const maxPosition = Math.max(
+        -1,
+        ...(product?.images?.map((img) => Number(img.position ?? 0)) ?? []),
+      );
+      const nextPosition = maxPosition + 1;
+
+      await addImageMutation.mutateAsync({
+        file: imageFile,
+        position: nextPosition,
+      });
       setSuccess("Image uploaded successfully!");
       setUploadingImageFor(null);
       setImageFile(null);
@@ -237,6 +276,228 @@ export default function ProductsPage() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       setError(err.message ?? "Failed to delete image");
+    }
+  };
+
+  const handleSetCoverImage = async (
+    productId: string,
+    image: { id: string; imageUrl: string; variantId?: string | null },
+  ) => {
+    try {
+      const product = products.find((p) => p.id === productId);
+      const currentCover = product?.images?.find((img) => Number(img.position ?? 0) === 0);
+
+      if (currentCover && currentCover.id !== image.id) {
+        await setProductImagePosition(productId, currentCover, 1);
+      }
+
+      await setProductCoverImage(productId, image);
+      await refreshProducts();
+      setSuccess("Cover image updated.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to set cover image");
+    }
+  };
+
+  const handleMoveImage = async (
+    productId: string,
+    image: { id: string; imageUrl: string; variantId?: string | null; position?: number | null },
+    delta: number,
+  ) => {
+    try {
+      const nextPosition = Math.max(0, Number(image.position ?? 0) + delta);
+      await setProductImagePosition(productId, image, nextPosition);
+      await refreshProducts();
+      setSuccess("Image order updated.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to move image");
+    }
+  };
+
+  const handleAssignCategoryToProduct = async (productId: string, categoryId: string) => {
+    if (!categoryId) return;
+    try {
+      await assignProductCategories(productId, [categoryId]);
+      await refreshProducts();
+      setSuccess("Category assigned.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to assign category");
+    }
+  };
+
+  const handleRemoveCategoryFromProduct = async (productId: string, categoryId: string) => {
+    try {
+      await removeProductCategory(productId, categoryId);
+      await refreshProducts();
+      setSuccess("Category removed.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to remove category");
+    }
+  };
+
+  const handleAddVariantToProduct = async (productId: string) => {
+    const variantName = window.prompt("Variant name");
+    if (!variantName) return;
+    const sku = window.prompt("SKU (optional)") || undefined;
+    const priceInput = window.prompt("Price (optional)") || "";
+    const stockInput = window.prompt("Stock quantity (optional)") || "";
+
+    try {
+      await addProductVariant(productId, {
+        variantName,
+        sku,
+        price: priceInput ? Number(priceInput) : undefined,
+        stockQuantity: stockInput ? Number(stockInput) : undefined,
+      });
+      await refreshProducts();
+      setSuccess("Variant added.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to add variant");
+    }
+  };
+
+  const handleEditVariant = async (productId: string, variant: ProductVariant) => {
+    const variantName = window.prompt("Variant name", variant.variantName ?? "") ?? undefined;
+    const sku = window.prompt("SKU", variant.sku ?? "") ?? undefined;
+    const priceInput = window.prompt("Price", String(variant.price ?? "")) ?? "";
+    const stockInput =
+      window.prompt("Stock quantity", String(variant.stockQuantity ?? "")) ?? "";
+    const activeInput = window.prompt("Is active? (yes/no)", variant.isActive ? "yes" : "no") ?? "yes";
+
+    try {
+      await updateProductVariant(productId, variant.id, {
+        variantName,
+        sku,
+        price: priceInput ? Number(priceInput) : undefined,
+        stockQuantity: stockInput ? Number(stockInput) : undefined,
+        isActive: activeInput.toLowerCase() !== "no",
+      });
+      await refreshProducts();
+      setSuccess("Variant updated.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to update variant");
+    }
+  };
+
+  const handleDeleteVariant = async (productId: string, variantId: string) => {
+    if (!confirm("Delete this variant?")) return;
+    try {
+      await deleteProductVariant(productId, variantId);
+      await refreshProducts();
+      setSuccess("Variant deleted.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to delete variant");
+    }
+  };
+
+  const handleAdjustVariantStock = async (productId: string, variantId: string) => {
+    const quantityInput = window.prompt("Stock adjustment quantity (e.g. 10 or -3)");
+    if (!quantityInput) return;
+    const reason = window.prompt("Reason (optional)") || undefined;
+
+    try {
+      await adjustProductVariantStock(productId, variantId, {
+        quantity: Number(quantityInput),
+        reason,
+      });
+      await refreshProducts();
+      setSuccess("Variant stock adjusted.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to adjust stock");
+    }
+  };
+
+  const handleLoadContentSections = async (productId: string) => {
+    try {
+      setLoadingContentFor(productId);
+      const sections = await listProductContentSectionsAdmin(productId);
+      setContentSectionsByProduct((prev) => ({ ...prev, [productId]: sections }));
+    } catch (err: any) {
+      setError(err.message ?? "Failed to load content sections");
+    } finally {
+      setLoadingContentFor(null);
+    }
+  };
+
+  const handleCreateContentSection = async (productId: string) => {
+    const sectionType = window.prompt(
+      "Section type (BENEFITS, FAQ, SUITABLE_FOR, USAGE_INSTRUCTION, BEFORE_AFTER, INGREDIENTS, HIGHLIGHTS, CUSTOM)",
+      "BENEFITS",
+    ) as ProductContentSection["sectionType"] | null;
+    if (!sectionType) return;
+
+    const title = window.prompt("Title (optional)") || undefined;
+    const contentText = window.prompt("Content (JSON or plain text)", "") || "";
+    const positionInput = window.prompt("Position", "0") || "0";
+
+    let parsedContent: unknown = contentText;
+    if (contentText.trim().startsWith("{") || contentText.trim().startsWith("[")) {
+      try {
+        parsedContent = JSON.parse(contentText);
+      } catch {
+        setError("Invalid JSON content");
+        return;
+      }
+    }
+
+    try {
+      await createProductContentSection(productId, {
+        sectionType,
+        title,
+        content: parsedContent,
+        position: Number(positionInput),
+      });
+      await handleLoadContentSections(productId);
+      setSuccess("Content section created.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to create content section");
+    }
+  };
+
+  const handleEditContentSection = async (
+    productId: string,
+    section: ProductContentSection,
+  ) => {
+    const sectionId = section.id;
+    if (!sectionId) return;
+
+    const title = window.prompt("Title", section.title ?? "") ?? section.title ?? undefined;
+    const positionInput =
+      window.prompt("Position", String(section.position ?? 0)) ?? String(section.position ?? 0);
+    const contentInput =
+      window.prompt("Content (JSON or plain text)", JSON.stringify(section.content)) ??
+      JSON.stringify(section.content);
+
+    let parsedContent: unknown = contentInput;
+    try {
+      parsedContent = JSON.parse(contentInput);
+    } catch {
+      // keep plain text
+    }
+
+    try {
+      await updateProductContentSection(productId, sectionId, {
+        title: title || undefined,
+        position: Number(positionInput),
+        content: parsedContent,
+      });
+      await handleLoadContentSections(productId);
+      setSuccess("Content section updated.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to update content section");
+    }
+  };
+
+  const handleDeleteContentSection = async (productId: string, sectionId?: string) => {
+    if (!sectionId) return;
+    if (!confirm("Delete this content section?")) return;
+
+    try {
+      await deleteProductContentSection(productId, sectionId);
+      await handleLoadContentSections(productId);
+      setSuccess("Content section removed.");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to remove content section");
     }
   };
 
@@ -579,18 +840,39 @@ export default function ProductsPage() {
                           >
                             {product.isActive ? "Active" : "Inactive"}
                           </span>
-                          {product.categories && product.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {product.categories.map((pc) => (
-                                <span
-                                  key={pc.category.id}
-                                  className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs"
-                                >
-                                  {pc.category.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-1">
+                            {product.categories?.map((pc) => (
+                              <button
+                                key={pc.category.id}
+                                type="button"
+                                onClick={() =>
+                                  handleRemoveCategoryFromProduct(product.id, pc.category.id)
+                                }
+                                className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs"
+                                title="Remove category"
+                              >
+                                {pc.category.name} x
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="mt-2 max-w-xs">
+                          <select
+                            defaultValue=""
+                            onChange={(e) => {
+                              if (!e.target.value) return;
+                              void handleAssignCategoryToProduct(product.id, e.target.value);
+                              e.currentTarget.value = "";
+                            }}
+                            className="w-full border border-gray-200 rounded px-2 py-1 text-xs bg-white"
+                          >
+                            <option value="">Assign category...</option>
+                            {categories?.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </>
                     )}
@@ -618,37 +900,115 @@ export default function ProductsPage() {
                 </div>
 
                 {/* Variants */}
-                {product.variants && product.variants.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-semibold text-gray-600 mb-1">
-                      Variants:
-                    </p>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-semibold text-gray-600">Variants:</p>
+                    <button
+                      type="button"
+                      onClick={() => handleAddVariantToProduct(product.id)}
+                      className="text-xs text-[#9E6E5B] hover:text-[#7a5644]"
+                    >
+                      + Add variant
+                    </button>
+                  </div>
+                  {product.variants && product.variants.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {product.variants.map((variant) => (
                         <div
                           key={variant.id}
-                          className="bg-gray-50 px-3 py-1.5 rounded text-xs"
+                          className="bg-gray-50 px-3 py-1.5 rounded text-xs border border-gray-200"
                         >
-                          {variant.variantName && (
-                            <span className="font-medium">
-                              {variant.variantName}
-                            </span>
-                          )}
-                          {variant.price && (
-                            <span className="ml-2 text-gray-600">
-                              ₹{variant.price}
-                            </span>
-                          )}
-                          {variant.stockQuantity !== null && (
-                            <span className="ml-2 text-gray-500">
-                              Stock: {variant.stockQuantity}
-                            </span>
-                          )}
+                          <div className="font-medium">{variant.variantName || "Variant"}</div>
+                          <div className="text-gray-600">SKU: {variant.sku || "-"}</div>
+                          <div className="text-gray-600">₹{variant.price ?? "-"}</div>
+                          <div className="text-gray-500">Stock: {variant.stockQuantity ?? "-"}</div>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEditVariant(product.id, variant as ProductVariant)}
+                              className="px-2 py-0.5 rounded bg-blue-100 text-blue-700"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAdjustVariantStock(product.id, variant.id)}
+                              className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700"
+                            >
+                              Stock +/-
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVariant(product.id, variant.id)}
+                              className="px-2 py-0.5 rounded bg-red-100 text-red-700"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">No variants yet</p>
+                  )}
+                </div>
+
+                {/* Content Sections */}
+                <div className="mb-4 border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-gray-600">Content Sections:</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadContentSections(product.id)}
+                        className="text-xs text-[#5B8D7C]"
+                      >
+                        {loadingContentFor === product.id ? "Loading..." : "Load"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCreateContentSection(product.id)}
+                        className="text-xs text-[#9E6E5B]"
+                      >
+                        + Add
+                      </button>
+                    </div>
                   </div>
-                )}
+
+                  {(contentSectionsByProduct[product.id] ?? []).length > 0 ? (
+                    <div className="space-y-2">
+                      {contentSectionsByProduct[product.id].map((section) => (
+                        <div
+                          key={section.id ?? `${section.sectionType}-${section.position}`}
+                          className="text-xs border border-gray-200 rounded px-2 py-1"
+                        >
+                          <div className="font-medium text-[#5E2B16]">
+                            {section.sectionType} (pos {section.position})
+                          </div>
+                          <div className="text-gray-600">{section.title || "No title"}</div>
+                          <div className="mt-1 flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEditContentSection(product.id, section)}
+                              className="px-2 py-0.5 rounded bg-blue-100 text-blue-700"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteContentSection(product.id, section.id)}
+                              className="px-2 py-0.5 rounded bg-red-100 text-red-700"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">No content sections loaded</p>
+                  )}
+                </div>
 
                 {/* Images */}
                 <div>
@@ -695,10 +1055,12 @@ export default function ProductsPage() {
 
                   {product.images && product.images.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {product.images.map((image) => (
+                      {[...product.images]
+                        .sort((a, b) => Number(a.position ?? 0) - Number(b.position ?? 0))
+                        .map((image) => (
                         <div
                           key={image.id}
-                          className="relative group w-24 h-24 rounded border border-gray-200 overflow-hidden"
+                          className="relative group w-28 h-28 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
                         >
                           <Image
                             src={image.imageUrl}
@@ -707,14 +1069,45 @@ export default function ProductsPage() {
                             className="object-cover"
                           />
                           <button
-                            onClick={() =>
-                              handleDeleteImage(product.id, image.id)
-                            }
-                            className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition text-xs"
-                            title="Delete"
+                            type="button"
+                            onClick={() => handleDeleteImage(product.id, image.id)}
+                            className="absolute top-1 right-1 z-10 h-6 w-6 rounded-full bg-red-600/95 text-white text-[11px] shadow-sm"
+                            title="Delete image"
                           >
                             <FontAwesomeIcon icon={faTrash} />
                           </button>
+
+                          <div className="absolute inset-x-1 bottom-1 flex flex-col gap-1">
+                            <span className="text-[10px] bg-black/65 text-white rounded px-1.5 py-0.5 text-center">
+                              pos {image.position ?? 0} {Number(image.position ?? 0) === 0 ? "(cover)" : ""}
+                            </span>
+                            <div className="grid grid-cols-3 gap-1 opacity-100">
+                              <button
+                                type="button"
+                                onClick={() => handleSetCoverImage(product.id, image)}
+                                className="h-6 rounded bg-green-600/95 text-white text-[10px]"
+                                title="Set as cover"
+                              >
+                                <FontAwesomeIcon icon={faStar} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveImage(product.id, image, -1)}
+                                className="h-6 rounded bg-blue-600/95 text-white text-[10px]"
+                                title="Move up"
+                              >
+                                <FontAwesomeIcon icon={faArrowUp} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveImage(product.id, image, 1)}
+                                className="h-6 rounded bg-blue-600/95 text-white text-[10px]"
+                                title="Move down"
+                              >
+                                <FontAwesomeIcon icon={faArrowDown} />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>

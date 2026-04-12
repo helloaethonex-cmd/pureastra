@@ -11,6 +11,8 @@ import {
   faBoxOpen,
   faTruck,
   faLock,
+  faChartLine,
+  faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function AdminPage() {
@@ -68,6 +70,22 @@ export default function AdminPage() {
       bg: "bg-[#E8F0EC]",
       accent: "#5B8D7C",
     },
+    {
+      icon: faChartLine,
+      title: "Reports",
+      desc: "GST and overview financial reports with CSV export",
+      href: "/admin/reports",
+      bg: "bg-[#EAF2F0]",
+      accent: "#4A7466",
+    },
+    {
+      icon: faUsers,
+      title: "Influencers",
+      desc: "Manage influencer accounts, analytics and payouts",
+      href: "/admin/influencers",
+      bg: "bg-[#EEF0F8]",
+      accent: "#6C79A8",
+    },
   ];
 
   return (
@@ -88,7 +106,7 @@ export default function AdminPage() {
       </div>
 
       {/* CARDS */}
-      <div className="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
         {cards.map((card) => (
           <Link
             key={card.href}

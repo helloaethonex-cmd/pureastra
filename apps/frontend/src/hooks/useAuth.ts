@@ -3,12 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
+import { mergeGuestCart } from "@/services/api";
 import { useAuthStore } from "@/store/auth.store";
 
 // ─── Session Query ────────────────────────────────────────────────────────────
 
 export function useSession() {
   const { setSession, clearSession, setLoading } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["session"],
@@ -25,10 +27,19 @@ export function useSession() {
       setLoading(true);
     } else if (query.data?.user && query.data?.session) {
       setSession({ user: query.data.user, session: query.data.session });
+      void mergeGuestCart()
+        .then(async (merged) => {
+          if (merged) {
+            await queryClient.invalidateQueries({ queryKey: ["cart"] });
+          }
+        })
+        .catch(() => {
+          // Ignore merge failures; cart still works via authenticated APIs.
+        });
     } else {
       clearSession();
     }
-  }, [query.data, query.isLoading, setSession, clearSession, setLoading]);
+  }, [query.data, query.isLoading, setSession, clearSession, setLoading, queryClient]);
 
   return query;
 }

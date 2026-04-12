@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addCartItem,
   clearCart,
-  getCart,
+  getCartWithGuestSession,
   removeCartItem,
   updateCartItemQuantity,
 } from "@/services/api";
@@ -12,7 +12,7 @@ import {
 export function useCart(enabled = true) {
   return useQuery({
     queryKey: ["cart"],
-    queryFn: getCart,
+    queryFn: getCartWithGuestSession,
     enabled,
     retry: false,
     staleTime: 1000 * 30,

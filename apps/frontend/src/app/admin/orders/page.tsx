@@ -6,6 +6,11 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faBoxOpen } from "@fortawesome/free-solid-svg-icons";
 import { useAdminOrders, useIsAdmin, useUpdateAdminOrderStatus } from "@/hooks/useAdmin";
+import {
+  getAdminOrderInvoice,
+  regenerateAdminInvoicePdf,
+  type OrderInvoiceResponse,
+} from "@/services/api";
 
 const ORDER_STATUS_LABEL: Record<number, string> = {
   0: "PLACED",
@@ -28,6 +33,11 @@ export default function AdminOrdersPage() {
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState<OrderInvoiceResponse | null>(null);
+  const [invoiceOrderNumber, setInvoiceOrderNumber] = useState<string | null>(null);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [regeneratingOrder, setRegeneratingOrder] = useState<string | null>(null);
 
   const { data, isLoading } = useAdminOrders({
     page,
@@ -57,6 +67,36 @@ export default function AdminOrdersPage() {
       newStatus: nextStatus,
       note: "Status updated from admin panel",
     });
+  };
+
+  const handleViewInvoice = async (orderNumber: string) => {
+    setInvoiceError(null);
+    setInvoiceLoading(true);
+    setInvoiceOrderNumber(orderNumber);
+
+    try {
+      const invoice = await getAdminOrderInvoice(orderNumber);
+      setSelectedInvoice(invoice);
+    } catch (err: any) {
+      setSelectedInvoice(null);
+      setInvoiceError(err.message ?? "Failed to load invoice");
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
+  const handleRegenerateInvoicePdf = async (orderNumber: string, force = false) => {
+    setInvoiceError(null);
+    setRegeneratingOrder(orderNumber);
+
+    try {
+      await regenerateAdminInvoicePdf(orderNumber, force);
+      await handleViewInvoice(orderNumber);
+    } catch (err: any) {
+      setInvoiceError(err.message ?? "Failed to regenerate PDF");
+    } finally {
+      setRegeneratingOrder(null);
+    }
   };
 
   return (
@@ -118,13 +158,28 @@ export default function AdminOrdersPage() {
                     <td className="px-4 py-3">₹{order.totalPaid}</td>
                     <td className="px-4 py-3">{new Date(order.createdAt).toLocaleString()}</td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleAdvance(order.orderNumber, order.orderStatus)}
-                        disabled={updateStatus.isPending || order.orderStatus >= 4 || order.orderStatus === 5}
-                        className="px-3 py-1 rounded bg-[#819744] text-white disabled:opacity-50"
-                      >
-                        Advance
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleAdvance(order.orderNumber, order.orderStatus)}
+                          disabled={updateStatus.isPending || order.orderStatus >= 4 || order.orderStatus === 5}
+                          className="px-3 py-1 rounded bg-[#819744] text-white disabled:opacity-50"
+                        >
+                          Advance
+                        </button>
+                        <button
+                          onClick={() => handleViewInvoice(order.orderNumber)}
+                          className="px-3 py-1 rounded bg-[#5B8D7C] text-white"
+                        >
+                          Invoice
+                        </button>
+                        <button
+                          onClick={() => handleRegenerateInvoicePdf(order.orderNumber)}
+                          disabled={regeneratingOrder === order.orderNumber}
+                          className="px-3 py-1 rounded bg-[#9E6E5B] text-white disabled:opacity-50"
+                        >
+                          {regeneratingOrder === order.orderNumber ? "Regenerating..." : "Regen PDF"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -156,6 +211,65 @@ export default function AdminOrdersPage() {
             </div>
           </div>
         ) : null}
+
+        {(invoiceOrderNumber || invoiceError || selectedInvoice) && (
+          <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-[#5E2B16]">
+                Invoice: {invoiceOrderNumber ?? "-"}
+              </h2>
+              {invoiceOrderNumber ? (
+                <button
+                  onClick={() => handleRegenerateInvoicePdf(invoiceOrderNumber, true)}
+                  disabled={regeneratingOrder === invoiceOrderNumber}
+                  className="px-3 py-1 rounded bg-[#6C79A8] text-white disabled:opacity-50"
+                >
+                  Force Regenerate
+                </button>
+              ) : null}
+            </div>
+
+            {invoiceLoading ? <p className="text-sm">Loading invoice...</p> : null}
+            {invoiceError ? <p className="text-sm text-red-600">{invoiceError}</p> : null}
+
+            {selectedInvoice ? (
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-[#6f665b]">Invoice Number</p>
+                  <p className="font-medium text-[#5E2B16]">{selectedInvoice.invoiceNumber}</p>
+                </div>
+                <div>
+                  <p className="text-[#6f665b]">Issued At</p>
+                  <p className="font-medium text-[#5E2B16]">
+                    {new Date(selectedInvoice.issuedAt).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#6f665b]">Total</p>
+                  <p className="font-medium text-[#5E2B16]">₹{selectedInvoice.totalAmount}</p>
+                </div>
+                <div>
+                  <p className="text-[#6f665b]">PDF Status</p>
+                  <p className="font-medium text-[#5E2B16]">{selectedInvoice.pdfStatus}</p>
+                </div>
+                <div className="md:col-span-2">
+                  {selectedInvoice.pdfUrl ? (
+                    <a
+                      href={selectedInvoice.pdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex px-3 py-1.5 rounded bg-[#819744] text-white"
+                    >
+                      Open PDF
+                    </a>
+                  ) : (
+                    <p className="text-[#6f665b]">No PDF URL yet. Use regenerate action.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
     </section>
   );
