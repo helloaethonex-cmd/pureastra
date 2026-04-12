@@ -3,22 +3,11 @@ import ejs from "ejs";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../lib/errors/app-error";
 import { env } from "../../config/env";
+import { toStateCode } from "../../utils/state";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Valid order statuses for shipping label generation.
- * PLACED = 0, CONFIRMED = 1, PACKED = 2
- */
 const VALID_LABEL_STATUSES = new Set([0, 1, 2]);
-
 const PAYMENT_STATUS_PAID = 1;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// INTERNAL TYPES
-// ─────────────────────────────────────────────────────────────────────────────
+const TEMPLATE_PATH = path.join(__dirname, "templates", "shipping-label.ejs");
 
 type OrderForLabel = {
   id: bigint;
@@ -34,17 +23,134 @@ type OrderForLabel = {
   totalPaid: { toString(): string };
   paymentStatus: number;
   orderStatus: number;
-  _count: { items: number };
+  placedAt: Date | null;
+  createdAt: Date;
+  items: Array<{
+    productName: string;
+    variantName: string | null;
+    sku: string | null;
+    quantity: number;
+  }>;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
+type ShippingLabelContext = {
+  seller: {
+    name: string;
+    address: string;
+    state: string;
+    stateCode: string;
+  };
+  receiver: {
+    name: string;
+    addressLines: string[];
+    city: string;
+    state: string;
+    stateCode: string;
+    pincode: string;
+    country: string;
+    phone: string;
+  };
+  order: {
+    id: string;
+    barcodeValue: string;
+    barcodeSvg: string;
+    date: string;
+    paymentType: "PREPAID" | "COD";
+    codAmount: string | null;
+    itemCount: number;
+    totalQuantity: number;
+  };
+  items: Array<{
+    productName: string;
+    variantName: string | null;
+    sku: string | null;
+    quantity: number;
+  }>;
+  remainingItemCount: number;
+  printedAt: string;
+};
 
-/**
- * Fetch a single order and validate it's eligible for a shipping label.
- * Uses snapshot fields — never live user data.
- */
+const CODE_128_PATTERNS = [
+  "212222", "222122", "222221", "121223", "121322", "131222", "122213",
+  "122312", "132212", "221213", "221312", "231212", "112232", "122132",
+  "122231", "113222", "123122", "123221", "223211", "221132", "221231",
+  "213212", "223112", "312131", "311222", "321122", "321221", "312212",
+  "322112", "322211", "212123", "212321", "232121", "111323", "131123",
+  "131321", "112313", "132113", "132311", "211313", "231113", "231311",
+  "112133", "112331", "132131", "113123", "113321", "133121", "313121",
+  "211331", "231131", "213113", "213311", "213131", "311123", "311321",
+  "331121", "312113", "312311", "332111", "314111", "221411", "431111",
+  "111224", "111422", "121124", "121421", "141122", "141221", "112214",
+  "112412", "122114", "122411", "142112", "142211", "241211", "221114",
+  "413111", "241112", "134111", "111242", "121142", "121241", "114212",
+  "124112", "124211", "411212", "421112", "421211", "212141", "214121",
+  "412121", "111143", "111341", "131141", "114113", "114311", "411113",
+  "411311", "113141", "114131", "311141", "411131", "211412", "211214",
+  "211232", "2331112",
+];
+
+const formatDate = (date: Date) =>
+  new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kolkata",
+  }).format(date);
+
+const normalizeUpper = (value: string) =>
+  value.trim().replace(/\s+/g, " ").toUpperCase();
+
+const money = (value: { toString(): string }) => {
+  const numeric = Number(value.toString());
+  if (Number.isFinite(numeric)) return numeric.toFixed(2);
+  return value.toString();
+};
+
+const toCode128BValue = (char: string) => {
+  const codePoint = char.charCodeAt(0);
+  if (codePoint < 32 || codePoint > 127) return 31; // fallback to "?"
+  return codePoint - 32;
+};
+
+function buildCode128Svg(rawValue: string): string {
+  const value = rawValue
+    .trim()
+    .toUpperCase()
+    .replace(/[^\x20-\x7F]/g, "?");
+  if (!value) {
+    throw new AppError(422, "Order barcode value is empty", "EMPTY_BARCODE_VALUE");
+  }
+  const dataValues = [...value].map(toCode128BValue);
+  const checksum =
+    (104 + dataValues.reduce((sum, code, index) => sum + code * (index + 1), 0)) %
+    103;
+  const codes = [104, ...dataValues, checksum, 106];
+  const quietModules = 10;
+  const moduleHeight = 92;
+  const barElements: string[] = [];
+  let x = quietModules;
+
+  for (const code of codes) {
+    const pattern = CODE_128_PATTERNS[code];
+    for (let i = 0; i < pattern.length; i += 1) {
+      const width = Number(pattern[i]);
+      if (i % 2 === 0) {
+        barElements.push(
+          `<rect x="${x}" y="0" width="${width}" height="${moduleHeight}" />`,
+        );
+      }
+      x += width;
+    }
+  }
+
+  const totalWidth = x + quietModules;
+
+  return `<svg class="barcode-svg" viewBox="0 0 ${totalWidth} ${moduleHeight}" preserveAspectRatio="none" role="img" aria-label="Code 128 barcode ${value}"><rect width="${totalWidth}" height="${moduleHeight}" fill="#fff" />${barElements.join("")}</svg>`;
+}
+
 async function fetchOrderForLabel(orderId: bigint): Promise<OrderForLabel> {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -62,7 +168,17 @@ async function fetchOrderForLabel(orderId: bigint): Promise<OrderForLabel> {
       totalPaid: true,
       paymentStatus: true,
       orderStatus: true,
-      _count: { select: { items: true } },
+      placedAt: true,
+      createdAt: true,
+      items: {
+        select: {
+          productName: true,
+          variantName: true,
+          sku: true,
+          quantity: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -81,57 +197,51 @@ async function fetchOrderForLabel(orderId: bigint): Promise<OrderForLabel> {
   return order;
 }
 
-/**
- * Build the EJS template context for a single order.
- */
-function buildLabelContext(order: OrderForLabel) {
+function buildLabelContext(order: OrderForLabel): ShippingLabelContext {
   const isPrepaid = order.paymentStatus === PAYMENT_STATUS_PAID;
-  const badgeBg = isPrepaid ? "#d4edda" : "#ffffff";
-  const badgeColor = isPrepaid ? "#155724" : "#111111";
-
-  // Build the badge color rule as a plain static <style> block.
-  // This avoids the need for EJS inside style="" attributes (which breaks IDE parsers).
-  const dynamicStyle = `<style>.header .payment-badge{background:${badgeBg};color:${badgeColor};}</style>`;
-
-  // Build barcode bar HTML upfront so the template never needs EJS inside style="".
-  const barWidths = [3,1,2,1,3,1,1,3,2,1,3,1,2,1,1,3,2,1,2,3,1,1,3,2,1,3,1,2,1,3,1,1,2,3,1,2,1,3,1,2];
-  const barcodeHtml = barWidths
-    .map((w) => `<div style="flex:0 0 ${w}mm;background:#111;"></div><div style="flex:0 0 0.5mm;background:#fff;"></div>`)
-    .join("");
+  const items = order.items.map((item) => ({
+    productName: normalizeUpper(item.productName),
+    variantName: item.variantName ? normalizeUpper(item.variantName) : null,
+    sku: item.sku ? normalizeUpper(item.sku) : null,
+    quantity: item.quantity,
+  }));
 
   return {
-    sellerName: env.SELLER_NAME,
-    sellerAddress: env.SELLER_ADDRESS,
-    paymentType: isPrepaid ? "PREPAID" : "COD",
-    dynamicStyle,
-    barcodeHtml,
-    order: {
-      orderNumber: order.orderNumber,
-      shippingName: order.shippingName,
-      shippingPhone: order.shippingPhone,
-      shippingLine1: order.shippingLine1,
-      shippingLine2: order.shippingLine2,
-      shippingCity: order.shippingCity,
-      shippingState: order.shippingState,
-      shippingPostalCode: order.shippingPostalCode,
-      shippingCountry: order.shippingCountry,
-      totalPaid: order.totalPaid.toString(),
-      itemCount: order._count.items,
+    seller: {
+      name: normalizeUpper(env.SELLER_NAME),
+      address: normalizeUpper(env.SELLER_ADDRESS),
+      state: normalizeUpper(env.SELLER_STATE),
+      stateCode: toStateCode(env.SELLER_STATE),
     },
-    printedAt: new Date().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
+    receiver: {
+      name: normalizeUpper(order.shippingName),
+      addressLines: [
+        normalizeUpper(order.shippingLine1),
+        ...(order.shippingLine2 ? [normalizeUpper(order.shippingLine2)] : []),
+      ],
+      city: normalizeUpper(order.shippingCity),
+      state: normalizeUpper(order.shippingState),
+      stateCode: toStateCode(order.shippingState),
+      pincode: normalizeUpper(order.shippingPostalCode),
+      country: normalizeUpper(order.shippingCountry),
+      phone: normalizeUpper(order.shippingPhone),
+    },
+    order: {
+      id: order.orderNumber,
+      barcodeValue: order.orderNumber,
+      barcodeSvg: buildCode128Svg(order.orderNumber),
+      date: formatDate(order.placedAt ?? order.createdAt),
+      paymentType: isPrepaid ? "PREPAID" : "COD",
+      codAmount: isPrepaid ? null : money(order.totalPaid),
+      itemCount: items.length,
+      totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
+    },
+    items: items.slice(0, 4),
+    remainingItemCount: Math.max(items.length - 4, 0),
+    printedAt: formatDate(new Date()),
   };
 }
 
-/**
- * Launch a Puppeteer browser instance using the system Chromium binary.
- * Shared across both single and bulk label generation.
- */
 async function launchBrowser() {
   const puppeteer = await import("puppeteer-core");
   const executablePath = process.env.CHROMIUM_PATH ?? "/usr/bin/chromium";
@@ -148,27 +258,11 @@ async function launchBrowser() {
   });
 }
 
-const TEMPLATE_PATH = path.join(
-  __dirname,
-  "templates",
-  "shipping-label.ejs",
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SINGLE LABEL
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Generate a single A6 shipping label PDF for one order.
- * Returns a Buffer containing the PDF bytes.
- */
-export async function generateSingleShippingLabel(
-  orderId: bigint,
-): Promise<Buffer> {
-  const order = await fetchOrderForLabel(orderId);
-  const context = buildLabelContext(order);
-
-  const html = await ejs.renderFile(TEMPLATE_PATH, context);
+async function renderLabelsPdf(labels: ShippingLabelContext[]): Promise<Buffer> {
+  const html = await ejs.renderFile(TEMPLATE_PATH, {
+    labels,
+    generatedAt: formatDate(new Date()),
+  });
 
   const browser = await launchBrowser();
   try {
@@ -176,9 +270,10 @@ export async function generateSingleShippingLabel(
     await page.setContent(html, { waitUntil: "networkidle0" });
     const pdfBuffer = await page.pdf({
       width: "105mm",
-      height: "148mm",  // A6
+      height: "148mm",
       printBackground: true,
       margin: { top: "0", bottom: "0", left: "0", right: "0" },
+      preferCSSPageSize: true,
     });
     return Buffer.from(pdfBuffer);
   } finally {
@@ -186,15 +281,13 @@ export async function generateSingleShippingLabel(
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BULK LABELS
-// ─────────────────────────────────────────────────────────────────────────────
+export async function generateSingleShippingLabel(
+  orderId: bigint,
+): Promise<Buffer> {
+  const order = await fetchOrderForLabel(orderId);
+  return renderLabelsPdf([buildLabelContext(order)]);
+}
 
-/**
- * Generate a single PDF containing multiple A6 shipping labels, one per page.
- * Skips invalid orders and collects them in a `skipped` list.
- * Returns the PDF buffer and a list of skipped order IDs with reasons.
- */
 export async function generateBulkShippingLabels(orderIds: bigint[]): Promise<{
   buffer: Buffer;
   skipped: { orderId: string; reason: string }[];
@@ -211,23 +304,19 @@ export async function generateBulkShippingLabels(orderIds: bigint[]): Promise<{
   }
 
   const skipped: { orderId: string; reason: string }[] = [];
-  const htmlPages: string[] = [];
+  const labels: ShippingLabelContext[] = [];
 
-  // Fetch each order individually to get precise error per order
   for (const orderId of orderIds) {
     try {
       const order = await fetchOrderForLabel(orderId);
-      const context = buildLabelContext(order);
-      const html = await ejs.renderFile(TEMPLATE_PATH, context);
-      htmlPages.push(html);
+      labels.push(buildLabelContext(order));
     } catch (err) {
-      const reason =
-        err instanceof AppError ? err.message : "Unexpected error";
+      const reason = err instanceof AppError ? err.message : "Unexpected error";
       skipped.push({ orderId: orderId.toString(), reason });
     }
   }
 
-  if (htmlPages.length === 0) {
+  if (labels.length === 0) {
     throw new AppError(
       422,
       "No valid orders to generate labels for",
@@ -235,44 +324,5 @@ export async function generateBulkShippingLabels(orderIds: bigint[]): Promise<{
     );
   }
 
-  // Combine all label HTMLs into a single multi-page document.
-  // Each label gets its own @page rule for A6 size.
-  const combinedHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <style>
-    @page { size: 105mm 148mm; margin: 0; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #fff; }
-    .page-break { page-break-after: always; }
-  </style>
-</head>
-<body>
-  ${htmlPages
-    .map((html, i) => {
-      // Strip the outer html/head/body tags from each label — keep only body content
-      const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      const content = bodyMatch ? bodyMatch[1].trim() : html;
-      const isLast = i === htmlPages.length - 1;
-      return `<div class="${isLast ? "" : "page-break"}">${content}</div>`;
-    })
-    .join("\n")}
-</body>
-</html>`;
-
-  const browser = await launchBrowser();
-  try {
-    const page = await browser.newPage();
-    await page.setContent(combinedHtml, { waitUntil: "networkidle0" });
-    const pdfBuffer = await page.pdf({
-      width: "105mm",
-      height: "148mm",
-      printBackground: true,
-      margin: { top: "0", bottom: "0", left: "0", right: "0" },
-    });
-    return { buffer: Buffer.from(pdfBuffer), skipped };
-  } finally {
-    await browser.close();
-  }
+  return { buffer: await renderLabelsPdf(labels), skipped };
 }

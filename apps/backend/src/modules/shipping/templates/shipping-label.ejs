@@ -2,234 +2,505 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shipping Label</title>
+  <title>Shipping Labels</title>
   <style>
-    /* ── Reset ─────────────────────────────────────────────────────────── */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page {
+      size: 105mm 148mm;
+      margin: 0;
+    }
 
-    /* ── Page: A6 = 105mm x 148mm ─────────────────────────────────────── */
-    html, body {
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
       width: 105mm;
+      min-height: 148mm;
+      background: #fff;
+      color: #000;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 9pt;
-      color: #111;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-size: 7.6pt;
+      line-height: 1.25;
+    }
+
+    .label {
+      width: 105mm;
+      height: 148mm;
+      padding: 3mm;
+      page-break-after: always;
+      page-break-inside: avoid;
+      overflow: hidden;
       background: #fff;
     }
 
-    /* ── Label wrapper ──────────────────────────────────────────────────── */
-    .label {
-      width: 105mm;
-      border: 2px solid #111;
-      padding: 0;
-      page-break-inside: avoid;
+    .label:last-child {
+      page-break-after: auto;
     }
 
-    /* ── Header bar ─────────────────────────────────────────────────────── */
-    .header {
-      background: #111;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 3mm 4mm;
+    .sheet {
+      width: 99mm;
+      height: 142mm;
+      border: 0.45mm solid #000;
+      display: grid;
+      grid-template-rows: 13mm 21mm 44mm 17mm 22mm 25mm;
+      overflow: hidden;
     }
-    .header .brand {
-      font-size: 13pt;
+
+    .top-band {
+      display: grid;
+      grid-template-columns: 1fr 31mm;
+      border-bottom: 0.35mm solid #000;
+    }
+
+    .brand-block {
+      padding: 2mm 2.5mm;
+      overflow: hidden;
+    }
+
+    .brand {
+      font-size: 15pt;
+      line-height: 1;
       font-weight: 900;
-      letter-spacing: 1px;
+      letter-spacing: 0;
       text-transform: uppercase;
-    }
-    .header .payment-badge {
-      font-size: 8pt;
-      font-weight: 800;
-      border: 2px solid #fff;
-      padding: 1mm 3mm;
-      border-radius: 2px;
-      letter-spacing: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    /* ── Section ────────────────────────────────────────────────────────── */
-    .section {
-      padding: 2.5mm 4mm;
-      border-bottom: 1px solid #ccc;
-    }
-    .section:last-child { border-bottom: none; }
-
-    .section-label {
+    .label-type {
+      margin-top: 1.1mm;
       font-size: 6.5pt;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #555;
-      margin-bottom: 1mm;
-    }
-
-    .from-name    { font-size: 9pt; font-weight: 700; }
-    .from-address { font-size: 8pt; color: #333; line-height: 1.4; margin-top: 0.5mm; }
-
-    /* ── Divider ────────────────────────────────────────────────────────── */
-    .divider {
-      height: 5mm;
-      background: #f0f0f0;
-      border-top: 1px solid #bbb;
-      border-bottom: 1px solid #bbb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .divider span {
-      font-size: 6pt;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: #777;
-    }
-
-    /* ── Ship-To ────────────────────────────────────────────────────────── */
-    .to-name {
-      font-size: 13pt;
-      font-weight: 900;
-      line-height: 1.2;
-      text-transform: uppercase;
-    }
-    .to-address {
-      font-size: 9.5pt;
-      font-weight: 600;
-      line-height: 1.5;
-      margin-top: 1.5mm;
-    }
-    .to-phone {
-      font-size: 11pt;
       font-weight: 800;
-      margin-top: 2mm;
-      letter-spacing: 0.5px;
-    }
-
-    /* ── Order info bar ─────────────────────────────────────────────────── */
-    .order-bar {
-      display: flex;
-      align-items: stretch;
-      border-top: 2px solid #111;
-    }
-    .order-cell {
-      flex: 1;
-      padding: 2mm 3mm;
-      border-right: 1px solid #bbb;
-    }
-    .order-cell:last-child { border-right: none; }
-    .order-cell-label {
-      font-size: 6pt;
-      font-weight: 700;
+      letter-spacing: 0;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: #555;
-    }
-    .order-cell-value {
-      font-size: 8pt;
-      font-weight: 800;
-      margin-top: 0.5mm;
-      word-break: break-all;
     }
 
-    /* ── Barcode ────────────────────────────────────────────────────────── */
-    .barcode-section {
-      border-top: 1px solid #ccc;
-      padding: 2mm 4mm;
+    .payment-block {
+      border-left: 0.35mm solid #000;
       display: flex;
       flex-direction: column;
       align-items: center;
-    }
-    .barcode-bars {
-      width: 85mm;
-      height: 10mm;
-      display: flex;
-      align-items: stretch;
-    }
-    .barcode-text {
-      font-size: 7pt;
-      font-family: 'Courier New', monospace;
-      font-weight: 700;
-      margin-top: 1mm;
-      letter-spacing: 2px;
+      justify-content: center;
+      text-align: center;
+      padding: 1.2mm;
     }
 
-    /* ── Footer ─────────────────────────────────────────────────────────── */
+    .payment-mode {
+      width: 100%;
+      border: 0.35mm solid #000;
+      padding: 1.3mm 0.8mm;
+      font-size: 13pt;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .cod-amount {
+      margin-top: 0.9mm;
+      font-size: 8.8pt;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .zone {
+      border-bottom: 0.35mm solid #000;
+      padding: 1.8mm 2.5mm;
+      overflow: hidden;
+    }
+
+    .zone-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1mm;
+      font-size: 6.1pt;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .zone-title span {
+      display: inline-block;
+      border: 0.25mm solid #000;
+      padding: 0.3mm 1mm;
+    }
+
+    .from-grid {
+      display: grid;
+      grid-template-columns: 1fr 27mm;
+      column-gap: 2mm;
+    }
+
+    .from-name,
+    .to-name {
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .from-name {
+      font-size: 8pt;
+      margin-bottom: 0.8mm;
+    }
+
+    .from-address,
+    .from-meta {
+      font-size: 6.7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+
+    .from-meta {
+      border-left: 0.25mm solid #000;
+      padding-left: 2mm;
+    }
+
+    .to-zone {
+      padding-bottom: 1.6mm;
+    }
+
+    .to-name {
+      font-size: 12.8pt;
+      line-height: 1.08;
+      margin-bottom: 1.2mm;
+      overflow-wrap: anywhere;
+    }
+
+    .to-address {
+      font-size: 8.7pt;
+      line-height: 1.23;
+      font-weight: 800;
+      text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+
+    .to-city-row {
+      display: grid;
+      grid-template-columns: 1fr 31mm;
+      column-gap: 2mm;
+      align-items: stretch;
+      margin-top: 1.4mm;
+    }
+
+    .to-city-state {
+      border: 0.3mm solid #000;
+      padding: 1.2mm;
+      font-size: 8.8pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      overflow: hidden;
+    }
+
+    .pincode-box {
+      border: 0.55mm solid #000;
+      text-align: center;
+      padding: 0.9mm 0.5mm;
+    }
+
+    .pincode-label {
+      font-size: 5.6pt;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .pincode-value {
+      margin-top: 0.4mm;
+      font-family: Arial Black, Arial, Helvetica, sans-serif;
+      font-size: 18pt;
+      line-height: 0.95;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .phone-row {
+      margin-top: 1.2mm;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 1.5mm;
+      font-size: 8.2pt;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .phone-row div {
+      border: 0.25mm solid #000;
+      padding: 0.9mm 1.2mm;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .order-zone {
+      padding: 0;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr 0.8fr;
+      min-height: 0;
+    }
+
+    .order-cell {
+      padding: 1.8mm 2mm;
+      border-right: 0.3mm solid #000;
+      overflow: hidden;
+    }
+
+    .order-cell:last-child {
+      border-right: 0;
+    }
+
+    .cell-label {
+      font-size: 5.8pt;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .cell-value {
+      margin-top: 0.8mm;
+      font-size: 8.4pt;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+
+    .product-zone {
+      min-height: 0;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 6.4pt;
+      line-height: 1.12;
+      text-transform: uppercase;
+    }
+
+    .items-table th {
+      border-bottom: 0.25mm solid #000;
+      padding: 0.7mm 0.8mm;
+      text-align: left;
+      font-size: 5.8pt;
+      font-weight: 900;
+    }
+
+    .items-table td {
+      padding: 0.7mm 0.8mm;
+      border-bottom: 0.18mm solid #777;
+      font-weight: 800;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    .items-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .item-name {
+      width: 58%;
+    }
+
+    .item-variant {
+      width: 29%;
+    }
+
+    .item-qty {
+      width: 13%;
+      text-align: center;
+    }
+
+    .more-items {
+      margin-top: 0.8mm;
+      font-size: 6.4pt;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .barcode-zone {
+      border-bottom: 0;
+      padding: 1.8mm 3mm 1.2mm;
+      display: grid;
+      grid-template-rows: 15mm 3.4mm 3.8mm;
+      row-gap: 0.8mm;
+      align-items: center;
+      justify-items: center;
+      overflow: hidden;
+    }
+
+    .barcode-frame {
+      width: 87mm;
+      height: 15mm;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .barcode-svg {
+      display: block;
+      width: 87mm;
+      height: 15mm;
+      shape-rendering: crispEdges;
+    }
+
+    .barcode-text {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 7.3pt;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-align: center;
+      max-width: 88mm;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
     .footer {
-      border-top: 1px dashed #ccc;
-      padding: 1.5mm 4mm;
-      font-size: 6pt;
-      color: #888;
       display: flex;
       justify-content: space-between;
+      gap: 2mm;
+      font-size: 5.6pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      border-top: 0.25mm dashed #000;
+      padding-top: 0.8mm;
+      margin-top: 0.8mm;
     }
   </style>
-
-  <%# Dynamic color rules injected as a separate style block — no EJS inside attribute strings %>
-  <%- dynamicStyle %>
 </head>
 <body>
-  <div class="label">
+  <% labels.forEach((label) => { %>
+    <section class="label">
+      <div class="sheet">
+        <header class="top-band">
+          <div class="brand-block">
+            <div class="brand"><%= label.seller.name %></div>
+            <div class="label-type">Courier Shipping Label · A6 / 4x6</div>
+          </div>
+          <div class="payment-block">
+            <div class="payment-mode"><%= label.order.paymentType %></div>
+            <% if (label.order.codAmount) { %>
+              <div class="cod-amount">COLLECT ₹<%= label.order.codAmount %></div>
+            <% } %>
+          </div>
+        </header>
 
-    <!-- Header: Brand + Payment badge -->
-    <div class="header">
-      <span class="brand"><%= sellerName %></span>
-      <span class="payment-badge"><%= paymentType %></span>
-    </div>
+        <section class="zone">
+          <div class="zone-title">
+            <span>From / Sender</span>
+            <strong>STATE: <%= label.seller.stateCode %></strong>
+          </div>
+          <div class="from-grid">
+            <div>
+              <div class="from-name"><%= label.seller.name %></div>
+              <div class="from-address"><%= label.seller.address %></div>
+            </div>
+            <div class="from-meta">
+              <div><%= label.seller.state %> (<%= label.seller.stateCode %>)</div>
+              <div>LOGISTICS LABEL</div>
+              <div>INVOICE SEPARATE</div>
+            </div>
+          </div>
+        </section>
 
-    <!-- FROM (Seller) -->
-    <div class="section">
-      <div class="section-label">From (Sold By)</div>
-      <div class="from-name"><%= sellerName %></div>
-      <div class="from-address"><%= sellerAddress %></div>
-    </div>
+        <section class="zone to-zone">
+          <div class="zone-title">
+            <span>To / Receiver</span>
+            <strong>STATE: <%= label.receiver.stateCode %></strong>
+          </div>
+          <div class="to-name"><%= label.receiver.name %></div>
+          <div class="to-address">
+            <% label.receiver.addressLines.forEach((line) => { %>
+              <div><%= line %></div>
+            <% }) %>
+          </div>
+          <div class="to-city-row">
+            <div class="to-city-state">
+              <div><%= label.receiver.city %></div>
+              <div><%= label.receiver.state %> (<%= label.receiver.stateCode %>)</div>
+              <div><%= label.receiver.country %></div>
+            </div>
+            <div class="pincode-box">
+              <div class="pincode-label">PINCODE</div>
+              <div class="pincode-value"><%= label.receiver.pincode %></div>
+            </div>
+          </div>
+          <div class="phone-row">
+            <div>Receiver PH: <%= label.receiver.phone %></div>
+            <div>Total Qty: <%= label.order.totalQuantity %></div>
+          </div>
+        </section>
 
-    <!-- Divider -->
-    <div class="divider">
-      <span>&#9660;&nbsp;&nbsp;Ship To&nbsp;&nbsp;&#9660;</span>
-    </div>
+        <section class="zone order-zone">
+          <div class="order-cell">
+            <div class="cell-label">Order ID</div>
+            <div class="cell-value"><%= label.order.id %></div>
+          </div>
+          <div class="order-cell">
+            <div class="cell-label">Order Date</div>
+            <div class="cell-value"><%= label.order.date %></div>
+          </div>
+          <div class="order-cell">
+            <div class="cell-label">Payment</div>
+            <div class="cell-value">
+              <% if (label.order.codAmount) { %>
+                COD ₹<%= label.order.codAmount %>
+              <% } else { %>
+                PREPAID
+              <% } %>
+            </div>
+          </div>
+        </section>
 
-    <!-- TO (Customer) -->
-    <div class="section">
-      <div class="section-label">Deliver To</div>
-      <div class="to-name"><%= order.shippingName %></div>
-      <div class="to-address">
-        <%= order.shippingLine1 %>
-        <%- order.shippingLine2 ? '<br>' + order.shippingLine2 : '' %><br>
-        <%= order.shippingCity %>, <%= order.shippingState %> &ndash; <%= order.shippingPostalCode %><br>
-        <%= order.shippingCountry %>
+        <section class="zone product-zone">
+          <div class="zone-title">
+            <span>Product Info / Packing</span>
+            <strong><%= label.order.itemCount %> LINE(S)</strong>
+          </div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="item-name">Product</th>
+                <th class="item-variant">Variant / SKU</th>
+                <th class="item-qty">Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% label.items.forEach((item) => { %>
+                <tr>
+                  <td class="item-name"><%= item.productName %></td>
+                  <td class="item-variant">
+                    <%= item.variantName || "-" %>
+                    <% if (item.sku) { %>
+                      <br />SKU: <%= item.sku %>
+                    <% } %>
+                  </td>
+                  <td class="item-qty"><%= item.quantity %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+          <% if (label.remainingItemCount > 0) { %>
+            <div class="more-items">+ <%= label.remainingItemCount %> more line(s). Check order packing slip.</div>
+          <% } %>
+        </section>
+
+        <section class="zone barcode-zone">
+          <div class="barcode-frame"><%- label.order.barcodeSvg %></div>
+          <div class="barcode-text">CODE 128 · <%= label.order.barcodeValue %></div>
+          <div class="footer">
+            <span>Printed: <%= label.printedAt %></span>
+            <span>Do not fold through barcode</span>
+          </div>
+        </section>
       </div>
-      <div class="to-phone">&#128222;&nbsp;<%= order.shippingPhone %></div>
-    </div>
-
-    <!-- Order info row -->
-    <div class="order-bar">
-      <div class="order-cell">
-        <div class="order-cell-label">Order ID</div>
-        <div class="order-cell-value"><%= order.orderNumber %></div>
-      </div>
-      <div class="order-cell">
-        <div class="order-cell-label">Items</div>
-        <div class="order-cell-value"><%= order.itemCount %></div>
-      </div>
-      <div class="order-cell">
-        <div class="order-cell-label">Amount</div>
-        <div class="order-cell-value">&#8377;<%= order.totalPaid %></div>
-      </div>
-    </div>
-
-    <!-- Barcode placeholder: pre-rendered HTML passed from service to avoid EJS in style attrs -->
-    <div class="barcode-section">
-      <div class="barcode-bars"><%- barcodeHtml %></div>
-      <div class="barcode-text"><%= order.orderNumber %></div>
-    </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <span>Printed: <%= printedAt %></span>
-      <span>Handle with care &middot; Do not bend</span>
-    </div>
-
-  </div>
+    </section>
+  <% }) %>
 </body>
 </html>
