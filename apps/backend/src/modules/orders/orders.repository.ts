@@ -8,20 +8,46 @@ const orderCreateInclude = {
 } as const;
 
 export const findActiveCartByUserId = (tx: TxClient, userId: bigint) => {
+  // return tx.cart.findFirst({
+  //   where: { userId, status: 0 },
+  //   include: {
+  //     items: {
+  //       include: {
+  //         productVariant: {
+  //           include: {
+  //             product: true,
+  //           },
+  //         },
+  //       },
+  //     },
+  //   },
+  // });
   return tx.cart.findFirst({
-    where: { userId, status: 0 },
-    include: {
-      items: {
-        include: {
-          productVariant: {
-            include: {
-              product: true,
+  where: { userId, status: 0 },
+  include: {
+    items: {
+      include: {
+        productVariant: {
+          select: {
+            id: true,
+            variantName: true,
+            sku: true,
+            price: true,
+            gstRate: true,
+            costPrice: true,
+            stockQuantity: true,
+            stockReserved: true,
+            product: {
+              select: {
+                name: true,
+              },
             },
           },
         },
       },
     },
-  });
+  },
+});
 };
 
 export const findAddressByIdForUser = (
