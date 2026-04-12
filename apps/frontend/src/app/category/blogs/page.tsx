@@ -8,19 +8,19 @@ export default function BlogPage() {
     {
       slug: "vitamin-c-benefits",
       title: "Benefits of Vitamin C for Skin",
-      img: "/img/banner-1.webp",
+      img: "/img/vitamin-c-blog.png",
       desc: "Learn how Vitamin C boosts glow and reduces pigmentation.",
     },
     {
       slug: "daily-skincare-routine",
       title: "Daily Skincare Routine",
-      img: "/img/banner-2.webp",
+      img: "/img/daily-routine-blog.png",
       desc: "Step-by-step routine for healthy skin.",
     },
     {
       slug: "natural-ingredients",
       title: "Natural Ingredients Guide",
-      img: "/img/banner-3.webp",
+      img: "/img/natural-ingredients-blog.png",
       desc: "Explore the power of natural skincare ingredients.",
     },
   ];
