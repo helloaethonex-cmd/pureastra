@@ -50,7 +50,7 @@ export default function AboutPage() {
         {/* IMAGE */}
         <div className="order-1 md:order-2 rounded-2xl overflow-hidden shadow-md">
           <Image
-            src="/img/banner-2.webp"
+            src="/img/about-banner-1.png"
             alt="brand"
             width={500}
             height={400}
