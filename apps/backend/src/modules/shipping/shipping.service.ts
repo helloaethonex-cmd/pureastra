@@ -1,5 +1,6 @@
 import path from "path";
 import ejs from "ejs";
+import bwipjs from "bwip-js";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../lib/errors/app-error";
 import { env } from "../../config/env";
@@ -36,72 +37,82 @@ type OrderForLabel = {
 type ShippingLabelContext = {
   seller: {
     name: string;
-    address: string;
-    state: string;
+    stateName: string;
     stateCode: string;
-  };
-  receiver: {
-    name: string;
-    addressLines: string[];
-    city: string;
-    state: string;
-    stateCode: string;
-    pincode: string;
-    country: string;
-    phone: string;
   };
   order: {
-    id: string;
-    barcodeValue: string;
-    barcodeSvg: string;
+    orderId: string;
+    customerName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    stateName: string;
+    stateCode: string;
+    pincode: string;
+    phone: string;
     date: string;
-    paymentType: "PREPAID" | "COD";
+    isCOD: boolean;
     codAmount: string | null;
-    itemCount: number;
-    totalQuantity: number;
   };
   items: Array<{
-    productName: string;
-    variantName: string | null;
+    name: string;
     sku: string | null;
     quantity: number;
   }>;
   remainingItemCount: number;
-  printedAt: string;
+  barcode: string;
 };
 
-const CODE_128_PATTERNS = [
-  "212222", "222122", "222221", "121223", "121322", "131222", "122213",
-  "122312", "132212", "221213", "221312", "231212", "112232", "122132",
-  "122231", "113222", "123122", "123221", "223211", "221132", "221231",
-  "213212", "223112", "312131", "311222", "321122", "321221", "312212",
-  "322112", "322211", "212123", "212321", "232121", "111323", "131123",
-  "131321", "112313", "132113", "132311", "211313", "231113", "231311",
-  "112133", "112331", "132131", "113123", "113321", "133121", "313121",
-  "211331", "231131", "213113", "213311", "213131", "311123", "311321",
-  "331121", "312113", "312311", "332111", "314111", "221411", "431111",
-  "111224", "111422", "121124", "121421", "141122", "141221", "112214",
-  "112412", "122114", "122411", "142112", "142211", "241211", "221114",
-  "413111", "241112", "134111", "111242", "121142", "121241", "114212",
-  "124112", "124211", "411212", "421112", "421211", "212141", "214121",
-  "412121", "111143", "111341", "131141", "114113", "114311", "411113",
-  "411311", "113141", "114131", "311141", "411131", "211412", "211214",
-  "211232", "2331112",
-];
+const STATE_NAME_BY_CODE: Record<string, string> = {
+  AP: "ANDHRA PRADESH",
+  AR: "ARUNACHAL PRADESH",
+  AS: "ASSAM",
+  BR: "BIHAR",
+  CG: "CHHATTISGARH",
+  GA: "GOA",
+  GJ: "GUJARAT",
+  HR: "HARYANA",
+  HP: "HIMACHAL PRADESH",
+  JH: "JHARKHAND",
+  KA: "KARNATAKA",
+  KL: "KERALA",
+  MP: "MADHYA PRADESH",
+  MH: "MAHARASHTRA",
+  MN: "MANIPUR",
+  ML: "MEGHALAYA",
+  MZ: "MIZORAM",
+  NL: "NAGALAND",
+  OD: "ODISHA",
+  PB: "PUNJAB",
+  RJ: "RAJASTHAN",
+  SK: "SIKKIM",
+  TN: "TAMIL NADU",
+  TS: "TELANGANA",
+  TR: "TRIPURA",
+  UP: "UTTAR PRADESH",
+  UK: "UTTARAKHAND",
+  WB: "WEST BENGAL",
+  AN: "ANDAMAN AND NICOBAR ISLANDS",
+  CH: "CHANDIGARH",
+  DN: "DADRA AND NAGAR HAVELI",
+  DD: "DAMAN AND DIU",
+  DL: "DELHI",
+  JK: "JAMMU AND KASHMIR",
+  LA: "LADAKH",
+  LD: "LAKSHADWEEP",
+  PY: "PUDUCHERRY",
+};
 
 const formatDate = (date: Date) =>
   new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
     timeZone: "Asia/Kolkata",
   }).format(date);
 
-const normalizeUpper = (value: string) =>
-  value.trim().replace(/\s+/g, " ").toUpperCase();
+const normalizeText = (value: string) => value.trim().replace(/\s+/g, " ");
+const normalizeUpper = (value: string) => normalizeText(value).toUpperCase();
 
 const money = (value: { toString(): string }) => {
   const numeric = Number(value.toString());
@@ -109,46 +120,30 @@ const money = (value: { toString(): string }) => {
   return value.toString();
 };
 
-const toCode128BValue = (char: string) => {
-  const codePoint = char.charCodeAt(0);
-  if (codePoint < 32 || codePoint > 127) return 31; // fallback to "?"
-  return codePoint - 32;
+const displayStateName = (value: string) => {
+  const stateCode = toStateCode(value);
+  return STATE_NAME_BY_CODE[stateCode] ?? normalizeUpper(value);
 };
 
-function buildCode128Svg(rawValue: string): string {
-  const value = rawValue
-    .trim()
-    .toUpperCase()
-    .replace(/[^\x20-\x7F]/g, "?");
-  if (!value) {
+const cleanBarcodeValue = (value: string) => {
+  const barcodeValue = value.trim().toUpperCase().replace(/[^\x20-\x7F]/g, "?");
+  if (!barcodeValue) {
     throw new AppError(422, "Order barcode value is empty", "EMPTY_BARCODE_VALUE");
   }
-  const dataValues = [...value].map(toCode128BValue);
-  const checksum =
-    (104 + dataValues.reduce((sum, code, index) => sum + code * (index + 1), 0)) %
-    103;
-  const codes = [104, ...dataValues, checksum, 106];
-  const quietModules = 10;
-  const moduleHeight = 92;
-  const barElements: string[] = [];
-  let x = quietModules;
+  return barcodeValue;
+};
 
-  for (const code of codes) {
-    const pattern = CODE_128_PATTERNS[code];
-    for (let i = 0; i < pattern.length; i += 1) {
-      const width = Number(pattern[i]);
-      if (i % 2 === 0) {
-        barElements.push(
-          `<rect x="${x}" y="0" width="${width}" height="${moduleHeight}" />`,
-        );
-      }
-      x += width;
-    }
-  }
-
-  const totalWidth = x + quietModules;
-
-  return `<svg class="barcode-svg" viewBox="0 0 ${totalWidth} ${moduleHeight}" preserveAspectRatio="none" role="img" aria-label="Code 128 barcode ${value}"><rect width="${totalWidth}" height="${moduleHeight}" fill="#fff" />${barElements.join("")}</svg>`;
+async function generateCode128Barcode(value: string): Promise<string> {
+  const barcode = await bwipjs.toBuffer({
+    bcid: "code128",
+    text: cleanBarcodeValue(value),
+    scale: 3,
+    height: 10,
+    includetext: false,
+    paddingwidth: 10,
+    paddingheight: 2,
+  });
+  return `data:image/png;base64,${barcode.toString("base64")}`;
 }
 
 async function fetchOrderForLabel(orderId: bigint): Promise<OrderForLabel> {
@@ -197,11 +192,16 @@ async function fetchOrderForLabel(orderId: bigint): Promise<OrderForLabel> {
   return order;
 }
 
-function buildLabelContext(order: OrderForLabel): ShippingLabelContext {
+async function buildLabelContext(
+  order: OrderForLabel,
+): Promise<ShippingLabelContext> {
   const isPrepaid = order.paymentStatus === PAYMENT_STATUS_PAID;
+  const sellerStateCode = toStateCode(env.SELLER_STATE);
+  const receiverStateCode = toStateCode(order.shippingState);
   const items = order.items.map((item) => ({
-    productName: normalizeUpper(item.productName),
-    variantName: item.variantName ? normalizeUpper(item.variantName) : null,
+    name: item.variantName
+      ? `${normalizeText(item.productName)} (${normalizeText(item.variantName)})`
+      : normalizeText(item.productName),
     sku: item.sku ? normalizeUpper(item.sku) : null,
     quantity: item.quantity,
   }));
@@ -209,36 +209,26 @@ function buildLabelContext(order: OrderForLabel): ShippingLabelContext {
   return {
     seller: {
       name: normalizeUpper(env.SELLER_NAME),
-      address: normalizeUpper(env.SELLER_ADDRESS),
-      state: normalizeUpper(env.SELLER_STATE),
-      stateCode: toStateCode(env.SELLER_STATE),
-    },
-    receiver: {
-      name: normalizeUpper(order.shippingName),
-      addressLines: [
-        normalizeUpper(order.shippingLine1),
-        ...(order.shippingLine2 ? [normalizeUpper(order.shippingLine2)] : []),
-      ],
-      city: normalizeUpper(order.shippingCity),
-      state: normalizeUpper(order.shippingState),
-      stateCode: toStateCode(order.shippingState),
-      pincode: normalizeUpper(order.shippingPostalCode),
-      country: normalizeUpper(order.shippingCountry),
-      phone: normalizeUpper(order.shippingPhone),
+      stateName: STATE_NAME_BY_CODE[sellerStateCode] ?? normalizeUpper(env.SELLER_STATE),
+      stateCode: sellerStateCode,
     },
     order: {
-      id: order.orderNumber,
-      barcodeValue: order.orderNumber,
-      barcodeSvg: buildCode128Svg(order.orderNumber),
+      orderId: order.orderNumber,
+      customerName: normalizeUpper(order.shippingName),
+      addressLine1: normalizeText(order.shippingLine1),
+      addressLine2: order.shippingLine2 ? normalizeText(order.shippingLine2) : null,
+      city: normalizeText(order.shippingCity),
+      stateName: displayStateName(order.shippingState),
+      stateCode: receiverStateCode,
+      pincode: normalizeUpper(order.shippingPostalCode),
+      phone: normalizeText(order.shippingPhone),
       date: formatDate(order.placedAt ?? order.createdAt),
-      paymentType: isPrepaid ? "PREPAID" : "COD",
+      isCOD: !isPrepaid,
       codAmount: isPrepaid ? null : money(order.totalPaid),
-      itemCount: items.length,
-      totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
     },
     items: items.slice(0, 4),
     remainingItemCount: Math.max(items.length - 4, 0),
-    printedAt: formatDate(new Date()),
+    barcode: await generateCode128Barcode(order.orderNumber),
   };
 }
 
@@ -259,10 +249,7 @@ async function launchBrowser() {
 }
 
 async function renderLabelsPdf(labels: ShippingLabelContext[]): Promise<Buffer> {
-  const html = await ejs.renderFile(TEMPLATE_PATH, {
-    labels,
-    generatedAt: formatDate(new Date()),
-  });
+  const html = await ejs.renderFile(TEMPLATE_PATH, { labels });
 
   const browser = await launchBrowser();
   try {
@@ -285,7 +272,7 @@ export async function generateSingleShippingLabel(
   orderId: bigint,
 ): Promise<Buffer> {
   const order = await fetchOrderForLabel(orderId);
-  return renderLabelsPdf([buildLabelContext(order)]);
+  return renderLabelsPdf([await buildLabelContext(order)]);
 }
 
 export async function generateBulkShippingLabels(orderIds: bigint[]): Promise<{
@@ -309,7 +296,7 @@ export async function generateBulkShippingLabels(orderIds: bigint[]): Promise<{
   for (const orderId of orderIds) {
     try {
       const order = await fetchOrderForLabel(orderId);
-      labels.push(buildLabelContext(order));
+      labels.push(await buildLabelContext(order));
     } catch (err) {
       const reason = err instanceof AppError ? err.message : "Unexpected error";
       skipped.push({ orderId: orderId.toString(), reason });
