@@ -82,13 +82,6 @@ export const updateOrderForPaymentSuccess = (
   });
 };
 
-export const confirmReservationsByOrder = (tx: TxClient, orderId: bigint) => {
-  return tx.inventoryReservation.updateMany({
-    where: { orderId, status: 0 },
-    data: { status: 1 },
-  });
-};
-
 export const createOrderStatusHistory = (
   tx: TxClient,
   data: Prisma.OrderStatusHistoryCreateInput,

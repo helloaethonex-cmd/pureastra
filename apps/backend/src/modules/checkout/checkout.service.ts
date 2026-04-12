@@ -26,10 +26,13 @@ import {
   findAddressForCheckout,
   findVariantForBuyNowCheckout,
   incrementOrderNumberSequence,
-  incrementVariantStockReservedBulk,
   markCartCheckedOut,
   TxClient,
 } from "./checkout.repository";
+import {
+  createInventoryMovements,
+  incrementVariantStockReservedBulk,
+} from "../orders/orders.repository";
 import {
   CHECKOUT_FLOW,
   CheckoutConfirmInput,
@@ -171,6 +174,19 @@ const groupByVariant = (
   return [...map.values()];
 };
 
+const assertStockMutationComplete = (
+  expected: Array<{ productVariantId: bigint }>,
+  updated: Array<{ id: bigint }>,
+) => {
+  if (updated.length !== expected.length) {
+    throw new AppError(
+      409,
+      "Insufficient stock for one or more variants",
+      "INSUFFICIENT_STOCK",
+    );
+  }
+};
+
 const buildPreparedLineItems = (
   rows: Array<{
     productVariantId: bigint;
@@ -184,6 +200,7 @@ const buildPreparedLineItems = (
       gstRate: Prisma.Decimal;
       stockQuantity: number | null;
       stockReserved: number;
+      bufferStock: number;
       isActive: boolean;
       deletedAt: Date | null;
       product: { name: string };
@@ -202,7 +219,8 @@ const buildPreparedLineItems = (
       );
     }
 
-    const available = (variant.stockQuantity ?? 0) - variant.stockReserved;
+    const available =
+      (variant.stockQuantity ?? 0) - variant.stockReserved - variant.bufferStock;
     if (available < row.quantity) {
       throw new AppError(
         409,
@@ -242,6 +260,7 @@ const buildBuyNowPreparedLineItem = (
     gstRate: Prisma.Decimal;
     stockQuantity: number | null;
     stockReserved: number;
+    bufferStock: number;
     isActive: boolean;
     deletedAt: Date | null;
     product: { name: string; deletedAt: Date | null; isActive: boolean };
@@ -261,7 +280,8 @@ const buildBuyNowPreparedLineItem = (
     );
   }
 
-  const available = (variant.stockQuantity ?? 0) - variant.stockReserved;
+  const available =
+    (variant.stockQuantity ?? 0) - variant.stockReserved - variant.bufferStock;
   if (available < quantity) {
     throw new AppError(409, "Insufficient stock", "INSUFFICIENT_STOCK");
   }
@@ -578,9 +598,15 @@ const createOrderAndPaymentInTx = async (
   const expiresAt = new Date(
     now.getTime() + env.ORDER_RESERVATION_TTL_MINUTES * 60 * 1000,
   );
+  const reservedByVariant = groupByVariant(
+    lineItems.map((item) => ({
+      productVariantId: item.productVariantId,
+      quantity: item.quantity,
+    })),
+  );
   await createInventoryReservations(
     tx,
-    lineItems.map((item) => ({
+    reservedByVariant.map((item) => ({
       productVariantId: item.productVariantId,
       orderId: order.id,
       cartId: cartIdForCheckout,
@@ -590,14 +616,23 @@ const createOrderAndPaymentInTx = async (
     })),
   );
 
-  await incrementVariantStockReservedBulk(
+  const reservedRows = await incrementVariantStockReservedBulk(
     tx,
-    groupByVariant(
-      lineItems.map((item) => ({
-        productVariantId: item.productVariantId,
-        quantity: item.quantity,
-      })),
-    ),
+    reservedByVariant,
+  );
+  assertStockMutationComplete(reservedByVariant, reservedRows);
+  await createInventoryMovements(
+    tx,
+    reservedRows.map((row) => ({
+      productVariantId: row.id,
+      type: "RESERVE",
+      quantity: row.quantity,
+      beforeQuantity: row.before_quantity,
+      afterQuantity: row.after_quantity,
+      referenceType: "ORDER",
+      referenceId: order.id,
+      reason: "Checkout order placed",
+    })),
   );
 
   await createOrderStatusHistory(tx, {

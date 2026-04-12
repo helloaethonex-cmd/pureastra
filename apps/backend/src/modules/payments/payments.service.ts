@@ -9,7 +9,6 @@ import {
   RazorpayVerifyBody,
 } from "./payments.types";
 import {
-  confirmReservationsByOrder,
   createOrderStatusHistory,
   createPaymentAttempt,
   findOrderForUser,
@@ -27,7 +26,17 @@ import {
   verifyRazorpayCheckoutSignature,
   verifyRazorpayWebhookSignature,
 } from "./gateways/razorpay.gateway";
-import { ORDER_STATUS, PAYMENT_STATUS } from "../orders/orders.types";
+import {
+  INVENTORY_RESERVATION_STATUS,
+  ORDER_STATUS,
+  PAYMENT_STATUS,
+} from "../orders/orders.types";
+import {
+  createInventoryMovements,
+  decrementVariantStockReservedSafeBulk,
+  findInventoryReservationsByOrderId,
+  updateInventoryReservationStatusByOrder,
+} from "../orders/orders.repository";
 import {
   createInfluencerSale,
   incrementInfluencerEarnings,
@@ -42,6 +51,125 @@ const TX_OPTIONS = {
   maxWait: 5000,
   timeout: 10000,
 } as const;
+
+const groupQuantityByVariant = (
+  rows: Array<{ productVariantId: bigint; quantity: number }>,
+) => {
+  const grouped = new Map<
+    string,
+    { productVariantId: bigint; quantity: number }
+  >();
+  for (const row of rows) {
+    const key = row.productVariantId.toString();
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.quantity += row.quantity;
+    } else {
+      grouped.set(key, {
+        productVariantId: row.productVariantId,
+        quantity: row.quantity,
+      });
+    }
+  }
+  return [...grouped.values()];
+};
+
+const releaseOrderReservations = async (
+  tx: Prisma.TransactionClient,
+  orderId: bigint,
+  reason: string,
+) => {
+  const reservations = await findInventoryReservationsByOrderId(tx, orderId);
+  const releasableReservations = reservations.filter(
+    (reservation) =>
+      reservation.status === INVENTORY_RESERVATION_STATUS.ACTIVE ||
+      reservation.status === INVENTORY_RESERVATION_STATUS.CONFIRMED,
+  );
+  if (releasableReservations.length === 0) return;
+
+  const quantities = groupQuantityByVariant(releasableReservations);
+  const releasedRows = await decrementVariantStockReservedSafeBulk(
+    tx,
+    quantities,
+  );
+  if (releasedRows.length !== quantities.length) {
+    throw new AppError(
+      409,
+      "Inventory reservation release failed",
+      "INVENTORY_RESERVATION_RELEASE_FAILED",
+    );
+  }
+
+  await createInventoryMovements(
+    tx,
+    releasedRows.map((row) => ({
+      productVariantId: row.id,
+      type: "RELEASE",
+      quantity: row.quantity,
+      beforeQuantity: row.before_quantity,
+      afterQuantity: row.after_quantity,
+      referenceType: "ORDER",
+      referenceId: orderId,
+      reason,
+    })),
+  );
+
+  await updateInventoryReservationStatusByOrder(
+    tx,
+    orderId,
+    [
+      INVENTORY_RESERVATION_STATUS.ACTIVE,
+      INVENTORY_RESERVATION_STATUS.CONFIRMED,
+    ],
+    INVENTORY_RESERVATION_STATUS.RELEASED,
+  );
+};
+
+const confirmOrderReservations = async (
+  tx: Prisma.TransactionClient,
+  orderId: bigint,
+) => {
+  const reservations = await findInventoryReservationsByOrderId(tx, orderId);
+  if (reservations.length === 0) {
+    throw new AppError(
+      409,
+      "Order has no inventory reservations",
+      "INVENTORY_RESERVATION_MISSING",
+    );
+  }
+  if (
+    reservations.every(
+      (reservation) =>
+        reservation.status === INVENTORY_RESERVATION_STATUS.CONFIRMED,
+    )
+  ) {
+    logger.info(
+      { orderId: orderId.toString() },
+      "[inventory] reservations already confirmed; skipping transition",
+    );
+    return;
+  }
+
+  if (
+    !reservations.every(
+      (reservation) =>
+        reservation.status === INVENTORY_RESERVATION_STATUS.ACTIVE,
+    )
+  ) {
+    throw new AppError(
+      409,
+      "Order inventory reservations are not active",
+      "INVENTORY_RESERVATION_INVALID",
+    );
+  }
+
+  await updateInventoryReservationStatusByOrder(
+    tx,
+    orderId,
+    INVENTORY_RESERVATION_STATUS.ACTIVE,
+    INVENTORY_RESERVATION_STATUS.CONFIRMED,
+  );
+};
 
 const centsToDecimal = (cents: number) =>
   new Prisma.Decimal((cents / 100).toFixed(2));
@@ -306,20 +434,28 @@ export const confirmPaymentAttempt = async (
       return payment;
     }
 
+    const existingSuccess = await findSuccessfulPaymentForOrder(
+      tx,
+      payment.orderId,
+    );
+
     if (body.status === "FAILED") {
-      return updatePayment(tx, payment.id, {
+      const failedPayment = await updatePayment(tx, payment.id, {
         paymentStatus: PAYMENT_STATUS.FAILED,
         failureReason: body.failureReason ?? null,
         providerEventId: body.providerEventId ?? null,
         providerPaymentId: body.providerPaymentId ?? undefined,
         providerOrderId: body.providerOrderId ?? undefined,
       });
+      if (
+        !existingSuccess &&
+        payment.order.paymentStatus !== PAYMENT_STATUS.SUCCESS
+      ) {
+        await releaseOrderReservations(tx, payment.orderId, "Payment failed");
+      }
+      return failedPayment;
     }
 
-    const existingSuccess = await findSuccessfulPaymentForOrder(
-      tx,
-      payment.orderId,
-    );
     if (existingSuccess && existingSuccess.id !== payment.id) {
       const overpaidPayment = await updatePayment(tx, payment.id, {
         paymentStatus: PAYMENT_STATUS.OVERPAID,
@@ -407,7 +543,7 @@ export const confirmPaymentAttempt = async (
           : payment.order.orderStatus,
     });
 
-    await confirmReservationsByOrder(tx, payment.orderId);
+    await confirmOrderReservations(tx, payment.orderId);
 
     if (payment.order.orderStatus === ORDER_STATUS.PLACED) {
       await createOrderStatusHistory(tx, {

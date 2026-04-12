@@ -7,11 +7,13 @@
     "dev": "ts-node-dev --project tsconfig.json --respawn src/server.ts",
     "worker:email": "ts-node-dev --project tsconfig.json --respawn src/jobs/email/email.worker.ts",
     "worker:orders": "ts-node-dev --project tsconfig.json --respawn src/jobs/orders/inventory-reservation.worker.ts",
-    "dev:all": "concurrently \"pnpm run dev\" \"pnpm run worker:email\" \"pnpm run worker:orders\"",
+    "worker:inventory:reconcile": "ts-node-dev --project tsconfig.json --respawn src/jobs/orders/inventory-reconciliation.worker.ts",
+    "dev:all": "concurrently \"pnpm run dev\" \"pnpm run worker:email\" \"pnpm run worker:orders\" \"pnpm run worker:inventory:reconcile\"",
     "build": "tsc && node -e \"const{cpSync}=require('fs');cpSync('src/modules/invoices/templates','dist/modules/invoices/templates',{recursive:true});cpSync('src/modules/shipping/templates','dist/modules/shipping/templates',{recursive:true});\"",
     "start": "node dist/server.js",
     "start:worker": "node dist/jobs/email/email.worker.js",
-    "start:worker:orders": "node dist/jobs/orders/inventory-reservation.worker.js"
+    "start:worker:orders": "node dist/jobs/orders/inventory-reservation.worker.js",
+    "start:worker:inventory:reconcile": "node dist/jobs/orders/inventory-reconciliation.worker.js"
   },
   "keywords": [],
   "author": "",

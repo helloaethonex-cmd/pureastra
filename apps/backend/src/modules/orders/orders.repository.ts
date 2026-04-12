@@ -2,6 +2,26 @@ import { Prisma } from "../../generated/prisma/client";
 
 export type TxClient = Prisma.TransactionClient;
 
+export type InventoryMovementType = "RESERVE" | "RELEASE" | "DEDUCT" | "ADJUST";
+
+export type InventoryMovementInput = {
+  productVariantId: bigint;
+  type: InventoryMovementType;
+  quantity: number;
+  beforeQuantity: number | null;
+  afterQuantity: number | null;
+  referenceType?: string | null;
+  referenceId?: bigint | null;
+  reason?: string | null;
+};
+
+export type StockMutationRow = {
+  id: bigint;
+  quantity: number;
+  before_quantity: number | null;
+  after_quantity: number | null;
+};
+
 const orderCreateInclude = {
   items: true,
   statusHistory: true,
@@ -37,6 +57,7 @@ export const findActiveCartByUserId = (tx: TxClient, userId: bigint) => {
             costPrice: true,
             stockQuantity: true,
             stockReserved: true,
+            bufferStock: true,
             product: {
               select: {
                 name: true,
@@ -105,9 +126,11 @@ export const incrementVariantStockReservedBulk = (
   tx: TxClient,
   rows: Array<{ productVariantId: bigint; quantity: number }>,
 ) => {
-  if (rows.length === 0) return Promise.resolve();
+  if (rows.length === 0) {
+    return Promise.resolve([] as StockMutationRow[]);
+  }
 
-  return tx.$executeRaw(
+  return tx.$queryRaw<StockMutationRow[]>(
     Prisma.sql`
       UPDATE "product_variants" AS pv
       SET "stock_reserved" = pv."stock_reserved" + data."quantity",
@@ -118,6 +141,49 @@ export const incrementVariantStockReservedBulk = (
         )}
       ) AS data("product_variant_id", "quantity")
       WHERE pv."id" = data."product_variant_id"
+        AND pv."stock_quantity" IS NOT NULL
+        AND pv."stock_quantity" - pv."stock_reserved" - pv."buffer_stock" >= data."quantity"
+      RETURNING
+        pv."id",
+        data."quantity",
+        pv."stock_reserved" - data."quantity" AS "before_quantity",
+        pv."stock_reserved" AS "after_quantity"
+    `,
+  );
+};
+
+export const createInventoryMovements = (
+  tx: TxClient,
+  rows: InventoryMovementInput[],
+) => {
+  if (rows.length === 0) return Promise.resolve(0);
+
+  return tx.$executeRaw(
+    Prisma.sql`
+      INSERT INTO "inventory_movements" (
+        "product_variant_id",
+        "type",
+        "quantity",
+        "before_quantity",
+        "after_quantity",
+        "reference_type",
+        "reference_id",
+        "reason"
+      )
+      VALUES ${Prisma.join(
+        rows.map(
+          (row) => Prisma.sql`(
+            ${row.productVariantId}::bigint,
+            ${row.type}::varchar,
+            ${row.quantity}::int,
+            ${row.beforeQuantity}::int,
+            ${row.afterQuantity}::int,
+            ${row.referenceType ?? null}::varchar,
+            ${row.referenceId ?? null}::bigint,
+            ${row.reason ?? null}::varchar
+          )`,
+        ),
+      )}
     `,
   );
 };
@@ -287,12 +353,14 @@ export const decrementVariantStockReservedSafeBulk = (
   tx: TxClient,
   rows: Array<{ productVariantId: bigint; quantity: number }>,
 ) => {
-  if (rows.length === 0) return Promise.resolve();
+  if (rows.length === 0) {
+    return Promise.resolve([] as StockMutationRow[]);
+  }
 
-  return tx.$executeRaw(
+  return tx.$queryRaw<StockMutationRow[]>(
     Prisma.sql`
       UPDATE "product_variants" AS pv
-      SET "stock_reserved" = GREATEST(pv."stock_reserved" - data."quantity", 0),
+      SET "stock_reserved" = pv."stock_reserved" - data."quantity",
           "updated_at" = NOW()
       FROM (
         VALUES ${Prisma.join(
@@ -300,6 +368,12 @@ export const decrementVariantStockReservedSafeBulk = (
         )}
       ) AS data("product_variant_id", "quantity")
       WHERE pv."id" = data."product_variant_id"
+        AND pv."stock_reserved" >= data."quantity"
+      RETURNING
+        pv."id",
+        data."quantity",
+        pv."stock_reserved" + data."quantity" AS "before_quantity",
+        pv."stock_reserved" AS "after_quantity"
     `,
   );
 };
@@ -309,10 +383,10 @@ export const decrementVariantStockQuantityBulkStrict = (
   rows: Array<{ productVariantId: bigint; quantity: number }>,
 ) => {
   if (rows.length === 0) {
-    return Promise.resolve([] as Array<{ id: bigint }>);
+    return Promise.resolve([] as StockMutationRow[]);
   }
 
-  return tx.$queryRaw<Array<{ id: bigint }>>(
+  return tx.$queryRaw<StockMutationRow[]>(
     Prisma.sql`
       UPDATE "product_variants" AS pv
       SET "stock_quantity" = pv."stock_quantity" - data."quantity",
@@ -325,9 +399,90 @@ export const decrementVariantStockQuantityBulkStrict = (
       WHERE pv."id" = data."product_variant_id"
         AND pv."stock_quantity" IS NOT NULL
         AND pv."stock_quantity" >= data."quantity"
-      RETURNING pv."id"
+      RETURNING
+        pv."id",
+        data."quantity",
+        pv."stock_quantity" + data."quantity" AS "before_quantity",
+        pv."stock_quantity" AS "after_quantity"
     `,
   );
+};
+
+export const adjustVariantStockQuantityStrict = (
+  tx: TxClient,
+  productVariantId: bigint,
+  quantity: number,
+) => {
+  return tx.$queryRaw<StockMutationRow[]>(
+    Prisma.sql`
+      UPDATE "product_variants" AS pv
+      SET "stock_quantity" = COALESCE(pv."stock_quantity", 0) + ${quantity}::int,
+          "updated_at" = NOW()
+      WHERE pv."id" = ${productVariantId}
+        AND COALESCE(pv."stock_quantity", 0) + ${quantity}::int >= pv."stock_reserved" + pv."buffer_stock"
+      RETURNING
+        pv."id",
+        ABS(${quantity}::int) AS "quantity",
+        pv."stock_quantity" - ${quantity}::int AS "before_quantity",
+        pv."stock_quantity" AS "after_quantity"
+    `,
+  );
+};
+
+export const findInventoryReservationReservedMismatches = (tx: TxClient) => {
+  return tx.$queryRaw<
+    Array<{
+      product_variant_id: bigint;
+      stock_reserved: number;
+      reservation_reserved: number;
+    }>
+  >(Prisma.sql`
+    SELECT
+      pv."id" AS "product_variant_id",
+      pv."stock_reserved",
+      COALESCE(SUM(ir."quantity") FILTER (WHERE ir."status" IN (0, 1)), 0)::int
+        AS "reservation_reserved"
+    FROM "product_variants" pv
+    LEFT JOIN "inventory_reservations" ir
+      ON ir."product_variant_id" = pv."id"
+    GROUP BY pv."id", pv."stock_reserved"
+    HAVING pv."stock_reserved" <> COALESCE(SUM(ir."quantity") FILTER (WHERE ir."status" IN (0, 1)), 0)::int
+  `);
+};
+
+export const findLowStockVariants = (tx: TxClient) => {
+  return tx.$queryRaw<
+    Array<{
+      product_variant_id: bigint;
+      product_id: bigint;
+      sku: string | null;
+      variant_name: string | null;
+      stock_quantity: number;
+      stock_reserved: number;
+      buffer_stock: number;
+      low_stock_threshold: number;
+      available_stock: number;
+    }>
+  >(Prisma.sql`
+    SELECT
+      pv."id" AS "product_variant_id",
+      pv."product_id",
+      pv."sku",
+      pv."variant_name",
+      pv."stock_quantity",
+      pv."stock_reserved",
+      pv."buffer_stock",
+      pv."low_stock_threshold",
+      GREATEST(pv."stock_quantity" - pv."stock_reserved" - pv."buffer_stock", 0)::int
+        AS "available_stock"
+    FROM "product_variants" pv
+    WHERE pv."deleted_at" IS NULL
+      AND pv."is_active" = true
+      AND pv."stock_quantity" IS NOT NULL
+      AND GREATEST(pv."stock_quantity" - pv."stock_reserved" - pv."buffer_stock", 0)
+        < pv."low_stock_threshold"
+    ORDER BY "available_stock" ASC, pv."id" ASC
+  `);
 };
 
 export type AdminListOrdersFilters = {

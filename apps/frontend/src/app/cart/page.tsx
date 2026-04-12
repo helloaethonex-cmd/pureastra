@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -33,21 +33,18 @@ export default function OrderPage() {
   const { user, isLoading: authLoading } = useAuthStore();
   const isAuthenticated = Boolean(user);
 
-  const {
-    data: cart,
-    isLoading: cartLoading,
-    isError,
-    error,
-  } = useCart();
+  const { data: cart, isLoading: cartLoading, isError, error } = useCart();
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveCartItem();
   const clearCart = useClearCart();
 
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [showCheckout] = useState(false);
   void showCheckout; // kept for future use - checkout is now a page
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [resumeCheckoutAfterLogin, setResumeCheckoutAfterLogin] =
     useState(false);
+  const [isRemovingUnavailable, setIsRemovingUnavailable] = useState(false);
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (isAuthenticated && resumeCheckoutAfterLogin) {
@@ -57,6 +54,14 @@ export default function OrderPage() {
   }, [isAuthenticated, resumeCheckoutAfterLogin, router]);
 
   const increase = (itemId: string, quantity: number) => {
+    const item = items.find((cartItem) => cartItem.id === itemId);
+    const availableStock = Math.max(
+      Number(item?.productVariant.availableStock ?? 0),
+      0,
+    );
+    if (availableStock > 0 && quantity >= availableStock) {
+      return;
+    }
     updateItem.mutate({ itemId, quantity: quantity + 1 });
   };
 
@@ -76,7 +81,28 @@ export default function OrderPage() {
     clearCart.mutate();
   };
 
-  const items = cart?.items ?? [];
+  const items = useMemo(() => cart?.items ?? [], [cart?.items]);
+  const problematicItemIds = useMemo(
+    () =>
+      items
+        .filter((item) => {
+          const availableStock = Math.max(
+            Number(item.productVariant.availableStock ?? 0),
+            0,
+          );
+          return availableStock <= 0 || item.quantity > availableStock;
+        })
+        .map((item) => item.id),
+    [items],
+  );
+  const unavailableItems = useMemo(
+    () =>
+      items.filter(
+        (item) => Number(item.productVariant.availableStock ?? 0) <= 0,
+      ),
+    [items],
+  );
+  const hasStockIssue = problematicItemIds.length > 0;
 
   const subtotal = items.reduce((acc, item) => {
     const unitPrice = toPriceNumber(
@@ -85,6 +111,26 @@ export default function OrderPage() {
     return acc + unitPrice * item.quantity;
   }, 0);
   const estimatedTotal = subtotal + SHIPPING_CHARGE;
+  const reviewProblemItems = () => {
+    const firstProblemItemId = problematicItemIds[0];
+    if (!firstProblemItemId) return;
+    itemRefs.current[firstProblemItemId]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  };
+
+  const removeUnavailableItems = async () => {
+    if (unavailableItems.length === 0 || isRemovingUnavailable) return;
+    setIsRemovingUnavailable(true);
+    try {
+      await Promise.all(
+        unavailableItems.map((item) => removeItem.mutateAsync(item.id)),
+      );
+    } finally {
+      setIsRemovingUnavailable(false);
+    }
+  };
 
   return (
     <>
@@ -134,9 +180,28 @@ export default function OrderPage() {
                   const itemPrice = toPriceNumber(
                     item.priceSnapshot ?? item.productVariant.price,
                   );
+                  const availableStock = Math.max(
+                    Number(item.productVariant.availableStock ?? 0),
+                    0,
+                  );
+                  const isOverStock =
+                    availableStock > 0 && item.quantity > availableStock;
+                  const isOutOfStock = availableStock <= 0;
+                  const isLowStock = Boolean(item.productVariant.isLowStock);
+                  const isProblemItem = isOutOfStock || isOverStock;
 
                   return (
-                    <div key={item.id} className="flex gap-6 border-b pb-6">
+                    <div
+                      key={item.id}
+                      ref={(node) => {
+                        itemRefs.current[item.id] = node;
+                      }}
+                      className={`flex gap-6 rounded-lg border-b pb-6 transition ${
+                        isProblemItem
+                          ? "border border-red-200 bg-red-50/70 px-4 py-3"
+                          : ""
+                      }`}
+                    >
                       {/* IMAGE */}
                       <Image
                         src={itemImage}
@@ -162,6 +227,28 @@ export default function OrderPage() {
                             {item.productVariant.variantName || "Default"}
                           </span>
                         </p>
+                        {isProblemItem && (
+                          <p className="mt-1 inline-flex rounded bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                            Needs attention
+                          </p>
+                        )}
+                        <p
+                          className={`mt-1 text-xs font-semibold ${
+                            isOutOfStock || isOverStock
+                              ? "text-red-600"
+                              : isLowStock
+                                ? "text-[#b35c1e]"
+                                : "text-[#819744]"
+                          }`}
+                        >
+                          {isOutOfStock
+                            ? "Out of stock"
+                            : isOverStock
+                              ? `Only ${availableStock} available. Reduce quantity.`
+                              : isLowStock
+                                ? `Only ${availableStock} available`
+                                : "In stock"}
+                        </p>
 
                         {/* QTY */}
                         <div className=" flex items-end justify-between">
@@ -181,7 +268,10 @@ export default function OrderPage() {
                             <button
                               onClick={() => increase(item.id, item.quantity)}
                               disabled={
-                                updateItem.isPending || removeItem.isPending
+                                updateItem.isPending ||
+                                removeItem.isPending ||
+                                isOutOfStock ||
+                                item.quantity >= availableStock
                               }
                               className="w-8 h-8 border flex items-center justify-center rounded"
                             >
@@ -210,7 +300,9 @@ export default function OrderPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Delivery cost</span>
-                  <span className="text-[#5E2B15] font-medium">₹{SHIPPING_CHARGE.toFixed(2)}</span>
+                  <span className="text-[#5E2B15] font-medium">
+                    ₹{SHIPPING_CHARGE.toFixed(2)}
+                  </span>
                 </div>
                 <p className="text-xs text-[#9a7a65]">
                   Final prices, taxes & discounts will be confirmed at checkout.
@@ -220,6 +312,40 @@ export default function OrderPage() {
                   <span>₹{estimatedTotal.toFixed(2)}</span>
                 </div>
               </div>
+
+              {hasStockIssue && (
+                <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <p className="font-semibold">Some items need attention</p>
+                  <p className="mt-0.5 text-xs text-red-600">
+                    {problematicItemIds.length} item
+                    {problematicItemIds.length > 1 ? "s" : ""} need updates
+                    before checkout.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={reviewProblemItems}
+                      className="rounded border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+                    >
+                      Review Items
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeUnavailableItems}
+                      disabled={
+                        unavailableItems.length === 0 ||
+                        isRemovingUnavailable ||
+                        removeItem.isPending
+                      }
+                      className="rounded border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isRemovingUnavailable
+                        ? "Removing..."
+                        : "Remove unavailable items"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={handleClearCart}
@@ -234,6 +360,7 @@ export default function OrderPage() {
                 <button
                   id="proceed-to-checkout-btn"
                   onClick={() => {
+                    if (hasStockIssue) return;
                     if (!isAuthenticated) {
                       setResumeCheckoutAfterLogin(true);
                       setIsAuthModalOpen(true);
@@ -241,9 +368,16 @@ export default function OrderPage() {
                     }
                     router.push("/checkout");
                   }}
-                  className="block w-full bg-[#819744] text-center text-white py-3 font-semibold hover:bg-[#6f873a] transition"
+                  disabled={hasStockIssue}
+                  className={`block w-full text-center py-3 font-semibold transition ${
+                    hasStockIssue
+                      ? "cursor-not-allowed bg-gray-300 text-gray-600"
+                      : "bg-[#819744] text-white hover:bg-[#6f873a]"
+                  }`}
                 >
-                  Proceed to Checkout
+                  {hasStockIssue
+                    ? "Resolve stock issues to checkout"
+                    : "Proceed to Checkout"}
                 </button>
               </div>
             </>

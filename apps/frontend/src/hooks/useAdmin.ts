@@ -99,6 +99,8 @@ export function useCreateProduct() {
         sku?: string;
         price?: number;
         stockQuantity?: number;
+        bufferStock?: number;
+        lowStockThreshold?: number;
       }[];
     }) => createProduct(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["products"] }),

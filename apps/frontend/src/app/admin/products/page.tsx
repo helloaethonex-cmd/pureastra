@@ -60,13 +60,34 @@ type Variant = {
   sku: string;
   price: string;
   stockQuantity: string;
+  bufferStock: string;
+  lowStockThreshold: string;
 };
+
+type VariantEditorForm = Variant & {
+  isActive: boolean;
+};
+
+const createEmptyVariantEditorForm = (): VariantEditorForm => ({
+  variantName: "",
+  sku: "",
+  price: "",
+  stockQuantity: "",
+  bufferStock: "0",
+  lowStockThreshold: "5",
+  isActive: true,
+});
+
+const optionalNumber = (value: string) =>
+  value.trim() ? Number(value) : undefined;
 
 export default function ProductsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
-  const { data: productsData, isLoading: productsLoading } = useProducts({ limit: 100 });
+  const { data: productsData, isLoading: productsLoading } = useProducts({
+    limit: 100,
+  });
   const { data: categories } = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -75,7 +96,9 @@ export default function ProductsPage() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [uploadingImageFor, setUploadingImageFor] = useState<string | null>(null);
+  const [uploadingImageFor, setUploadingImageFor] = useState<string | null>(
+    null,
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -87,14 +110,44 @@ export default function ProductsPage() {
   const [autoSlug, setAutoSlug] = useState(true);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([
-    { variantName: "", sku: "", price: "", stockQuantity: "" },
+    {
+      variantName: "",
+      sku: "",
+      price: "",
+      stockQuantity: "",
+      bufferStock: "",
+      lowStockThreshold: "5",
+    },
   ]);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contentSectionsByProduct, setContentSectionsByProduct] = useState<
     Record<string, ProductContentSection[]>
   >({});
-  const [loadingContentFor, setLoadingContentFor] = useState<string | null>(null);
+  const [loadingContentFor, setLoadingContentFor] = useState<string | null>(
+    null,
+  );
+  const [variantEditorModal, setVariantEditorModal] = useState<{
+    mode: "add" | "edit";
+    productId: string;
+    variant?: ProductVariant;
+  } | null>(null);
+  const [variantEditorForm, setVariantEditorForm] = useState<VariantEditorForm>(
+    createEmptyVariantEditorForm(),
+  );
+  const [stockAdjustmentModal, setStockAdjustmentModal] = useState<{
+    productId: string;
+    variant: ProductVariant;
+  } | null>(null);
+  const [stockAdjustmentMode, setStockAdjustmentMode] = useState<
+    "adjust" | "setCount"
+  >("adjust");
+  const [stockAdjustmentQuantity, setStockAdjustmentQuantity] = useState("");
+  const [stockActualCount, setStockActualCount] = useState("");
+  const [stockAdjustmentReason, setStockAdjustmentReason] = useState("");
+  const [openReservedDetailKey, setOpenReservedDetailKey] = useState<
+    string | null
+  >(null);
 
   const addImageMutation = useAddProductImage(uploadingImageFor || "");
 
@@ -123,20 +176,27 @@ export default function ProductsPage() {
 
   const toggleCategory = (id: string) => {
     setSelectedCategoryIds((p) =>
-      p.includes(id) ? p.filter((c) => c !== id) : [...p, id]
+      p.includes(id) ? p.filter((c) => c !== id) : [...p, id],
     );
   };
 
   const updateVariant = (i: number, key: keyof Variant, val: string) => {
     setVariants((v) =>
-      v.map((row, idx) => (idx === i ? { ...row, [key]: val } : row))
+      v.map((row, idx) => (idx === i ? { ...row, [key]: val } : row)),
     );
   };
 
   const addVariant = () =>
     setVariants((v) => [
       ...v,
-      { variantName: "", sku: "", price: "", stockQuantity: "" },
+      {
+        variantName: "",
+        sku: "",
+        price: "",
+        stockQuantity: "",
+        bufferStock: "",
+        lowStockThreshold: "5",
+      },
     ]);
 
   const removeVariant = (i: number) =>
@@ -174,6 +234,10 @@ export default function ProductsPage() {
           sku: v.sku || undefined,
           price: v.price ? Number(v.price) : undefined,
           stockQuantity: v.stockQuantity ? Number(v.stockQuantity) : undefined,
+          bufferStock: v.bufferStock ? Number(v.bufferStock) : undefined,
+          lowStockThreshold: v.lowStockThreshold
+            ? Number(v.lowStockThreshold)
+            : undefined,
         }));
 
       const created = await createProduct.mutateAsync({
@@ -188,9 +252,24 @@ export default function ProductsPage() {
       });
 
       setSuccess(`Product "${created.name}" created!`);
-      setForm({ name: "", slug: "", description: "", brand: "", isActive: true });
+      setForm({
+        name: "",
+        slug: "",
+        description: "",
+        brand: "",
+        isActive: true,
+      });
       setSelectedCategoryIds([]);
-      setVariants([{ variantName: "", sku: "", price: "", stockQuantity: "" }]);
+      setVariants([
+        {
+          variantName: "",
+          sku: "",
+          price: "",
+          stockQuantity: "",
+          bufferStock: "",
+          lowStockThreshold: "5",
+        },
+      ]);
       setAutoSlug(true);
       setShowCreateForm(false);
       setTimeout(() => setSuccess(null), 3000);
@@ -285,7 +364,9 @@ export default function ProductsPage() {
   ) => {
     try {
       const product = products.find((p) => p.id === productId);
-      const currentCover = product?.images?.find((img) => Number(img.position ?? 0) === 0);
+      const currentCover = product?.images?.find(
+        (img) => Number(img.position ?? 0) === 0,
+      );
 
       if (currentCover && currentCover.id !== image.id) {
         await setProductImagePosition(productId, currentCover, 1);
@@ -301,7 +382,12 @@ export default function ProductsPage() {
 
   const handleMoveImage = async (
     productId: string,
-    image: { id: string; imageUrl: string; variantId?: string | null; position?: number | null },
+    image: {
+      id: string;
+      imageUrl: string;
+      variantId?: string | null;
+      position?: number | null;
+    },
     delta: number,
   ) => {
     try {
@@ -314,7 +400,10 @@ export default function ProductsPage() {
     }
   };
 
-  const handleAssignCategoryToProduct = async (productId: string, categoryId: string) => {
+  const handleAssignCategoryToProduct = async (
+    productId: string,
+    categoryId: string,
+  ) => {
     if (!categoryId) return;
     try {
       await assignProductCategories(productId, [categoryId]);
@@ -325,7 +414,10 @@ export default function ProductsPage() {
     }
   };
 
-  const handleRemoveCategoryFromProduct = async (productId: string, categoryId: string) => {
+  const handleRemoveCategoryFromProduct = async (
+    productId: string,
+    categoryId: string,
+  ) => {
     try {
       await removeProductCategory(productId, categoryId);
       await refreshProducts();
@@ -335,47 +427,81 @@ export default function ProductsPage() {
     }
   };
 
-  const handleAddVariantToProduct = async (productId: string) => {
-    const variantName = window.prompt("Variant name");
-    if (!variantName) return;
-    const sku = window.prompt("SKU (optional)") || undefined;
-    const priceInput = window.prompt("Price (optional)") || "";
-    const stockInput = window.prompt("Stock quantity (optional)") || "";
-
-    try {
-      await addProductVariant(productId, {
-        variantName,
-        sku,
-        price: priceInput ? Number(priceInput) : undefined,
-        stockQuantity: stockInput ? Number(stockInput) : undefined,
-      });
-      await refreshProducts();
-      setSuccess("Variant added.");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to add variant");
-    }
+  const openAddVariantModal = (productId: string) => {
+    setError(null);
+    setVariantEditorForm(createEmptyVariantEditorForm());
+    setVariantEditorModal({ mode: "add", productId });
   };
 
-  const handleEditVariant = async (productId: string, variant: ProductVariant) => {
-    const variantName = window.prompt("Variant name", variant.variantName ?? "") ?? undefined;
-    const sku = window.prompt("SKU", variant.sku ?? "") ?? undefined;
-    const priceInput = window.prompt("Price", String(variant.price ?? "")) ?? "";
-    const stockInput =
-      window.prompt("Stock quantity", String(variant.stockQuantity ?? "")) ?? "";
-    const activeInput = window.prompt("Is active? (yes/no)", variant.isActive ? "yes" : "no") ?? "yes";
+  const openEditVariantModal = (productId: string, variant: ProductVariant) => {
+    setError(null);
+    setVariantEditorForm({
+      variantName: variant.variantName ?? "",
+      sku: variant.sku ?? "",
+      price: variant.price == null ? "" : String(variant.price),
+      stockQuantity:
+        variant.stockQuantity == null ? "" : String(variant.stockQuantity),
+      bufferStock: String(variant.bufferStock ?? 0),
+      lowStockThreshold: String(variant.lowStockThreshold ?? 5),
+      isActive: variant.isActive,
+    });
+    setVariantEditorModal({ mode: "edit", productId, variant });
+  };
+
+  const updateVariantEditorField = <K extends keyof VariantEditorForm>(
+    key: K,
+    value: VariantEditorForm[K],
+  ) => {
+    setVariantEditorForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const closeVariantEditorModal = () => {
+    setVariantEditorModal(null);
+    setVariantEditorForm(createEmptyVariantEditorForm());
+  };
+
+  const handleSaveVariantEditor = async () => {
+    if (!variantEditorModal) return;
+    if (!variantEditorForm.variantName.trim()) {
+      setError("Variant name is required.");
+      return;
+    }
 
     try {
-      await updateProductVariant(productId, variant.id, {
-        variantName,
-        sku,
-        price: priceInput ? Number(priceInput) : undefined,
-        stockQuantity: stockInput ? Number(stockInput) : undefined,
-        isActive: activeInput.toLowerCase() !== "no",
-      });
+      const basePayload = {
+        variantName: variantEditorForm.variantName.trim(),
+        sku: variantEditorForm.sku.trim() || undefined,
+        price: optionalNumber(variantEditorForm.price),
+        bufferStock: optionalNumber(variantEditorForm.bufferStock),
+        lowStockThreshold: optionalNumber(variantEditorForm.lowStockThreshold),
+      };
+
+      if (variantEditorModal.mode === "add") {
+        await addProductVariant(variantEditorModal.productId, {
+          ...basePayload,
+          stockQuantity: optionalNumber(variantEditorForm.stockQuantity),
+          isActive: variantEditorForm.isActive,
+        });
+      } else if (variantEditorModal.variant) {
+        await updateProductVariant(
+          variantEditorModal.productId,
+          variantEditorModal.variant.id,
+          {
+            ...basePayload,
+            isActive: variantEditorForm.isActive,
+          },
+        );
+      }
+
+      closeVariantEditorModal();
       await refreshProducts();
-      setSuccess("Variant updated.");
+      setSuccess(
+        variantEditorModal.mode === "add"
+          ? "Variant added."
+          : "Variant updated.",
+      );
     } catch (err: any) {
-      setError(err.message ?? "Failed to update variant");
+      setError(err.message ?? "Failed to save variant");
     }
   };
 
@@ -390,16 +516,65 @@ export default function ProductsPage() {
     }
   };
 
-  const handleAdjustVariantStock = async (productId: string, variantId: string) => {
-    const quantityInput = window.prompt("Stock adjustment quantity (e.g. 10 or -3)");
-    if (!quantityInput) return;
-    const reason = window.prompt("Reason (optional)") || undefined;
+  const openStockAdjustmentModal = (
+    productId: string,
+    variant: ProductVariant,
+  ) => {
+    setError(null);
+    setStockAdjustmentMode("adjust");
+    setStockAdjustmentQuantity("");
+    setStockActualCount("");
+    setStockAdjustmentReason("");
+    setStockAdjustmentModal({ productId, variant });
+  };
+
+  const handleAdjustVariantStock = async () => {
+    if (!stockAdjustmentModal) return;
+
+    const currentStock = Number(
+      stockAdjustmentModal.variant.stockQuantity ?? 0,
+    );
+    let quantity: number | null = null;
+
+    if (stockAdjustmentMode === "adjust") {
+      const parsed = Number(stockAdjustmentQuantity);
+      if (!Number.isInteger(parsed) || parsed === 0) {
+        setError("Enter a non-zero whole number for the stock adjustment.");
+        return;
+      }
+      quantity = parsed;
+    } else {
+      const actual = Number(stockActualCount);
+      if (!Number.isInteger(actual) || actual < 0) {
+        setError("Enter a valid whole number (0 or more) for actual count.");
+        return;
+      }
+      quantity = actual - currentStock;
+      if (quantity === 0) {
+        setError("Actual count matches current stock. No adjustment needed.");
+        return;
+      }
+    }
+
+    if (!stockAdjustmentReason.trim()) {
+      setError("Stock adjustment reason is required.");
+      return;
+    }
 
     try {
-      await adjustProductVariantStock(productId, variantId, {
-        quantity: Number(quantityInput),
-        reason,
-      });
+      await adjustProductVariantStock(
+        stockAdjustmentModal.productId,
+        stockAdjustmentModal.variant.id,
+        {
+          quantity,
+          reason: stockAdjustmentReason.trim(),
+        },
+      );
+      setStockAdjustmentModal(null);
+      setStockAdjustmentMode("adjust");
+      setStockAdjustmentQuantity("");
+      setStockActualCount("");
+      setStockAdjustmentReason("");
       await refreshProducts();
       setSuccess("Variant stock adjusted.");
     } catch (err: any) {
@@ -407,11 +582,22 @@ export default function ProductsPage() {
     }
   };
 
+  const closeStockAdjustmentModal = () => {
+    setStockAdjustmentModal(null);
+    setStockAdjustmentMode("adjust");
+    setStockAdjustmentQuantity("");
+    setStockActualCount("");
+    setStockAdjustmentReason("");
+  };
+
   const handleLoadContentSections = async (productId: string) => {
     try {
       setLoadingContentFor(productId);
       const sections = await listProductContentSectionsAdmin(productId);
-      setContentSectionsByProduct((prev) => ({ ...prev, [productId]: sections }));
+      setContentSectionsByProduct((prev) => ({
+        ...prev,
+        [productId]: sections,
+      }));
     } catch (err: any) {
       setError(err.message ?? "Failed to load content sections");
     } finally {
@@ -431,7 +617,10 @@ export default function ProductsPage() {
     const positionInput = window.prompt("Position", "0") || "0";
 
     let parsedContent: unknown = contentText;
-    if (contentText.trim().startsWith("{") || contentText.trim().startsWith("[")) {
+    if (
+      contentText.trim().startsWith("{") ||
+      contentText.trim().startsWith("[")
+    ) {
       try {
         parsedContent = JSON.parse(contentText);
       } catch {
@@ -461,12 +650,16 @@ export default function ProductsPage() {
     const sectionId = section.id;
     if (!sectionId) return;
 
-    const title = window.prompt("Title", section.title ?? "") ?? section.title ?? undefined;
+    const title =
+      window.prompt("Title", section.title ?? "") ?? section.title ?? undefined;
     const positionInput =
-      window.prompt("Position", String(section.position ?? 0)) ?? String(section.position ?? 0);
+      window.prompt("Position", String(section.position ?? 0)) ??
+      String(section.position ?? 0);
     const contentInput =
-      window.prompt("Content (JSON or plain text)", JSON.stringify(section.content)) ??
-      JSON.stringify(section.content);
+      window.prompt(
+        "Content (JSON or plain text)",
+        JSON.stringify(section.content),
+      ) ?? JSON.stringify(section.content);
 
     let parsedContent: unknown = contentInput;
     try {
@@ -488,7 +681,10 @@ export default function ProductsPage() {
     }
   };
 
-  const handleDeleteContentSection = async (productId: string, sectionId?: string) => {
+  const handleDeleteContentSection = async (
+    productId: string,
+    sectionId?: string,
+  ) => {
     if (!sectionId) return;
     if (!confirm("Delete this content section?")) return;
 
@@ -500,6 +696,29 @@ export default function ProductsPage() {
       setError(err.message ?? "Failed to remove content section");
     }
   };
+
+  const stockModalVariant = stockAdjustmentModal?.variant;
+  const stockModalStock = Number(stockModalVariant?.stockQuantity ?? 0);
+  const stockModalReserved = Number(stockModalVariant?.stockReserved ?? 0);
+  const stockModalBuffer = Number(stockModalVariant?.bufferStock ?? 0);
+  const stockModalAvailable = Number(stockModalVariant?.availableStock ?? 0);
+  const parsedStockAdjustment = Number(stockAdjustmentQuantity);
+  const parsedStockActualCount = Number(stockActualCount);
+  const computedStockAdjustment =
+    stockAdjustmentMode === "adjust"
+      ? Number.isInteger(parsedStockAdjustment)
+        ? parsedStockAdjustment
+        : null
+      : Number.isInteger(parsedStockActualCount) && parsedStockActualCount >= 0
+        ? parsedStockActualCount - stockModalStock
+        : null;
+  const computedAdjustmentSign =
+    computedStockAdjustment == null || computedStockAdjustment === 0
+      ? ""
+      : computedStockAdjustment > 0
+        ? "+"
+        : "";
+  const variantModalAvailable = variantEditorModal?.variant?.availableStock;
 
   return (
     <section className="min-h-screen bg-[#FAF3E2] px-6 md:px-12 py-14">
@@ -527,9 +746,24 @@ export default function ProductsPage() {
             onClick={() => {
               setShowCreateForm(!showCreateForm);
               setEditingId(null);
-              setForm({ name: "", slug: "", description: "", brand: "", isActive: true });
+              setForm({
+                name: "",
+                slug: "",
+                description: "",
+                brand: "",
+                isActive: true,
+              });
               setSelectedCategoryIds([]);
-              setVariants([{ variantName: "", sku: "", price: "", stockQuantity: "" }]);
+              setVariants([
+                {
+                  variantName: "",
+                  sku: "",
+                  price: "",
+                  stockQuantity: "",
+                  bufferStock: "",
+                  lowStockThreshold: "5",
+                },
+              ]);
               setAutoSlug(true);
             }}
             className="px-4 py-2 bg-[#9E6E5B] hover:bg-[#8a5e4e] text-white rounded-lg transition flex items-center gap-2 text-sm font-medium"
@@ -596,7 +830,9 @@ export default function ProductsPage() {
                 <input
                   type="text"
                   value={form.brand}
-                  onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, brand: e.target.value }))
+                  }
                   placeholder="e.g. Pureastra"
                   className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#9E6E5B]"
                 />
@@ -611,7 +847,10 @@ export default function ProductsPage() {
                   }
                   className="accent-[#9E6E5B] w-4 h-4"
                 />
-                <label htmlFor="isActive" className="text-sm font-medium text-[#5E2B16]">
+                <label
+                  htmlFor="isActive"
+                  className="text-sm font-medium text-[#5E2B16]"
+                >
                   Active (visible on site)
                 </label>
               </div>
@@ -669,48 +908,122 @@ export default function ProductsPage() {
               </div>
               <div className="space-y-2">
                 {variants.map((v, i) => (
-                  <div key={i} className="grid grid-cols-5 gap-2">
-                    <input
-                      type="text"
-                      placeholder="Name (e.g. 100ml)"
-                      value={v.variantName}
-                      onChange={(e) =>
-                        updateVariant(i, "variantName", e.target.value)
-                      }
-                      className="border border-gray-200 rounded px-3 py-2 text-xs focus:outline-none focus:border-[#9E6E5B]"
-                    />
-                    <input
-                      type="text"
-                      placeholder="SKU"
-                      value={v.sku}
-                      onChange={(e) => updateVariant(i, "sku", e.target.value)}
-                      className="border border-gray-200 rounded px-3 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] font-mono"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Price (₹)"
-                      value={v.price}
-                      onChange={(e) => updateVariant(i, "price", e.target.value)}
-                      className="border border-gray-200 rounded px-3 py-2 text-xs focus:outline-none focus:border-[#9E6E5B]"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Stock"
-                      value={v.stockQuantity}
-                      onChange={(e) =>
-                        updateVariant(i, "stockQuantity", e.target.value)
-                      }
-                      className="border border-gray-200 rounded px-3 py-2 text-xs focus:outline-none focus:border-[#9E6E5B]"
-                    />
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(i)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    )}
+                  <div
+                    key={i}
+                    className="rounded-lg border border-gray-200 p-3"
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold text-[#5E2B16]">
+                        Variant {i + 1}
+                      </p>
+                      {variants.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeVariant(i)}
+                          className="text-xs font-semibold text-red-600 hover:text-red-700"
+                        >
+                          <FontAwesomeIcon icon={faTrash} /> Remove
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <label className="space-y-1 text-xs font-semibold text-gray-600">
+                        <span>Variant name</span>
+                        <input
+                          type="text"
+                          placeholder="100ml"
+                          value={v.variantName}
+                          onChange={(e) =>
+                            updateVariant(i, "variantName", e.target.value)
+                          }
+                          className="w-full border border-gray-200 rounded px-3 py-2 text-xs font-normal focus:outline-none focus:border-[#9E6E5B]"
+                        />
+                      </label>
+                      <label className="space-y-1 text-xs font-semibold text-gray-600">
+                        <span>SKU</span>
+                        <input
+                          type="text"
+                          placeholder="PA-VCW-100ML"
+                          value={v.sku}
+                          onChange={(e) =>
+                            updateVariant(i, "sku", e.target.value)
+                          }
+                          className="w-full border border-gray-200 rounded px-3 py-2 text-xs font-mono font-normal focus:outline-none focus:border-[#9E6E5B]"
+                        />
+                      </label>
+                      <label className="space-y-1 text-xs font-semibold text-gray-600">
+                        <span>Price</span>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="₹"
+                          value={v.price}
+                          onChange={(e) =>
+                            updateVariant(i, "price", e.target.value)
+                          }
+                          className="w-full border border-gray-200 rounded px-3 py-2 text-xs font-normal focus:outline-none focus:border-[#9E6E5B]"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-3 rounded-md bg-[#F8F4EC] p-3">
+                      <p className="mb-2 text-xs font-semibold text-[#5E2B16]">
+                        Inventory
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <label className="space-y-1 text-xs font-semibold text-gray-600">
+                          <span>Stock</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="On-hand stock"
+                            value={v.stockQuantity}
+                            onChange={(e) =>
+                              updateVariant(i, "stockQuantity", e.target.value)
+                            }
+                            className="w-full border border-gray-200 rounded px-3 py-2 text-xs font-normal focus:outline-none focus:border-[#9E6E5B]"
+                          />
+                        </label>
+                        <label className="space-y-1 text-xs font-semibold text-gray-600">
+                          <span>Buffer</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Hidden reserve"
+                            value={v.bufferStock}
+                            onChange={(e) =>
+                              updateVariant(i, "bufferStock", e.target.value)
+                            }
+                            className="w-full border border-gray-200 rounded px-3 py-2 text-xs font-normal focus:outline-none focus:border-[#9E6E5B]"
+                          />
+                        </label>
+                        <label className="space-y-1 text-xs font-semibold text-gray-600">
+                          <span>Low stock threshold</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Alert level"
+                            value={v.lowStockThreshold}
+                            onChange={(e) =>
+                              updateVariant(
+                                i,
+                                "lowStockThreshold",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full border border-gray-200 rounded px-3 py-2 text-xs font-normal focus:outline-none focus:border-[#9E6E5B]"
+                          />
+                        </label>
+                        <div className="rounded border border-dashed border-[#D6C9B6] px-3 py-2">
+                          <p className="text-[11px] font-semibold uppercase text-gray-500">
+                            Available
+                          </p>
+                          <p className="text-sm font-bold text-[#5E2B16]">
+                            Calculated after save
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -781,7 +1094,10 @@ export default function ProductsPage() {
                         <textarea
                           value={form.description || ""}
                           onChange={(e) =>
-                            setForm((p) => ({ ...p, description: e.target.value }))
+                            setForm((p) => ({
+                              ...p,
+                              description: e.target.value,
+                            }))
                           }
                           placeholder="Description"
                           rows={2}
@@ -792,7 +1108,10 @@ export default function ProductsPage() {
                             type="checkbox"
                             checked={form.isActive}
                             onChange={(e) =>
-                              setForm((p) => ({ ...p, isActive: e.target.checked }))
+                              setForm((p) => ({
+                                ...p,
+                                isActive: e.target.checked,
+                              }))
                             }
                             className="accent-[#9E6E5B]"
                           />
@@ -823,7 +1142,9 @@ export default function ProductsPage() {
                           {product.slug}
                         </p>
                         {product.brand && (
-                          <p className="text-sm text-gray-600">Brand: {product.brand}</p>
+                          <p className="text-sm text-gray-600">
+                            Brand: {product.brand}
+                          </p>
                         )}
                         {product.description && (
                           <p className="text-sm text-gray-700 mt-2">
@@ -846,7 +1167,10 @@ export default function ProductsPage() {
                                 key={pc.category.id}
                                 type="button"
                                 onClick={() =>
-                                  handleRemoveCategoryFromProduct(product.id, pc.category.id)
+                                  handleRemoveCategoryFromProduct(
+                                    product.id,
+                                    pc.category.id,
+                                  )
                                 }
                                 className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs"
                                 title="Remove category"
@@ -861,7 +1185,10 @@ export default function ProductsPage() {
                             defaultValue=""
                             onChange={(e) => {
                               if (!e.target.value) return;
-                              void handleAssignCategoryToProduct(product.id, e.target.value);
+                              void handleAssignCategoryToProduct(
+                                product.id,
+                                e.target.value,
+                              );
                               e.currentTarget.value = "";
                             }}
                             className="w-full border border-gray-200 rounded px-2 py-1 text-xs bg-white"
@@ -902,51 +1229,153 @@ export default function ProductsPage() {
                 {/* Variants */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-semibold text-gray-600">Variants:</p>
+                    <p className="text-xs font-semibold text-gray-600">
+                      Variants:
+                    </p>
                     <button
                       type="button"
-                      onClick={() => handleAddVariantToProduct(product.id)}
+                      onClick={() => openAddVariantModal(product.id)}
                       className="text-xs text-[#9E6E5B] hover:text-[#7a5644]"
                     >
                       + Add variant
                     </button>
                   </div>
                   {product.variants && product.variants.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {product.variants.map((variant) => (
-                        <div
-                          key={variant.id}
-                          className="bg-gray-50 px-3 py-1.5 rounded text-xs border border-gray-200"
-                        >
-                          <div className="font-medium">{variant.variantName || "Variant"}</div>
-                          <div className="text-gray-600">SKU: {variant.sku || "-"}</div>
-                          <div className="text-gray-600">₹{variant.price ?? "-"}</div>
-                          <div className="text-gray-500">Stock: {variant.stockQuantity ?? "-"}</div>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleEditVariant(product.id, variant as ProductVariant)}
-                              className="px-2 py-0.5 rounded bg-blue-100 text-blue-700"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleAdjustVariantStock(product.id, variant.id)}
-                              className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700"
-                            >
-                              Stock +/-
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteVariant(product.id, variant.id)}
-                              className="px-2 py-0.5 rounded bg-red-100 text-red-700"
-                            >
-                              Delete
-                            </button>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {product.variants.map((variant) => {
+                        const reservedDetailKey = `${product.id}:${variant.id}`;
+                        const reservedCount = Number(
+                          variant.stockReserved ?? 0,
+                        );
+                        const isReservedDetailOpen =
+                          openReservedDetailKey === reservedDetailKey;
+
+                        return (
+                          <div
+                            key={variant.id}
+                            className={`rounded-lg border p-3 text-xs ${
+                              variant.isLowStock
+                                ? "border-yellow-300 bg-yellow-50"
+                                : "border-gray-200 bg-gray-50"
+                            }`}
+                          >
+                            <div className="mb-2 flex items-start justify-between gap-2">
+                              <div>
+                                <div className="font-semibold text-[#5E2B16]">
+                                  {variant.variantName || "Variant"}
+                                </div>
+                                <div className="font-mono text-gray-600">
+                                  SKU: {variant.sku || "-"}
+                                </div>
+                              </div>
+                              {variant.isLowStock && (
+                                <span className="rounded bg-yellow-200 px-2 py-0.5 font-semibold text-yellow-900">
+                                  {reservedCount > 0
+                                    ? "Low stock - fast moving"
+                                    : "Low stock"}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mb-2 rounded-md bg-white px-3 py-2">
+                              <p className="text-[11px] font-semibold uppercase text-gray-500">
+                                Available
+                              </p>
+                              <p
+                                className={`text-2xl font-bold ${
+                                  Number(variant.availableStock ?? 0) <= 0
+                                    ? "text-red-600"
+                                    : variant.isLowStock
+                                      ? "text-[#b35c1e]"
+                                      : "text-[#3B7509]"
+                                }`}
+                              >
+                                {variant.availableStock ?? 0}
+                              </p>
+                              {variant.isLowStock &&
+                                Number(variant.availableStock ?? 0) > 0 && (
+                                  <p className="text-[11px] font-semibold text-[#b35c1e]">
+                                    Only {variant.availableStock ?? 0} left
+                                  </p>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-gray-600">
+                              <span>Price: ₹{variant.price ?? "-"}</span>
+                              <span>Stock: {variant.stockQuantity ?? "-"}</span>
+                              {reservedCount > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setOpenReservedDetailKey((prev) =>
+                                      prev === reservedDetailKey
+                                        ? null
+                                        : reservedDetailKey,
+                                    )
+                                  }
+                                  className="text-left font-semibold text-[#5E2B16] underline decoration-dotted underline-offset-2"
+                                >
+                                  Reserved: {reservedCount}
+                                </button>
+                              ) : (
+                                <span>Reserved: {reservedCount}</span>
+                              )}
+                              <span>Buffer: {variant.bufferStock ?? 0}</span>
+                              <span className="col-span-2">
+                                Low threshold: {variant.lowStockThreshold ?? 5}
+                              </span>
+                              {isReservedDetailOpen && (
+                                <div className="col-span-2 rounded border border-[#E8DFC9] bg-[#FCF8EF] px-2 py-1.5 text-[11px] text-[#5E2B16]">
+                                  <p className="font-semibold">
+                                    Reservation breakdown
+                                  </p>
+                                  <p>
+                                    Active + Confirmed reservations:{" "}
+                                    {reservedCount}
+                                  </p>
+                                  <p className="text-[10px] text-[#7B6A58]">
+                                    This stock is held by pending orders and
+                                    cannot be sold until released or fulfilled.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openEditVariantModal(
+                                    product.id,
+                                    variant as ProductVariant,
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded bg-blue-100 text-blue-700"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openStockAdjustmentModal(
+                                    product.id,
+                                    variant as ProductVariant,
+                                  )
+                                }
+                                className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700"
+                              >
+                                Stock +/-
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteVariant(product.id, variant.id)
+                                }
+                                className="px-2 py-0.5 rounded bg-red-100 text-red-700"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-gray-400">No variants yet</p>
@@ -956,14 +1385,18 @@ export default function ProductsPage() {
                 {/* Content Sections */}
                 <div className="mb-4 border border-gray-100 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-gray-600">Content Sections:</p>
+                    <p className="text-xs font-semibold text-gray-600">
+                      Content Sections:
+                    </p>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleLoadContentSections(product.id)}
                         className="text-xs text-[#5B8D7C]"
                       >
-                        {loadingContentFor === product.id ? "Loading..." : "Load"}
+                        {loadingContentFor === product.id
+                          ? "Loading..."
+                          : "Load"}
                       </button>
                       <button
                         type="button"
@@ -979,24 +1412,36 @@ export default function ProductsPage() {
                     <div className="space-y-2">
                       {contentSectionsByProduct[product.id].map((section) => (
                         <div
-                          key={section.id ?? `${section.sectionType}-${section.position}`}
+                          key={
+                            section.id ??
+                            `${section.sectionType}-${section.position}`
+                          }
                           className="text-xs border border-gray-200 rounded px-2 py-1"
                         >
                           <div className="font-medium text-[#5E2B16]">
                             {section.sectionType} (pos {section.position})
                           </div>
-                          <div className="text-gray-600">{section.title || "No title"}</div>
+                          <div className="text-gray-600">
+                            {section.title || "No title"}
+                          </div>
                           <div className="mt-1 flex gap-1">
                             <button
                               type="button"
-                              onClick={() => handleEditContentSection(product.id, section)}
+                              onClick={() =>
+                                handleEditContentSection(product.id, section)
+                              }
                               className="px-2 py-0.5 rounded bg-blue-100 text-blue-700"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteContentSection(product.id, section.id)}
+                              onClick={() =>
+                                handleDeleteContentSection(
+                                  product.id,
+                                  section.id,
+                                )
+                              }
                               className="px-2 py-0.5 rounded bg-red-100 text-red-700"
                             >
                               Delete
@@ -1006,14 +1451,18 @@ export default function ProductsPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400">No content sections loaded</p>
+                    <p className="text-xs text-gray-400">
+                      No content sections loaded
+                    </p>
                   )}
                 </div>
 
                 {/* Images */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-gray-600">Images:</p>
+                    <p className="text-xs font-semibold text-gray-600">
+                      Images:
+                    </p>
                     <button
                       onClick={() => setUploadingImageFor(product.id)}
                       className="text-xs text-[#9E6E5B] hover:text-[#7a5644] flex items-center gap-1"
@@ -1038,7 +1487,9 @@ export default function ProductsPage() {
                           disabled={!imageFile || addImageMutation.isPending}
                           className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs disabled:opacity-50"
                         >
-                          {addImageMutation.isPending ? "Uploading..." : "Upload"}
+                          {addImageMutation.isPending
+                            ? "Uploading..."
+                            : "Upload"}
                         </button>
                         <button
                           onClick={() => {
@@ -1056,60 +1507,74 @@ export default function ProductsPage() {
                   {product.images && product.images.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {[...product.images]
-                        .sort((a, b) => Number(a.position ?? 0) - Number(b.position ?? 0))
+                        .sort(
+                          (a, b) =>
+                            Number(a.position ?? 0) - Number(b.position ?? 0),
+                        )
                         .map((image) => (
-                        <div
-                          key={image.id}
-                          className="relative group w-28 h-28 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
-                        >
-                          <Image
-                            src={image.imageUrl}
-                            alt="Product"
-                            fill
-                            className="object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteImage(product.id, image.id)}
-                            className="absolute top-1 right-1 z-10 h-6 w-6 rounded-full bg-red-600/95 text-white text-[11px] shadow-sm"
-                            title="Delete image"
+                          <div
+                            key={image.id}
+                            className="relative group w-28 h-28 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
                           >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
+                            <Image
+                              src={image.imageUrl}
+                              alt="Product"
+                              fill
+                              className="object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteImage(product.id, image.id)
+                              }
+                              className="absolute top-1 right-1 z-10 h-6 w-6 rounded-full bg-red-600/95 text-white text-[11px] shadow-sm"
+                              title="Delete image"
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
 
-                          <div className="absolute inset-x-1 bottom-1 flex flex-col gap-1">
-                            <span className="text-[10px] bg-black/65 text-white rounded px-1.5 py-0.5 text-center">
-                              pos {image.position ?? 0} {Number(image.position ?? 0) === 0 ? "(cover)" : ""}
-                            </span>
-                            <div className="grid grid-cols-3 gap-1 opacity-100">
-                              <button
-                                type="button"
-                                onClick={() => handleSetCoverImage(product.id, image)}
-                                className="h-6 rounded bg-green-600/95 text-white text-[10px]"
-                                title="Set as cover"
-                              >
-                                <FontAwesomeIcon icon={faStar} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveImage(product.id, image, -1)}
-                                className="h-6 rounded bg-blue-600/95 text-white text-[10px]"
-                                title="Move up"
-                              >
-                                <FontAwesomeIcon icon={faArrowUp} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveImage(product.id, image, 1)}
-                                className="h-6 rounded bg-blue-600/95 text-white text-[10px]"
-                                title="Move down"
-                              >
-                                <FontAwesomeIcon icon={faArrowDown} />
-                              </button>
+                            <div className="absolute inset-x-1 bottom-1 flex flex-col gap-1">
+                              <span className="text-[10px] bg-black/65 text-white rounded px-1.5 py-0.5 text-center">
+                                pos {image.position ?? 0}{" "}
+                                {Number(image.position ?? 0) === 0
+                                  ? "(cover)"
+                                  : ""}
+                              </span>
+                              <div className="grid grid-cols-3 gap-1 opacity-100">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleSetCoverImage(product.id, image)
+                                  }
+                                  className="h-6 rounded bg-green-600/95 text-white text-[10px]"
+                                  title="Set as cover"
+                                >
+                                  <FontAwesomeIcon icon={faStar} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleMoveImage(product.id, image, -1)
+                                  }
+                                  className="h-6 rounded bg-blue-600/95 text-white text-[10px]"
+                                  title="Move up"
+                                >
+                                  <FontAwesomeIcon icon={faArrowUp} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleMoveImage(product.id, image, 1)
+                                  }
+                                  className="h-6 rounded bg-blue-600/95 text-white text-[10px]"
+                                  title="Move down"
+                                >
+                                  <FontAwesomeIcon icon={faArrowDown} />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   ) : (
                     <p className="text-xs text-gray-400">No images yet</p>
@@ -1120,6 +1585,345 @@ export default function ProductsPage() {
           )}
         </div>
       </div>
+
+      {variantEditorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-[#5E2B16]">
+                  {variantEditorModal.mode === "add"
+                    ? "Add Variant"
+                    : "Edit Variant"}
+                </h2>
+                <p className="text-xs text-gray-600">
+                  Keep sellable stock clear: stock minus reserved minus buffer.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeVariantEditorModal}
+                className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+                aria-label="Close variant editor"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="space-y-1 text-xs font-semibold text-gray-600">
+                <span>Variant name</span>
+                <input
+                  type="text"
+                  value={variantEditorForm.variantName}
+                  onChange={(e) =>
+                    updateVariantEditorField("variantName", e.target.value)
+                  }
+                  placeholder="100ml"
+                  className="w-full rounded border border-gray-200 px-3 py-2 text-xs font-normal focus:border-[#9E6E5B] focus:outline-none"
+                />
+              </label>
+              <label className="space-y-1 text-xs font-semibold text-gray-600">
+                <span>SKU</span>
+                <input
+                  type="text"
+                  value={variantEditorForm.sku}
+                  onChange={(e) =>
+                    updateVariantEditorField("sku", e.target.value)
+                  }
+                  placeholder="PA-VCW-100ML"
+                  className="w-full rounded border border-gray-200 px-3 py-2 text-xs font-mono font-normal focus:border-[#9E6E5B] focus:outline-none"
+                />
+              </label>
+              <label className="space-y-1 text-xs font-semibold text-gray-600">
+                <span>Price</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={variantEditorForm.price}
+                  onChange={(e) =>
+                    updateVariantEditorField("price", e.target.value)
+                  }
+                  placeholder="₹"
+                  className="w-full rounded border border-gray-200 px-3 py-2 text-xs font-normal focus:border-[#9E6E5B] focus:outline-none"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 rounded-md bg-[#F8F4EC] p-3">
+              <p className="mb-2 text-xs font-semibold text-[#5E2B16]">
+                Inventory
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="space-y-1 text-xs font-semibold text-gray-600">
+                  <span>Stock</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={variantEditorForm.stockQuantity}
+                    disabled={variantEditorModal.mode === "edit"}
+                    onChange={(e) =>
+                      updateVariantEditorField("stockQuantity", e.target.value)
+                    }
+                    placeholder={
+                      variantEditorModal.mode === "edit"
+                        ? "Use Stock +/-"
+                        : "On-hand stock"
+                    }
+                    className="w-full rounded border border-gray-200 px-3 py-2 text-xs font-normal focus:border-[#9E6E5B] focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
+                  />
+                  {variantEditorModal.mode === "edit" && (
+                    <span className="text-[11px] font-normal text-gray-500">
+                      Use Stock +/- for audited stock changes.
+                    </span>
+                  )}
+                </label>
+                <label className="space-y-1 text-xs font-semibold text-gray-600">
+                  <span>Buffer</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={variantEditorForm.bufferStock}
+                    onChange={(e) =>
+                      updateVariantEditorField("bufferStock", e.target.value)
+                    }
+                    placeholder="Hidden reserve"
+                    className="w-full rounded border border-gray-200 px-3 py-2 text-xs font-normal focus:border-[#9E6E5B] focus:outline-none"
+                  />
+                </label>
+                <label className="space-y-1 text-xs font-semibold text-gray-600">
+                  <span>Low stock threshold</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={variantEditorForm.lowStockThreshold}
+                    onChange={(e) =>
+                      updateVariantEditorField(
+                        "lowStockThreshold",
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Alert level"
+                    className="w-full rounded border border-gray-200 px-3 py-2 text-xs font-normal focus:border-[#9E6E5B] focus:outline-none"
+                  />
+                </label>
+                <div className="rounded border border-dashed border-[#D6C9B6] px-3 py-2">
+                  <p className="text-[11px] font-semibold uppercase text-gray-500">
+                    Available
+                  </p>
+                  <p className="text-sm font-bold text-[#5E2B16]">
+                    {variantModalAvailable == null
+                      ? "Calculated after save"
+                      : variantModalAvailable}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <label className="mt-4 flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                type="checkbox"
+                checked={variantEditorForm.isActive}
+                onChange={(e) =>
+                  updateVariantEditorField("isActive", e.target.checked)
+                }
+                className="accent-[#9E6E5B]"
+              />
+              Active variant
+            </label>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeVariantEditorModal}
+                className="rounded bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveVariantEditor}
+                className="rounded bg-[#5E2B16] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4a2010]"
+              >
+                Save Variant
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {stockAdjustmentModal && stockModalVariant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-[#5E2B16]">
+                  Adjust Stock
+                </h2>
+                <p className="text-xs text-gray-600">
+                  {stockModalVariant.variantName || "Variant"} · SKU{" "}
+                  {stockModalVariant.sku || "-"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeStockAdjustmentModal}
+                className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+                aria-label="Close stock adjustment"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+
+            <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded border border-gray-200 p-3">
+                <p className="text-[11px] font-semibold uppercase text-gray-500">
+                  Current stock
+                </p>
+                <p className="text-lg font-bold text-[#5E2B16]">
+                  {stockModalStock}
+                </p>
+              </div>
+              <div className="rounded border border-gray-200 p-3">
+                <p className="text-[11px] font-semibold uppercase text-gray-500">
+                  Reserved
+                </p>
+                {stockModalReserved > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenReservedDetailKey((prev) =>
+                        prev === stockModalVariant.id
+                          ? null
+                          : stockModalVariant.id,
+                      )
+                    }
+                    className="text-left text-lg font-bold text-[#5E2B16] underline decoration-dotted underline-offset-2"
+                  >
+                    {stockModalReserved}
+                  </button>
+                ) : (
+                  <p className="text-lg font-bold text-[#5E2B16]">
+                    {stockModalReserved}
+                  </p>
+                )}
+              </div>
+              <div className="rounded border border-gray-200 p-3">
+                <p className="text-[11px] font-semibold uppercase text-gray-500">
+                  Buffer
+                </p>
+                <p className="text-lg font-bold text-[#5E2B16]">
+                  {stockModalBuffer}
+                </p>
+              </div>
+              <div className="rounded border border-[#819744] bg-[#F3F7EA] p-3">
+                <p className="text-[11px] font-semibold uppercase text-gray-500">
+                  Available
+                </p>
+                <p className="text-lg font-bold text-[#3B7509]">
+                  {stockModalAvailable}
+                </p>
+              </div>
+            </div>
+
+            {stockModalReserved > 0 &&
+              openReservedDetailKey === stockModalVariant.id && (
+                <div className="mb-4 rounded border border-[#E8DFC9] bg-[#FCF8EF] px-3 py-2 text-xs text-[#5E2B16]">
+                  <p className="font-semibold">Reservation breakdown</p>
+                  <p>Active + Confirmed reservations: {stockModalReserved}</p>
+                </div>
+              )}
+
+            <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-1">
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStockAdjustmentMode("adjust")}
+                  className={`rounded px-2 py-1.5 font-semibold transition ${
+                    stockAdjustmentMode === "adjust"
+                      ? "bg-white text-[#5E2B16] shadow-sm"
+                      : "text-gray-600 hover:bg-white/70"
+                  }`}
+                >
+                  Adjust By
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStockAdjustmentMode("setCount")}
+                  className={`rounded px-2 py-1.5 font-semibold transition ${
+                    stockAdjustmentMode === "setCount"
+                      ? "bg-white text-[#5E2B16] shadow-sm"
+                      : "text-gray-600 hover:bg-white/70"
+                  }`}
+                >
+                  Set Actual Count
+                </button>
+              </div>
+            </div>
+
+            {stockAdjustmentMode === "adjust" ? (
+              <label className="mb-3 block text-sm font-semibold text-gray-700">
+                Adjustment
+                <input
+                  type="number"
+                  value={stockAdjustmentQuantity}
+                  onChange={(e) => setStockAdjustmentQuantity(e.target.value)}
+                  placeholder="+10 or -3"
+                  className="mt-1 w-full rounded border border-gray-200 px-3 py-2 text-sm font-normal focus:border-[#9E6E5B] focus:outline-none"
+                />
+              </label>
+            ) : (
+              <label className="mb-3 block text-sm font-semibold text-gray-700">
+                Actual Count
+                <input
+                  type="number"
+                  min="0"
+                  value={stockActualCount}
+                  onChange={(e) => setStockActualCount(e.target.value)}
+                  placeholder="Enter physically counted stock"
+                  className="mt-1 w-full rounded border border-gray-200 px-3 py-2 text-sm font-normal focus:border-[#9E6E5B] focus:outline-none"
+                />
+              </label>
+            )}
+
+            {computedStockAdjustment != null && (
+              <div className="mb-3 rounded border border-[#DCCCB3] bg-[#F8F4EC] px-3 py-2 text-sm text-[#5E2B16]">
+                This will adjust stock by {computedAdjustmentSign}
+                {computedStockAdjustment}
+              </div>
+            )}
+
+            <label className="block text-sm font-semibold text-gray-700">
+              Reason
+              <textarea
+                value={stockAdjustmentReason}
+                onChange={(e) => setStockAdjustmentReason(e.target.value)}
+                placeholder="Required for audit log"
+                rows={3}
+                className="mt-1 w-full resize-none rounded border border-gray-200 px-3 py-2 text-sm font-normal focus:border-[#9E6E5B] focus:outline-none"
+              />
+            </label>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeStockAdjustmentModal}
+                className="rounded bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAdjustVariantStock}
+                disabled={computedStockAdjustment === 0}
+                className="rounded bg-[#5E2B16] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4a2010]"
+              >
+                Save Adjustment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

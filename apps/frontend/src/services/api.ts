@@ -30,6 +30,11 @@ export interface ProductVariant {
   sku?: string | null;
   price?: number | null;
   stockQuantity?: number | null;
+  stockReserved?: number | null;
+  bufferStock?: number | null;
+  lowStockThreshold?: number | null;
+  availableStock?: number | null;
+  isLowStock?: boolean;
   isActive: boolean;
 }
 
@@ -40,7 +45,11 @@ export interface ProductVariantDetail {
   price?: number | null;
   costPrice?: number | null;
   stockQuantity?: number | null;
-  reservedQuantity?: number | null;
+  stockReserved?: number | null;
+  bufferStock?: number | null;
+  lowStockThreshold?: number | null;
+  availableStock?: number | null;
+  isLowStock?: boolean;
   weight?: number | null;
   isActive: boolean;
   images?: ProductImage[];
@@ -163,6 +172,12 @@ export interface CartProductVariant {
   id: string;
   variantName?: string | null;
   price?: number | string | null;
+  stockQuantity?: number | null;
+  stockReserved?: number | null;
+  bufferStock?: number | null;
+  lowStockThreshold?: number | null;
+  availableStock?: number | null;
+  isLowStock?: boolean;
   product: CartProduct;
   images?: CartVariantImage[];
 }
@@ -726,6 +741,8 @@ export const createProduct = (body: {
     sku?: string;
     price?: number;
     stockQuantity?: number;
+    bufferStock?: number;
+    lowStockThreshold?: number;
   }[];
 }) =>
   apiFetch<Product>("/products", {
@@ -812,7 +829,8 @@ export const addProductVariant = (
     price?: number;
     costPrice?: number;
     stockQuantity?: number;
-    reservedQuantity?: number;
+    bufferStock?: number;
+    lowStockThreshold?: number;
     weight?: number;
     isActive?: boolean;
   },
@@ -831,7 +849,8 @@ export const updateProductVariant = (
     price?: number;
     costPrice?: number;
     stockQuantity?: number;
-    reservedQuantity?: number;
+    bufferStock?: number;
+    lowStockThreshold?: number;
     weight?: number;
     isActive?: boolean;
   },
@@ -849,7 +868,7 @@ export const deleteProductVariant = (productId: string, variantId: string) =>
 export const adjustProductVariantStock = (
   productId: string,
   variantId: string,
-  body: { quantity: number; reason?: string },
+  body: { quantity: number; reason: string },
 ) =>
   apiFetch<ProductVariantDetail>(`/products/${productId}/variants/${variantId}/stock`, {
     method: "PATCH",

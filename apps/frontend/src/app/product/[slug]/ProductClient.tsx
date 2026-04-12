@@ -1140,6 +1140,12 @@ export default function ProductClient({ product }: { product: Product }) {
   const displayImages = images.length > 0 ? images : ["/img/facewash.webp"];
 
   const activeVariant = product.variants.find((v) => v.id === activeVariantId);
+  const activeAvailableStock = Math.max(
+    Number(activeVariant?.availableStock ?? 0),
+    0,
+  );
+  const isActiveVariantOutOfStock = activeAvailableStock <= 0;
+  const isActiveVariantLowStock = Boolean(activeVariant?.isLowStock);
 
   // Compute price display
   const activePrice =
@@ -1188,6 +1194,14 @@ export default function ProductClient({ product }: { product: Product }) {
       toast.error("Please select a valid variant.");
       return;
     }
+    if (isActiveVariantOutOfStock) {
+      toast.error("This variant is out of stock.");
+      return;
+    }
+    if (qty > activeAvailableStock) {
+      toast.error(`Only ${activeAvailableStock} left in stock.`);
+      return;
+    }
     addCartItem.mutate(
       { productVariantId: activeVariant.id, quantity: qty },
       {
@@ -1206,6 +1220,14 @@ export default function ProductClient({ product }: { product: Product }) {
       toast.error("Please select a valid variant.");
       return;
     }
+    if (isActiveVariantOutOfStock) {
+      toast.error("This variant is out of stock.");
+      return;
+    }
+    if (qty > activeAvailableStock) {
+      toast.error(`Only ${activeAvailableStock} left in stock.`);
+      return;
+    }
 
     addCartItem.mutate(
       { productVariantId: activeVariant.id, quantity: qty },
@@ -1218,7 +1240,24 @@ export default function ProductClient({ product }: { product: Product }) {
         },
       },
     );
-  }, [activeVariant?.id, qty, addCartItem, router]);
+  }, [
+    activeAvailableStock,
+    activeVariant?.id,
+    isActiveVariantOutOfStock,
+    qty,
+    addCartItem,
+    router,
+  ]);
+
+  useEffect(() => {
+    if (isActiveVariantOutOfStock) {
+      setQty(1);
+      return;
+    }
+    if (qty > activeAvailableStock) {
+      setQty(activeAvailableStock);
+    }
+  }, [activeAvailableStock, isActiveVariantOutOfStock, qty]);
 
   useEffect(() => {
     if (!user || !resumeBuyNowAfterLogin) return;
@@ -1531,6 +1570,21 @@ export default function ProductClient({ product }: { product: Product }) {
                     (MRP Inclusive of all taxes)
                   </p>
                 </div>
+                <p
+                  className={`mt-1 text-sm font-semibold ${
+                    isActiveVariantOutOfStock
+                      ? "text-red-600"
+                      : isActiveVariantLowStock
+                        ? "text-[#b35c1e]"
+                        : "text-[#3B7509]"
+                  }`}
+                >
+                  {isActiveVariantOutOfStock
+                    ? "Out of stock"
+                    : isActiveVariantLowStock
+                      ? `Only ${activeAvailableStock} left`
+                      : "In stock"}
+                </p>
               </div>
             )}
 
@@ -1560,7 +1614,14 @@ export default function ProductClient({ product }: { product: Product }) {
                   {qty}
                 </span>
                 <button
-                  onClick={() => setQty(qty + 1)}
+                  onClick={() =>
+                    setQty((current) =>
+                      isActiveVariantOutOfStock
+                        ? 1
+                        : Math.min(current + 1, activeAvailableStock),
+                    )
+                  }
+                  disabled={isActiveVariantOutOfStock || qty >= activeAvailableStock}
                   className="w-[42px] flex items-center justify-center text-[#5E2B16]"
                 >
                   <FontAwesomeIcon icon={faPlus} />
@@ -1571,7 +1632,7 @@ export default function ProductClient({ product }: { product: Product }) {
               <div className="hidden md:flex flex-col sm:flex-row gap-4 sm:gap-6">
                 <button
                   onClick={handleAddToCart}
-                  disabled={addCartItem.isPending}
+                  disabled={addCartItem.isPending || isActiveVariantOutOfStock}
                   className="flex h-[42px] cursor-pointer hover:scale-105 transition disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <span className="bg-[#E5EAD9] text-[#5E2B16] px-6 flex items-center font-semibold text-[14px] tracking-wide">
@@ -1584,7 +1645,7 @@ export default function ProductClient({ product }: { product: Product }) {
 
                 <button
                   onClick={handleBuyNow}
-                  disabled={addCartItem.isPending}
+                  disabled={addCartItem.isPending || isActiveVariantOutOfStock}
                   className="bg-[#819744] text-white px-5 h-[42px] rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 hover:scale-105 transition disabled:opacity-60 cursor-pointer"
                 >
                   <FontAwesomeIcon icon={faBolt} />
@@ -1608,7 +1669,7 @@ export default function ProductClient({ product }: { product: Product }) {
           <div className="min-w-0 flex flex-1 gap-2">
             <button
               onClick={handleAddToCart}
-              disabled={addCartItem.isPending}
+              disabled={addCartItem.isPending || isActiveVariantOutOfStock}
               className="min-w-0 flex-1 bg-[#E5EAD9] text-[#5E2B16] py-2.5 rounded-lg flex items-center justify-center gap-1 font-semibold text-[12px] disabled:opacity-70"
             >
               <FontAwesomeIcon icon={faCartShopping} />
@@ -1616,7 +1677,7 @@ export default function ProductClient({ product }: { product: Product }) {
             </button>
             <button
               onClick={handleBuyNow}
-              disabled={addCartItem.isPending}
+              disabled={addCartItem.isPending || isActiveVariantOutOfStock}
               className="min-w-0 flex-1 bg-[#819744] text-white py-2.5 rounded-lg flex items-center justify-center gap-1 font-semibold text-[12px] disabled:opacity-70"
             >
               <FontAwesomeIcon icon={faBolt} />

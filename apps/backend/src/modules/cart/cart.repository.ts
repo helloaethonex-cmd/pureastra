@@ -31,6 +31,33 @@ const cartFullInclude = {
   },
 } as const;
 
+const availableStock = (variant: {
+  stockQuantity: number | null;
+  stockReserved: number;
+  bufferStock: number;
+}) =>
+  variant.stockQuantity == null
+    ? 0
+    : Math.max(variant.stockQuantity - variant.stockReserved - variant.bufferStock, 0);
+
+const assertVariantCanCartQuantity = (
+  variant: {
+    id: bigint;
+    stockQuantity: number | null;
+    stockReserved: number;
+    bufferStock: number;
+  },
+  quantity: number,
+) => {
+  if (availableStock(variant) < quantity) {
+    throw new AppError(
+      409,
+      `Insufficient stock for variant ${variant.id.toString()}`,
+      "INSUFFICIENT_STOCK",
+    );
+  }
+};
+
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 
 /** Returns the existing active cart for a user (or session), or creates a new one. */
@@ -97,12 +124,14 @@ export const upsertCartItem = async (
   const existing = await prisma.cartItem.findFirst({
     where: { cartId, productVariantId: data.productVariantId },
   });
+  const nextQuantity = (existing?.quantity ?? 0) + data.quantity;
+  assertVariantCanCartQuantity(variant, nextQuantity);
 
   if (existing) {
     return prisma.cartItem.update({
       where: { id: existing.id },
       data: {
-        quantity: existing.quantity + data.quantity,
+        quantity: nextQuantity,
         priceSnapshot: variant.price,
       },
       include: {
@@ -163,6 +192,14 @@ export const updateCartItemQuantityForUser = async (
 
   if (!existing) return null;
 
+  const variant = await prisma.productVariant.findUnique({
+    where: { id: existing.productVariantId },
+  });
+  if (!variant) {
+    throw new AppError(404, "Product variant not found", "PRODUCT_VARIANT_NOT_FOUND");
+  }
+  assertVariantCanCartQuantity(variant, data.quantity);
+
   return prisma.cartItem.update({
     where: { id: itemId },
     data: { quantity: data.quantity },
@@ -199,6 +236,14 @@ export const updateCartItemQuantityForSession = async (
   });
 
   if (!existing) return null;
+
+  const variant = await prisma.productVariant.findUnique({
+    where: { id: existing.productVariantId },
+  });
+  if (!variant) {
+    throw new AppError(404, "Product variant not found", "PRODUCT_VARIANT_NOT_FOUND");
+  }
+  assertVariantCanCartQuantity(variant, data.quantity);
 
   return prisma.cartItem.update({
     where: { id: itemId },
@@ -307,10 +352,39 @@ export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
         cartId: userCart.id,
         productVariantId: { in: variantIds },
       },
-      select: { id: true, productVariantId: true },
+      select: { id: true, productVariantId: true, quantity: true },
     });
 
     const existingMap = new Map(existingItems.map((item) => [item.productVariantId.toString(), item.id]));
+    const existingQuantityMap = new Map(
+      existingItems.map((item) => [item.productVariantId.toString(), item.quantity]),
+    );
+
+    const variants = await tx.productVariant.findMany({
+      where: { id: { in: variantIds }, deletedAt: null },
+      select: {
+        id: true,
+        stockQuantity: true,
+        stockReserved: true,
+        bufferStock: true,
+      },
+    });
+    const variantMap = new Map(variants.map((variant) => [variant.id.toString(), variant]));
+    for (const row of groupedRows) {
+      const variant = variantMap.get(row.productVariantId.toString());
+      if (!variant) {
+        throw new AppError(
+          404,
+          "Product variant not found",
+          "PRODUCT_VARIANT_NOT_FOUND",
+        );
+      }
+      assertVariantCanCartQuantity(
+        variant,
+        row.quantity + (existingQuantityMap.get(row.productVariantId.toString()) ?? 0),
+      );
+    }
+
     const rowsToCreate = groupedRows.filter((row) => !existingMap.has(row.productVariantId.toString()));
     const rowsToIncrement = groupedRows.filter((row) => existingMap.has(row.productVariantId.toString()));
 
