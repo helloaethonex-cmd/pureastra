@@ -6,7 +6,7 @@ import {
   faEnvelope,
   faPhone,
 } from "@fortawesome/free-solid-svg-icons";
-import { faFacebookF, faInstagram } from "@fortawesome/free-brands-svg-icons";
+import { faFacebookF, faInstagram ,  faLinkedinIn } from "@fortawesome/free-brands-svg-icons";
 
 export default function Footer() {
   return (
@@ -39,11 +39,19 @@ export default function Footer() {
 
             {/* SOCIAL */}
             <div className="mt-4 flex gap-4 text-lg">
-              <a href="#" className="hover:scale-110 transition">
+              <a href="https://www.facebook.com/share/1Ho4ajBRTp/" className="hover:scale-110 transition">
                 <FontAwesomeIcon icon={faFacebookF} />
               </a>
-              <a href="#" className="hover:scale-110 transition">
+              <a href="https://www.instagram.com/pureastra.in?igsh=aWExMTVwamJraWNx" className="hover:scale-110 transition">
                 <FontAwesomeIcon icon={faInstagram} />
+              </a>
+              <a
+                href="https://www.linkedin.com/company/pureastra/posts/?feedView=all"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:scale-110 transition"
+              >
+                <FontAwesomeIcon icon={faLinkedinIn} />
               </a>
             </div>
           </div>
@@ -89,7 +97,7 @@ export default function Footer() {
 
           <p className="flex items-center gap-2">
             <FontAwesomeIcon icon={faEnvelope} />
-            support@pureastra.com
+            support@pureastra.in
           </p>
 
           <p className="flex items-center gap-2">
