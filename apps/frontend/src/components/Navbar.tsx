@@ -100,7 +100,7 @@ export default function Navbar() {
   return (
     <>
       {/* ================= TOP BAR ================= */}
-      <div className="border-b border-gray-200 py-2 px-3 sm:px-4 bg-white overflow-x-hidden">
+      <div className="relative z-50 border-b border-gray-200 py-2 px-3 sm:px-4 bg-white">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-2 min-w-0">
 
           {/* LEFT (MOBILE MENU + SEARCH) */}
@@ -164,7 +164,7 @@ export default function Navbar() {
 
                 {user && isUserMenuOpen && (
                   <div
-                    className="absolute right-0 top-11 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44 z-50"
+                    className="absolute right-0 top-11 z-[100] bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-44"
                   >
                     <p className="px-4 py-1 text-xs text-gray-400 truncate">
                       {user.email}
