@@ -27,6 +27,8 @@ import {
   updateAdminInfluencerPayoutStatus,
   updateAdminInfluencerStatus,
   updateAdminOrderStatus,
+  downloadSingleShippingLabel,
+  downloadBulkShippingLabels,
 } from "@/services/api";
 
 // ─── Admin check ──────────────────────────────────────────────────────────────
@@ -209,9 +211,26 @@ export function useUpdateAdminOrderStatus() {
   });
 }
 
+// ─── Shipping Labels ───────────────────────────────────────────────────────────
+
+export function useDownloadShippingLabel() {
+  return useMutation({
+    mutationFn: (orderId: string) => downloadSingleShippingLabel(orderId),
+  });
+}
+
+export function useDownloadBulkShippingLabels() {
+  return useMutation({
+    mutationFn: (orderIds: string[]) => downloadBulkShippingLabels(orderIds),
+  });
+}
+
 // ─── Reports ─────────────────────────────────────────────────────────────────
 
-export function useAdminOverviewReport(params?: { from?: string; to?: string }) {
+export function useAdminOverviewReport(params?: {
+  from?: string;
+  to?: string;
+}) {
   return useQuery({
     queryKey: ["adminReports", "overview", params],
     queryFn: () => getAdminOverviewReport(params),
@@ -219,7 +238,11 @@ export function useAdminOverviewReport(params?: { from?: string; to?: string }) 
   });
 }
 
-export function useAdminGstSummary(params: { from: string; to: string; sort?: "issuedAt:asc" | "issuedAt:desc" }) {
+export function useAdminGstSummary(params: {
+  from: string;
+  to: string;
+  sort?: "issuedAt:asc" | "issuedAt:desc";
+}) {
   return useQuery({
     queryKey: ["adminReports", "gst", "summary", params],
     queryFn: () => getAdminGstReportSummary(params),
@@ -302,8 +325,13 @@ export function useCreateAdminInfluencer() {
 export function useUpdateAdminInfluencerStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ influencerId, status }: { influencerId: string; status: "ACTIVE" | "PAUSED" | "BANNED" }) =>
-      updateAdminInfluencerStatus(influencerId, { status }),
+    mutationFn: ({
+      influencerId,
+      status,
+    }: {
+      influencerId: string;
+      status: "ACTIVE" | "PAUSED" | "BANNED";
+    }) => updateAdminInfluencerStatus(influencerId, { status }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
       qc.invalidateQueries({ queryKey: ["adminInfluencers", "analytics"] });
@@ -314,8 +342,13 @@ export function useUpdateAdminInfluencerStatus() {
 export function useUpdateAdminInfluencerCommission() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ influencerId, commissionRate }: { influencerId: string; commissionRate: number }) =>
-      updateAdminInfluencerCommission(influencerId, { commissionRate }),
+    mutationFn: ({
+      influencerId,
+      commissionRate,
+    }: {
+      influencerId: string;
+      commissionRate: number;
+    }) => updateAdminInfluencerCommission(influencerId, { commissionRate }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
       qc.invalidateQueries({ queryKey: ["adminInfluencers", "analytics"] });
@@ -326,7 +359,13 @@ export function useUpdateAdminInfluencerCommission() {
 export function useUpdateAdminInfluencerDashboardAccess() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ influencerId, canViewDashboard }: { influencerId: string; canViewDashboard: boolean }) =>
+    mutationFn: ({
+      influencerId,
+      canViewDashboard,
+    }: {
+      influencerId: string;
+      canViewDashboard: boolean;
+    }) =>
       updateAdminInfluencerDashboardAccess(influencerId, { canViewDashboard }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminInfluencers", "list"] });
@@ -349,8 +388,15 @@ export function useAdminInfluencerPayouts(
 export function useRecordAdminInfluencerPayout() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ influencerId, amount, referenceNote }: { influencerId: string; amount: number; referenceNote?: string }) =>
-      recordAdminInfluencerPayout(influencerId, { amount, referenceNote }),
+    mutationFn: ({
+      influencerId,
+      amount,
+      referenceNote,
+    }: {
+      influencerId: string;
+      amount: number;
+      referenceNote?: string;
+    }) => recordAdminInfluencerPayout(influencerId, { amount, referenceNote }),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({
         queryKey: ["adminInfluencers", "payouts", variables.influencerId],
@@ -373,7 +419,8 @@ export function useUpdateAdminInfluencerPayoutStatus() {
       payoutId: string;
       status: "COMPLETED" | "FAILED";
       referenceNote?: string;
-    }) => updateAdminInfluencerPayoutStatus(payoutId, { status, referenceNote }),
+    }) =>
+      updateAdminInfluencerPayoutStatus(payoutId, { status, referenceNote }),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({
         queryKey: ["adminInfluencers", "payouts", variables.influencerId],

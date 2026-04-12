@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shipping Label</title>
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────────── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ── Page: A6 = 105mm x 148mm ─────────────────────────────────────── */
+    html, body {
+      width: 105mm;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9pt;
+      color: #111;
+      background: #fff;
+    }
+
+    /* ── Label wrapper ──────────────────────────────────────────────────── */
+    .label {
+      width: 105mm;
+      border: 2px solid #111;
+      padding: 0;
+      page-break-inside: avoid;
+    }
+
+    /* ── Header bar ─────────────────────────────────────────────────────── */
+    .header {
+      background: #111;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3mm 4mm;
+    }
+    .header .brand {
+      font-size: 13pt;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .header .payment-badge {
+      font-size: 8pt;
+      font-weight: 800;
+      border: 2px solid #fff;
+      padding: 1mm 3mm;
+      border-radius: 2px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Section ────────────────────────────────────────────────────────── */
+    .section {
+      padding: 2.5mm 4mm;
+      border-bottom: 1px solid #ccc;
+    }
+    .section:last-child { border-bottom: none; }
+
+    .section-label {
+      font-size: 6.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #555;
+      margin-bottom: 1mm;
+    }
+
+    .from-name    { font-size: 9pt; font-weight: 700; }
+    .from-address { font-size: 8pt; color: #333; line-height: 1.4; margin-top: 0.5mm; }
+
+    /* ── Divider ────────────────────────────────────────────────────────── */
+    .divider {
+      height: 5mm;
+      background: #f0f0f0;
+      border-top: 1px solid #bbb;
+      border-bottom: 1px solid #bbb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .divider span {
+      font-size: 6pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #777;
+    }
+
+    /* ── Ship-To ────────────────────────────────────────────────────────── */
+    .to-name {
+      font-size: 13pt;
+      font-weight: 900;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+    .to-address {
+      font-size: 9.5pt;
+      font-weight: 600;
+      line-height: 1.5;
+      margin-top: 1.5mm;
+    }
+    .to-phone {
+      font-size: 11pt;
+      font-weight: 800;
+      margin-top: 2mm;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Order info bar ─────────────────────────────────────────────────── */
+    .order-bar {
+      display: flex;
+      align-items: stretch;
+      border-top: 2px solid #111;
+    }
+    .order-cell {
+      flex: 1;
+      padding: 2mm 3mm;
+      border-right: 1px solid #bbb;
+    }
+    .order-cell:last-child { border-right: none; }
+    .order-cell-label {
+      font-size: 6pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #555;
+    }
+    .order-cell-value {
+      font-size: 8pt;
+      font-weight: 800;
+      margin-top: 0.5mm;
+      word-break: break-all;
+    }
+
+    /* ── Barcode ────────────────────────────────────────────────────────── */
+    .barcode-section {
+      border-top: 1px solid #ccc;
+      padding: 2mm 4mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .barcode-bars {
+      width: 85mm;
+      height: 10mm;
+      display: flex;
+      align-items: stretch;
+    }
+    .barcode-text {
+      font-size: 7pt;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      margin-top: 1mm;
+      letter-spacing: 2px;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    .footer {
+      border-top: 1px dashed #ccc;
+      padding: 1.5mm 4mm;
+      font-size: 6pt;
+      color: #888;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+
+  <%# Dynamic color rules injected as a separate style block — no EJS inside attribute strings %>
+  <%- dynamicStyle %>
+</head>
+<body>
+  <div class="label">
+
+    <!-- Header: Brand + Payment badge -->
+    <div class="header">
+      <span class="brand"><%= sellerName %></span>
+      <span class="payment-badge"><%= paymentType %></span>
+    </div>
+
+    <!-- FROM (Seller) -->
+    <div class="section">
+      <div class="section-label">From (Sold By)</div>
+      <div class="from-name"><%= sellerName %></div>
+      <div class="from-address"><%= sellerAddress %></div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider">
+      <span>&#9660;&nbsp;&nbsp;Ship To&nbsp;&nbsp;&#9660;</span>
+    </div>
+
+    <!-- TO (Customer) -->
+    <div class="section">
+      <div class="section-label">Deliver To</div>
+      <div class="to-name"><%= order.shippingName %></div>
+      <div class="to-address">
+        <%= order.shippingLine1 %>
+        <%- order.shippingLine2 ? '<br>' + order.shippingLine2 : '' %><br>
+        <%= order.shippingCity %>, <%= order.shippingState %> &ndash; <%= order.shippingPostalCode %><br>
+        <%= order.shippingCountry %>
+      </div>
+      <div class="to-phone">&#128222;&nbsp;<%= order.shippingPhone %></div>
+    </div>
+
+    <!-- Order info row -->
+    <div class="order-bar">
+      <div class="order-cell">
+        <div class="order-cell-label">Order ID</div>
+        <div class="order-cell-value"><%= order.orderNumber %></div>
+      </div>
+      <div class="order-cell">
+        <div class="order-cell-label">Items</div>
+        <div class="order-cell-value"><%= order.itemCount %></div>
+      </div>
+      <div class="order-cell">
+        <div class="order-cell-label">Amount</div>
+        <div class="order-cell-value">&#8377;<%= order.totalPaid %></div>
+      </div>
+    </div>
+
+    <!-- Barcode placeholder: pre-rendered HTML passed from service to avoid EJS in style attrs -->
+    <div class="barcode-section">
+      <div class="barcode-bars"><%- barcodeHtml %></div>
+      <div class="barcode-text"><%= order.orderNumber %></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span>Printed: <%= printedAt %></span>
+      <span>Handle with care &middot; Do not bend</span>
+    </div>
+
+  </div>
+</body>
+</html>

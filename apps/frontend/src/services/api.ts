@@ -1133,6 +1133,57 @@ export const updateAdminOrderStatus = (
     body: JSON.stringify(body),
   });
 
+// ─── Shipping Labels ───────────────────────────────────────────────────────────
+
+/**
+ * Download a single shipping label PDF for one order.
+ * Uses raw fetch (not apiFetch) because the response is a binary PDF, not JSON.
+ */
+export const downloadSingleShippingLabel = async (orderId: string): Promise<void> => {
+  const res = await fetch(`${BASE}/admin/orders/${orderId}/shipping-label`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? `Failed to download label (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `shipping-label-${orderId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * Download bulk shipping labels PDF for multiple orders.
+ * Uses raw fetch (not apiFetch) because the response is a binary PDF, not JSON.
+ */
+export const downloadBulkShippingLabels = async (orderIds: string[]): Promise<void> => {
+  const res = await fetch(`${BASE}/admin/orders/shipping-labels`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderIds: orderIds.map(Number) }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? `Failed to download bulk labels (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "shipping-labels-bulk.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
 // ─── Admin Reports ──────────────────────────────────────────────────────────
 
 export const getAdminOverviewReport = (params?: {
