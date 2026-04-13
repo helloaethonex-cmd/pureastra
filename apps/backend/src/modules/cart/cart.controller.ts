@@ -34,8 +34,11 @@ const handleError = (req: Request, res: Response, err: unknown) => {
 /** Resolves the current user ID (if authenticated) and the session ID (from header or query). */
 const resolveContext = (req: Request) => {
   const userId: string | undefined = (req as any).user?.id?.toString();
-  const sessionId: string | undefined =
-    (req.headers["x-session-id"] as string) ?? (req.query["sessionId"] as string);
+  // Enforce single-owner context:
+  // authenticated requests use user cart only; guest requests use session cart.
+  const sessionId: string | undefined = userId
+    ? undefined
+    : (req.headers["x-session-id"] as string) ?? (req.query["sessionId"] as string);
   return { userId, sessionId };
 };
 

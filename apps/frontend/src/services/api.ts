@@ -186,11 +186,14 @@ export interface Cart {
 
 const GUEST_CART_SESSION_KEY = "pureastra_guest_cart_session_id";
 
-const getGuestCartSessionId = (): string | null => {
+const getGuestCartSessionId = (
+  options?: { createIfMissing?: boolean },
+): string | null => {
   if (typeof window === "undefined") return null;
 
   const existing = window.localStorage.getItem(GUEST_CART_SESSION_KEY);
   if (existing) return existing;
+  if (options?.createIfMissing === false) return null;
 
   const generated =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -1388,47 +1391,59 @@ export const updateAdminInfluencerPayoutStatus = (
 
 export const getCart = () => apiFetch<Cart>("/cart");
 
-export const getCartWithGuestSession = async () => {
+type CartRequestOptions = {
+  includeGuestSession?: boolean;
+};
+
+const cartSessionHeaders = (options?: CartRequestOptions) => {
+  if (options?.includeGuestSession === false) return undefined;
   const sessionId = getGuestCartSessionId();
+  return sessionId ? { "x-session-id": sessionId } : undefined;
+};
+
+export const getCartWithGuestSession = async (options?: CartRequestOptions) => {
+  const sessionId =
+    options?.includeGuestSession === false
+      ? null
+      : getGuestCartSessionId();
   return apiFetch<Cart>(`/cart${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ""}`);
 };
 
-export const addCartItem = (body: { productVariantId: string; quantity: number }) =>
+export const addCartItem = (
+  body: { productVariantId: string; quantity: number },
+  options?: CartRequestOptions,
+) =>
   apiFetch<CartItem>("/cart/items", {
     method: "POST",
-    headers: getGuestCartSessionId()
-      ? { "x-session-id": getGuestCartSessionId() as string }
-      : undefined,
+    headers: cartSessionHeaders(options),
     body: JSON.stringify(body),
   });
 
-export const updateCartItemQuantity = (itemId: string, quantity: number) =>
+export const updateCartItemQuantity = (
+  itemId: string,
+  quantity: number,
+  options?: CartRequestOptions,
+) =>
   apiFetch<CartItem>(`/cart/items/${itemId}`, {
     method: "PATCH",
-    headers: getGuestCartSessionId()
-      ? { "x-session-id": getGuestCartSessionId() as string }
-      : undefined,
+    headers: cartSessionHeaders(options),
     body: JSON.stringify({ quantity }),
   });
 
-export const removeCartItem = (itemId: string) =>
+export const removeCartItem = (itemId: string, options?: CartRequestOptions) =>
   apiFetch<{ message: string }>(`/cart/items/${itemId}`, {
     method: "DELETE",
-    headers: getGuestCartSessionId()
-      ? { "x-session-id": getGuestCartSessionId() as string }
-      : undefined,
+    headers: cartSessionHeaders(options),
   });
 
-export const clearCart = () =>
+export const clearCart = (options?: CartRequestOptions) =>
   apiFetch<{ message: string }>("/cart", {
     method: "DELETE",
-    headers: getGuestCartSessionId()
-      ? { "x-session-id": getGuestCartSessionId() as string }
-      : undefined,
+    headers: cartSessionHeaders(options),
   });
 
 export const mergeGuestCart = async () => {
-  const sessionId = getGuestCartSessionId();
+  const sessionId = getGuestCartSessionId({ createIfMissing: false });
   if (!sessionId) return null;
 
   const merged = await apiFetch<Cart>("/cart/merge", {

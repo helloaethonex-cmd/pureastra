@@ -39,21 +39,43 @@ export const findOrCreateCart = async (userId?: bigint, sessionId?: string) => {
     throw new Error("Either userId or sessionId is required");
   }
 
-  const where = userId
-    ? { userId, status: CART_STATUS.ACTIVE }
-    : { sessionId, status: CART_STATUS.ACTIVE };
+  if (userId) {
+    const existingUserCart = await prisma.cart.findFirst({
+      where: { userId, status: CART_STATUS.ACTIVE },
+      include: cartFullInclude,
+    });
 
-  const existing = await prisma.cart.findFirst({
-    where,
+    if (existingUserCart) {
+      // Hotfix: enforce single-owner cart model (user cart must not keep sessionId).
+      if (existingUserCart.sessionId) {
+        return prisma.cart.update({
+          where: { id: existingUserCart.id },
+          data: { sessionId: null },
+          include: cartFullInclude,
+        });
+      }
+      return existingUserCart;
+    }
+
+    return prisma.cart.create({
+      data: {
+        status: CART_STATUS.ACTIVE,
+        userId,
+      },
+      include: cartFullInclude,
+    });
+  }
+
+  const existingGuestCart = await prisma.cart.findFirst({
+    where: { sessionId, status: CART_STATUS.ACTIVE, userId: null },
     include: cartFullInclude,
   });
-  if (existing) return existing;
+  if (existingGuestCart) return existingGuestCart;
 
   return prisma.cart.create({
     data: {
       status: CART_STATUS.ACTIVE,
-      ...(userId ? { userId } : {}),
-      ...(sessionId ? { sessionId } : {}),
+      sessionId,
     },
     include: cartFullInclude,
   });
@@ -255,7 +277,7 @@ export const clearCartItems = async (cartId: bigint) => {
  */
 export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
   const guestCart = await prisma.cart.findFirst({
-    where: { sessionId, status: CART_STATUS.ACTIVE },
+    where: { sessionId, status: CART_STATUS.ACTIVE, userId: null },
     include: { items: true },
   });
 
@@ -268,7 +290,15 @@ export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
     });
 
     const userCart =
-      existingUserCart ??
+      (existingUserCart
+        ? existingUserCart.sessionId
+          ? await tx.cart.update({
+              where: { id: existingUserCart.id },
+              data: { sessionId: null },
+              include: cartFullInclude,
+            })
+          : existingUserCart
+        : null) ??
       (await tx.cart.create({
         data: {
           userId,

@@ -8,11 +8,15 @@ import {
   removeCartItem,
   updateCartItemQuantity,
 } from "@/services/api";
+import { useAuthStore } from "@/store/auth.store";
 
 export function useCart(enabled = true) {
+  const isAuthenticated = useAuthStore((s) => Boolean(s.session));
+
   return useQuery({
     queryKey: ["cart"],
-    queryFn: getCartWithGuestSession,
+    queryFn: () =>
+      getCartWithGuestSession({ includeGuestSession: !isAuthenticated }),
     enabled,
     retry: false,
     staleTime: 1000 * 30,
@@ -21,10 +25,13 @@ export function useCart(enabled = true) {
 
 export function useUpdateCartItem() {
   const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => Boolean(s.session));
 
   return useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
-      updateCartItemQuantity(itemId, quantity),
+      updateCartItemQuantity(itemId, quantity, {
+        includeGuestSession: !isAuthenticated,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
@@ -33,10 +40,11 @@ export function useUpdateCartItem() {
 
 export function useAddCartItem() {
   const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => Boolean(s.session));
 
   return useMutation({
     mutationFn: (payload: { productVariantId: string; quantity: number }) =>
-      addCartItem(payload),
+      addCartItem(payload, { includeGuestSession: !isAuthenticated }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
@@ -45,9 +53,11 @@ export function useAddCartItem() {
 
 export function useRemoveCartItem() {
   const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => Boolean(s.session));
 
   return useMutation({
-    mutationFn: (itemId: string) => removeCartItem(itemId),
+    mutationFn: (itemId: string) =>
+      removeCartItem(itemId, { includeGuestSession: !isAuthenticated }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
@@ -56,9 +66,10 @@ export function useRemoveCartItem() {
 
 export function useClearCart() {
   const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => Boolean(s.session));
 
   return useMutation({
-    mutationFn: clearCart,
+    mutationFn: () => clearCart({ includeGuestSession: !isAuthenticated }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
