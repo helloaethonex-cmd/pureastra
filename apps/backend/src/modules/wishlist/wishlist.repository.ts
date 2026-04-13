@@ -18,6 +18,12 @@ const wishlistItemInclude = {
           brand: true,
           isActive: true,
           deletedAt: true,
+          // Cover image: product-level images sorted by position
+          images: {
+            orderBy: { position: "asc" as const },
+            take: 1,
+            select: { imageUrl: true },
+          },
         },
       },
       images: {
