@@ -185,6 +185,7 @@ export interface Cart {
 }
 
 const GUEST_CART_SESSION_KEY = "pureastra_guest_cart_session_id";
+const CART_MERGE_ROUTE_UNAVAILABLE_KEY = "pureastra_cart_merge_route_unavailable";
 
 const getGuestCartSessionId = (
   options?: { createIfMissing?: boolean },
@@ -1446,13 +1447,35 @@ export const mergeGuestCart = async () => {
   const sessionId = getGuestCartSessionId({ createIfMissing: false });
   if (!sessionId) return null;
 
-  const merged = await apiFetch<Cart>("/cart/merge", {
-    method: "POST",
-    body: JSON.stringify({ sessionId }),
-  });
+  if (
+    typeof window !== "undefined" &&
+    window.sessionStorage.getItem(CART_MERGE_ROUTE_UNAVAILABLE_KEY) === "1"
+  ) {
+    return null;
+  }
 
-  clearGuestCartSessionId();
-  return merged;
+  try {
+    const merged = await apiFetch<Cart>("/cart/merge", {
+      method: "POST",
+      body: JSON.stringify({ sessionId }),
+    });
+
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem(CART_MERGE_ROUTE_UNAVAILABLE_KEY);
+    }
+
+    clearGuestCartSessionId();
+    return merged;
+  } catch (err: any) {
+    const msg = String(err?.message ?? "");
+    if (msg.includes("404")) {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(CART_MERGE_ROUTE_UNAVAILABLE_KEY, "1");
+      }
+      return null;
+    }
+    throw err;
+  }
 };
 
 // ─── Wishlist ────────────────────────────────────────────────────────────────

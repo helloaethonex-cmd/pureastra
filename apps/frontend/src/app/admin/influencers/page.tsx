@@ -60,7 +60,7 @@ export default function AdminInfluencersPage() {
     sortOrder: "desc",
   });
   const analytics = useAdminInfluencerAnalytics({ topLimit: 5 });
-  const products = useProducts({ page: 1, limit: 200, sortOrder: "asc" });
+  const products = useProducts({ page: 1, limit: 100, sortOrder: "asc" });
 
   const createInfluencer = useCreateAdminInfluencer();
   const updateStatus = useUpdateAdminInfluencerStatus();
