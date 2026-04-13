@@ -38,6 +38,7 @@ export default function AdminInfluencersPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "PAUSED" | "BANNED">("ALL");
   const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(null);
+  const [productSlugForLink, setProductSlugForLink] = useState("");
 
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -200,6 +201,47 @@ export default function AdminInfluencersPage() {
     }
   };
 
+  const getAppOrigin = () =>
+    typeof window !== "undefined" ? window.location.origin : "https://pureastra.in";
+
+  const copyToClipboard = async (text: string) => {
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      throw new Error("Clipboard is not available");
+    }
+    await navigator.clipboard.writeText(text);
+  };
+
+  const handleCopyReferralLink = async (referralCode: string) => {
+    setError(null);
+    setMessage(null);
+    try {
+      const link = `${getAppOrigin()}/?ref=${encodeURIComponent(referralCode)}`;
+      await copyToClipboard(link);
+      setMessage("Link copied");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to copy link");
+    }
+  };
+
+  const handleCopyProductLink = async (referralCode: string) => {
+    setError(null);
+    setMessage(null);
+
+    const slug = productSlugForLink.trim();
+    if (!slug) {
+      setError("Enter a product slug to copy product link");
+      return;
+    }
+
+    try {
+      const link = `${getAppOrigin()}/product/${encodeURIComponent(slug)}?ref=${encodeURIComponent(referralCode)}`;
+      await copyToClipboard(link);
+      setMessage("Link copied");
+    } catch (err: any) {
+      setError(err.message ?? "Failed to copy product link");
+    }
+  };
+
   return (
     <section className="min-h-screen bg-[#FAF3E2] px-6 md:px-12 py-14">
       <div className="max-w-7xl mx-auto">
@@ -320,6 +362,12 @@ export default function AdminInfluencersPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <input
+                value={productSlugForLink}
+                onChange={(e) => setProductSlugForLink(e.target.value)}
+                placeholder="Product slug (for product link)"
+                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-56"
+              />
               <select
                 value={statusFilter}
                 onChange={(e) => {
@@ -420,6 +468,20 @@ export default function AdminInfluencersPage() {
                           >
                             <FontAwesomeIcon icon={faMoneyBillTransfer} />
                             Payouts
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyReferralLink(item.referralCode)}
+                            className="px-2 py-1 rounded bg-[#E8F0FA] text-[#16589C] text-xs"
+                          >
+                            Copy Referral Link
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyProductLink(item.referralCode)}
+                            className="px-2 py-1 rounded bg-[#E8F0FA] text-[#16589C] text-xs"
+                          >
+                            Copy Product Link
                           </button>
                         </div>
                       </td>

@@ -136,8 +136,8 @@ export const getProfitOverviewAggregates = async (
   };
 
   const influencerWhere: Prisma.InfluencerSaleWhereInput = placedAt
-    ? { order: { placedAt } }
-    : {};
+    ? { order: { placedAt }, status: { not: "CANCELLED" } }
+    : { status: { not: "CANCELLED" } };
 
   const [orderSums, influencerSums] = await Promise.all([
     tx.order.aggregate({

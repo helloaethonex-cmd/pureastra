@@ -297,10 +297,44 @@ export const adminRecordPayout = async (
     throw new AppError(404, "Influencer not found", "INFLUENCER_NOT_FOUND");
   }
 
-  const payout = await createPayout(prisma, {
-    influencerId: BigInt(influencerId),
-    amount: new Prisma.Decimal(input.amount.toFixed(2)),
-    referenceNote: input.referenceNote,
+  const payout = await prisma.$transaction(async (tx) => {
+    const influencerIdBigInt = BigInt(influencerId);
+    const payoutAmount = new Prisma.Decimal(input.amount.toFixed(2));
+
+    const [approvedSales, completedPayouts] = await Promise.all([
+      tx.influencerSale.aggregate({
+        where: {
+          influencerId: influencerIdBigInt,
+          status: "APPROVED",
+        },
+        _sum: { commissionAmount: true },
+      }),
+      tx.influencerPayout.aggregate({
+        where: {
+          influencerId: influencerIdBigInt,
+          status: "COMPLETED",
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const approvedAmount = approvedSales._sum.commissionAmount ?? new Prisma.Decimal(0);
+    const completedAmount = completedPayouts._sum.amount ?? new Prisma.Decimal(0);
+    const payable = approvedAmount.sub(completedAmount);
+
+    if (payoutAmount.gt(payable)) {
+      throw new AppError(
+        400,
+        "Payout amount exceeds payable commission balance",
+        "PAYOUT_EXCEEDS_PAYABLE",
+      );
+    }
+
+    return createPayout(tx, {
+      influencerId: influencerIdBigInt,
+      amount: payoutAmount,
+      referenceNote: input.referenceNote,
+    });
   });
 
   return {
@@ -350,22 +384,38 @@ export const adminUpdatePayoutStatus = async (
   payoutId: string,
   input: UpdatePayoutStatusInput,
 ) => {
-  const payout = await findPayoutById(prisma, BigInt(payoutId));
-  if (!payout) {
-    throw new AppError(404, "Payout not found", "PAYOUT_NOT_FOUND");
-  }
+  const updated = await prisma.$transaction(async (tx) => {
+    const payout = await findPayoutById(tx, BigInt(payoutId));
+    if (!payout) {
+      throw new AppError(404, "Payout not found", "PAYOUT_NOT_FOUND");
+    }
 
-  if (payout.status !== "INITIATED") {
-    throw new AppError(
-      400,
-      `Cannot update payout that is already ${payout.status}`,
-      "PAYOUT_ALREADY_SETTLED",
-    );
-  }
+    if (payout.status !== "INITIATED") {
+      throw new AppError(
+        400,
+        `Cannot update payout that is already ${payout.status}`,
+        "PAYOUT_ALREADY_SETTLED",
+      );
+    }
 
-  const updated = await updatePayoutStatus(prisma, BigInt(payoutId), {
-    status: input.status,
-    referenceNote: input.referenceNote,
+    const next = await updatePayoutStatus(tx, BigInt(payoutId), {
+      status: input.status,
+      referenceNote: input.referenceNote,
+    });
+
+    if (input.status === "COMPLETED") {
+      await tx.influencerSale.updateMany({
+        where: {
+          influencerId: payout.influencerId,
+          status: "APPROVED",
+        },
+        data: {
+          status: "PAID",
+        },
+      });
+    }
+
+    return next;
   });
 
   return {
