@@ -332,7 +332,12 @@ export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
             "updated_at" = NOW()
         FROM (
           VALUES ${Prisma.join(
-            rowsToIncrement.map((row) => Prisma.sql`(${existingMap.get(row.productVariantId.toString())!}, ${row.quantity})`),
+            rowsToIncrement.map(
+              (row) =>
+                Prisma.sql`(${existingMap.get(
+                  row.productVariantId.toString(),
+                )!}::bigint, ${row.quantity}::integer)`,
+            ),
           )}
         ) AS data("id", "quantity")
         WHERE ci."id" = data."id"
