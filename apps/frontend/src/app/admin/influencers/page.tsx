@@ -23,6 +23,7 @@ import {
   useUpdateAdminInfluencerPayoutStatus,
   useUpdateAdminInfluencerStatus,
 } from "@/hooks/useAdmin";
+import { useProducts } from "@/hooks/useProducts";
 
 const asCurrency = (value: string | number) =>
   new Intl.NumberFormat("en-IN", {
@@ -38,7 +39,7 @@ export default function AdminInfluencersPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "PAUSED" | "BANNED">("ALL");
   const [selectedInfluencerId, setSelectedInfluencerId] = useState<string | null>(null);
-  const [productSlugForLink, setProductSlugForLink] = useState("");
+  const [selectedProductSlug, setSelectedProductSlug] = useState("");
 
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -59,6 +60,7 @@ export default function AdminInfluencersPage() {
     sortOrder: "desc",
   });
   const analytics = useAdminInfluencerAnalytics({ topLimit: 5 });
+  const products = useProducts({ page: 1, limit: 200, sortOrder: "asc" });
 
   const createInfluencer = useCreateAdminInfluencer();
   const updateStatus = useUpdateAdminInfluencerStatus();
@@ -227,9 +229,9 @@ export default function AdminInfluencersPage() {
     setError(null);
     setMessage(null);
 
-    const slug = productSlugForLink.trim();
+    const slug = selectedProductSlug.trim();
     if (!slug) {
-      setError("Enter a product slug to copy product link");
+      setError("Select a product first");
       return;
     }
 
@@ -362,12 +364,22 @@ export default function AdminInfluencersPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <input
-                value={productSlugForLink}
-                onChange={(e) => setProductSlugForLink(e.target.value)}
-                placeholder="Product slug (for product link)"
-                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-56"
-              />
+              <select
+                value={selectedProductSlug}
+                onChange={(e) => setSelectedProductSlug(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-64"
+              >
+                <option value="">
+                  {products.isLoading ? "Loading products..." : "Select product for product link"}
+                </option>
+                {(products.data?.data ?? [])
+                  .filter((product) => Boolean(product.slug))
+                  .map((product) => (
+                    <option key={product.id} value={product.slug ?? ""}>
+                      {product.name} ({product.slug})
+                    </option>
+                  ))}
+              </select>
               <select
                 value={statusFilter}
                 onChange={(e) => {
