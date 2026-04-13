@@ -68,11 +68,10 @@ type Variant = {
 
 // ─── Toast System ─────────────────────────────────────────────────────────────
 
-type ToastState =
-  | { type: "idle" }
-  | { type: "updating"; message: string }
-  | { type: "success"; message: string }
-  | { type: "error"; message: string };
+type ToastState = {
+  type: "idle" | "updating" | "success" | "error";
+  message?: string;
+};
 
 function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void }) {
   const visible = toast.type !== "idle";
@@ -120,7 +119,7 @@ function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void 
         className={cfg.spin ? "animate-spin" : ""}
         size="sm"
       />
-      <span className="flex-1">{toast.type !== "idle" ? toast.message : ""}</span>
+      <span className="flex-1">{toast.message ?? ""}</span>
       {toast.type !== "updating" && (
         <button
           onClick={onDismiss}
