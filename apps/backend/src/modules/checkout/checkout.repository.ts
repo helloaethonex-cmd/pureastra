@@ -70,25 +70,9 @@ export const incrementVariantStockReservedBulk = (
   tx: TxClient,
   rows: Array<{ productVariantId: bigint; quantity: number }>,
 ) => {
-  if (rows.length === 0) {
-    return Promise.resolve(
-      [] as Array<{
-        id: bigint;
-        quantity: number;
-        before_quantity: number | null;
-        after_quantity: number | null;
-      }>,
-    );
-  }
+  if (rows.length === 0) return Promise.resolve();
 
-  return tx.$queryRaw<
-    Array<{
-      id: bigint;
-      quantity: number;
-      before_quantity: number | null;
-      after_quantity: number | null;
-    }>
-  >(
+  return tx.$executeRaw(
     Prisma.sql`
       UPDATE "product_variants" AS pv
       SET "stock_reserved" = pv."stock_reserved" + data."quantity",
@@ -99,13 +83,6 @@ export const incrementVariantStockReservedBulk = (
         )}
       ) AS data("product_variant_id", "quantity")
       WHERE pv."id" = data."product_variant_id"
-        AND pv."stock_quantity" IS NOT NULL
-        AND pv."stock_quantity" - pv."stock_reserved" - pv."buffer_stock" >= data."quantity"
-      RETURNING
-        pv."id",
-        data."quantity",
-        pv."stock_reserved" - data."quantity" AS "before_quantity",
-        pv."stock_reserved" AS "after_quantity"
     `,
   );
 };

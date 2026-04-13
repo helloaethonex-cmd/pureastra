@@ -56,41 +56,10 @@ const invalidateProductDetailCache = async (id: string, slug?: string | null) =>
   await Promise.all(keys.map((key) => deleteCachedKey(key)));
 };
 
-const getAvailableStock = (variant: any) =>
-  variant.stockQuantity == null
-    ? null
-    : Math.max(
-        variant.stockQuantity -
-          (variant.stockReserved ?? 0) -
-          (variant.bufferStock ?? 0),
-        0,
-      );
-
-const withAvailableStock = (variant: any) => {
-  const availableStock = getAvailableStock(variant);
-  return {
-    ...variant,
-    availableStock,
-    isLowStock:
-      availableStock !== null &&
-      availableStock > 0 &&
-      availableStock < (variant.lowStockThreshold ?? 5),
-  };
-};
-
-const withVariantAvailability = (product: any) => ({
-  ...product,
-  variants: product.variants?.map(withAvailableStock),
-});
-
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 export const getAllProducts = async (query: ProductQuery) => {
-  const result = await findAllProducts(query);
-  return {
-    ...result,
-    data: result.data.map(withVariantAvailability),
-  };
+  return findAllProducts(query);
 };
 
 export const getProductById = async (id: string) => {
@@ -99,16 +68,15 @@ export const getProductById = async (id: string) => {
 
   const product = await findProductById(BigInt(id));
   if (!product) throw { status: 404, message: "Product not found" };
-  const response = withVariantAvailability(product);
 
   await Promise.all([
-    setCachedJson(cacheKeyById(id), response, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
+    setCachedJson(cacheKeyById(id), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
     ...(product.slug
-      ? [setCachedJson(cacheKeyBySlug(product.slug), response, PRODUCT_DETAIL_CACHE_TTL_SECONDS)]
+      ? [setCachedJson(cacheKeyBySlug(product.slug), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS)]
       : []),
   ]);
 
-  return response;
+  return product;
 };
 
 export const getProductBySlug = async (slug: string) => {
@@ -117,20 +85,19 @@ export const getProductBySlug = async (slug: string) => {
 
   const product = await findProductBySlug(slug);
   if (!product) throw { status: 404, message: "Product not found" };
-  const response = withVariantAvailability(product);
 
   await Promise.all([
-    setCachedJson(cacheKeyBySlug(slug), response, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
-    setCachedJson(cacheKeyById(product.id.toString()), response, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
+    setCachedJson(cacheKeyBySlug(slug), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
+    setCachedJson(cacheKeyById(product.id.toString()), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
   ]);
 
-  return response;
+  return product;
 };
 
 export const createNewProduct = async (data: CreateProductInput) => {
   const created = await createProduct(data);
   await invalidateProductDetailCache(created.id.toString(), created.slug);
-  return withVariantAvailability(created);
+  return created;
 };
 
 export const updateExistingProduct = async (id: string, data: UpdateProductInput) => {
@@ -140,7 +107,7 @@ export const updateExistingProduct = async (id: string, data: UpdateProductInput
     invalidateProductDetailCache(id, existing.slug),
     invalidateProductDetailCache(id, updated.slug),
   ]);
-  return withVariantAvailability(updated);
+  return updated;
 };
 
 export const deleteProduct = async (id: string) => {
@@ -171,7 +138,7 @@ export const removeCategory = async (productId: string, categoryId: string) => {
 export const getVariantById = async (id: string) => {
   const variant = await findVariantById(BigInt(id));
   if (!variant) throw { status: 404, message: "Variant not found" };
-  return withAvailableStock(variant);
+  return variant;
 };
 
 const getScopedVariantById = async (productId: string, variantId: string) => {
@@ -186,14 +153,14 @@ export const addVariantToProduct = async (productId: string, data: CreateVariant
   const product = await getProductById(productId);
   const created = await createVariant(BigInt(productId), data);
   await invalidateProductDetailCache(productId, product.slug);
-  return withAvailableStock(created);
+  return created;
 };
 
 export const updateProductVariant = async (variantId: string, data: UpdateVariantInput) => {
   const existing = await getVariantById(variantId);
   const updated = await updateVariant(BigInt(variantId), data);
   await invalidateProductDetailCache(existing.productId.toString(), existing.product?.slug);
-  return withAvailableStock(updated);
+  return updated;
 };
 
 export const deleteProductVariant = async (variantId: string) => {
@@ -207,7 +174,7 @@ export const adjustStock = async (variantId: string, data: StockAdjustmentInput)
   const existing = await getVariantById(variantId);
   const updated = await adjustVariantStock(BigInt(variantId), data);
   await invalidateProductDetailCache(existing.productId.toString(), existing.product?.slug);
-  return withAvailableStock(updated);
+  return updated;
 };
 
 // ─── Product Images ───────────────────────────────────────────────────────────

@@ -9,8 +9,6 @@ export const createVariantSchema = z.object({
   costPrice: z.coerce.number().positive().optional(),
   gstRate: z.coerce.number().min(0).max(100).default(18),
   stockQuantity: z.coerce.number().int().min(0).optional(),
-  bufferStock: z.coerce.number().int().min(0).optional(),
-  lowStockThreshold: z.coerce.number().int().min(0).optional(),
   weight: z.coerce.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
 });
@@ -132,10 +130,8 @@ export const productQuerySchema = z.object({
 export type ProductQuery = z.infer<typeof productQuerySchema>;
 
 export const stockAdjustmentSchema = z.object({
-  quantity: z.number().int().refine((value) => value !== 0, {
-    message: "Quantity adjustment must not be zero",
-  }),
-  reason: z.string().trim().min(1).max(500),
+  quantity: z.number().int(),
+  reason: z.string().optional(),
 });
 
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentSchema>;

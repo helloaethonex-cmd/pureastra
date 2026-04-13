@@ -1,10 +1,5 @@
 import { prisma } from "../../lib/prisma";
 import type { PrismaClient as GeneratedPrismaClient } from "../../generated/prisma/client";
-import { AppError } from "../../lib/errors/app-error";
-import {
-  adjustVariantStockQuantityStrict,
-  createInventoryMovements,
-} from "../orders/orders.repository";
 import {
   CreateProductInput,
   UpdateProductInput,
@@ -213,37 +208,11 @@ export const softDeleteVariant = async (id: bigint) => {
 };
 
 export const adjustVariantStock = async (id: bigint, data: StockAdjustmentInput) => {
-  return prisma.$transaction(async (tx) => {
-    const updatedRows = await adjustVariantStockQuantityStrict(
-      tx,
-      id,
-      data.quantity,
-    );
-    if (updatedRows.length !== 1) {
-      throw new AppError(
-        409,
-        "Stock adjustment would make quantity negative",
-        "STOCK_ADJUSTMENT_INVALID",
-      );
-    }
-
-    const row = updatedRows[0];
-    await createInventoryMovements(tx, [
-      {
-        productVariantId: row.id,
-        type: "ADJUST",
-        quantity: row.quantity,
-        beforeQuantity: row.before_quantity,
-        afterQuantity: row.after_quantity,
-        referenceType: "ADMIN",
-        referenceId: null,
-        reason: data.reason,
-      },
-    ]);
-
-    return tx.productVariant.findUniqueOrThrow({
-      where: { id },
-    });
+  return prisma.productVariant.update({
+    where: { id },
+    data: {
+      stockQuantity: { increment: data.quantity },
+    },
   });
 };
 

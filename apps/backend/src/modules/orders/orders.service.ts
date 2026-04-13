@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import { Prisma } from "../../generated/prisma/client";
 import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
@@ -15,7 +14,6 @@ import {
 } from "./orders.types";
 import {
   createInventoryReservations,
-  createInventoryMovements,
   createOrder,
   createOrderItems,
   createOrderStatusHistory,
@@ -31,8 +29,6 @@ import {
   findOrderByOrderNumberForUser,
   findOrdersForAdmin,
   findOrdersByUserId,
-  findInventoryReservationReservedMismatches,
-  findLowStockVariants,
   incrementOrderNumberSequence,
   incrementVariantStockReservedBulk,
   markCartCheckedOut,
@@ -90,37 +86,6 @@ const groupQuantityByVariant = <
   return [...grouped.values()];
 };
 
-const assertStockMutationComplete = (
-  expected: Array<{ productVariantId: bigint }>,
-  updated: Array<{ id: bigint }>,
-  message = "Insufficient stock for one or more variants",
-) => {
-  if (updated.length !== expected.length) {
-    throw new AppError(409, message, "INSUFFICIENT_STOCK");
-  }
-};
-
-const movementRowsFromMutation = (
-  type: "RESERVE" | "RELEASE" | "DEDUCT",
-  rows: Array<{
-    id: bigint;
-    quantity: number;
-    before_quantity: number | null;
-    after_quantity: number | null;
-  }>,
-  input: { referenceType: string; referenceId: bigint | null; reason: string },
-) =>
-  rows.map((row) => ({
-    productVariantId: row.id,
-    type,
-    quantity: row.quantity,
-    beforeQuantity: row.before_quantity,
-    afterQuantity: row.after_quantity,
-    referenceType: input.referenceType,
-    referenceId: input.referenceId,
-    reason: input.reason,
-  }));
-
 const buildPreparedItems = (
   cartItems: Array<{
     productVariantId: bigint;
@@ -135,15 +100,13 @@ const buildPreparedItems = (
       costPrice: Prisma.Decimal | null;
       stockQuantity: number | null;
       stockReserved: number;
-      bufferStock: number;
       product: { name: string };
     };
   }>,
 ) => {
   return cartItems.map((item) => {
     const variant = item.productVariant;
-    const available =
-      (variant.stockQuantity ?? 0) - variant.stockReserved - variant.bufferStock;
+    const available = (variant.stockQuantity ?? 0) - variant.stockReserved;
 
     if (available < item.quantity) {
       throw new AppError(
@@ -277,10 +240,9 @@ const createOrderInTx = async (
   const expiresAt = new Date(
     now.getTime() + env.ORDER_RESERVATION_TTL_MINUTES * 60 * 1000,
   );
-  const reservedByVariant = groupQuantityByVariant(preparedItems);
   await createInventoryReservations(
     tx,
-    reservedByVariant.map((item) => ({
+    preparedItems.map((item) => ({
       productVariantId: item.productVariantId,
       orderId: order.id,
       cartId: cart.id,
@@ -290,16 +252,8 @@ const createOrderInTx = async (
     })),
   );
 
-  const reservedRows = await incrementVariantStockReservedBulk(tx, reservedByVariant);
-  assertStockMutationComplete(reservedByVariant, reservedRows);
-  await createInventoryMovements(
-    tx,
-    movementRowsFromMutation("RESERVE", reservedRows, {
-      referenceType: "ORDER",
-      referenceId: order.id,
-      reason: "Order placed",
-    }),
-  );
+  const reservedByVariant = groupQuantityByVariant(preparedItems);
+  await incrementVariantStockReservedBulk(tx, reservedByVariant);
 
   await createOrderStatusHistory(tx, {
     order: { connect: { id: order.id } },
@@ -350,23 +304,7 @@ const releaseExpiredReservationsInTx = async (
     })),
   );
 
-  const releasedRows = await decrementVariantStockReservedSafeBulk(
-    tx,
-    decrementByVariant,
-  );
-  assertStockMutationComplete(
-    decrementByVariant,
-    releasedRows,
-    "Inventory reservation release failed",
-  );
-  await createInventoryMovements(
-    tx,
-    movementRowsFromMutation("RELEASE", releasedRows, {
-      referenceType: "RESERVATION_EXPIRY",
-      referenceId: null,
-      reason: "Reservation expired",
-    }),
-  );
+  await decrementVariantStockReservedSafeBulk(tx, decrementByVariant);
 
   return expiredRows.length;
 };
@@ -451,49 +389,17 @@ const updateOrderStatusInTx = async (
 
   if (newStatus === ORDER_STATUS.SHIPPED) {
     const reservations = await findInventoryReservationsByOrderId(tx, order.id);
-    if (reservations.length === 0) {
-      throw new AppError(
-        409,
-        "Order has no inventory reservation to consume",
-        "INVENTORY_RESERVATION_MISSING",
-      );
-    }
-
-    if (
-      reservations.some(
-        (r) => r.status !== INVENTORY_RESERVATION_STATUS.CONFIRMED,
-      )
-    ) {
-      throw new AppError(
-        409,
-        "Order inventory reservation must be confirmed before shipping",
-        "INVENTORY_RESERVATION_INVALID",
-      );
-    }
+    const reservableReservations = reservations.filter(
+      (r) =>
+        r.status === INVENTORY_RESERVATION_STATUS.ACTIVE ||
+        r.status === INVENTORY_RESERVATION_STATUS.CONFIRMED,
+    );
 
     const variantQuantities = groupQuantityByVariant(
-      reservations.map((r) => ({
+      reservableReservations.map((r) => ({
         productVariantId: r.productVariantId,
         quantity: r.quantity,
       })),
-    );
-
-    const releasedRows = await decrementVariantStockReservedSafeBulk(
-      tx,
-      variantQuantities,
-    );
-    assertStockMutationComplete(
-      variantQuantities,
-      releasedRows,
-      "Inventory reservation consumption failed",
-    );
-    await createInventoryMovements(
-      tx,
-      movementRowsFromMutation("RELEASE", releasedRows, {
-        referenceType: "ORDER",
-        referenceId: order.id,
-        reason: "Reservation consumed on shipment",
-      }),
     );
 
     const updatedRows = await decrementVariantStockQuantityBulkStrict(
@@ -507,20 +413,14 @@ const updateOrderStatusInTx = async (
         "INSUFFICIENT_STOCK",
       );
     }
-    await createInventoryMovements(
-      tx,
-      movementRowsFromMutation("DEDUCT", updatedRows, {
-        referenceType: "ORDER",
-        referenceId: order.id,
-        reason: "Order shipped",
-      }),
-    );
+
+    await decrementVariantStockReservedSafeBulk(tx, variantQuantities);
 
     await updateInventoryReservationStatusByOrder(
       tx,
       order.id,
+      INVENTORY_RESERVATION_STATUS.ACTIVE,
       INVENTORY_RESERVATION_STATUS.CONFIRMED,
-      INVENTORY_RESERVATION_STATUS.CONSUMED,
     );
   }
 
@@ -529,16 +429,6 @@ const updateOrderStatusInTx = async (
     currentStatus < ORDER_STATUS.SHIPPED
   ) {
     const reservations = await findInventoryReservationsByOrderId(tx, order.id);
-    if (
-      reservations.some(
-        (r) => r.status === INVENTORY_RESERVATION_STATUS.CONSUMED,
-      )
-    ) {
-      logger.warn(
-        { orderId: order.id.toString(), orderNumber },
-        "[inventory] cancelled order has consumed reservations; manual restock required",
-      );
-    }
     const releasableReservations = reservations.filter(
       (r) =>
         r.status === INVENTORY_RESERVATION_STATUS.ACTIVE ||
@@ -552,23 +442,7 @@ const updateOrderStatusInTx = async (
       })),
     );
 
-    const releasedRows = await decrementVariantStockReservedSafeBulk(
-      tx,
-      variantQuantities,
-    );
-    assertStockMutationComplete(
-      variantQuantities,
-      releasedRows,
-      "Inventory reservation release failed",
-    );
-    await createInventoryMovements(
-      tx,
-      movementRowsFromMutation("RELEASE", releasedRows, {
-        referenceType: "ORDER",
-        referenceId: order.id,
-        reason: "Order cancelled",
-      }),
-    );
+    await decrementVariantStockReservedSafeBulk(tx, variantQuantities);
 
     await updateInventoryReservationStatusByOrder(
       tx,
@@ -618,74 +492,6 @@ const updateOrderStatusInTx = async (
   }
 
   return findOrderByOrderNumber(tx, orderNumber);
-};
-
-export const reconcileInventoryReservations = async () => {
-  const { mismatches, lowStockVariants } = await prisma.$transaction(
-    async (tx) => ({
-      mismatches: await findInventoryReservationReservedMismatches(tx),
-      lowStockVariants: await findLowStockVariants(tx),
-    }),
-    TX_OPTIONS,
-  );
-
-  if (mismatches.length > 0) {
-    logger.error(
-      {
-        count: mismatches.length,
-        mismatches: mismatches.map((mismatch) => ({
-          productVariantId: mismatch.product_variant_id.toString(),
-          stockReserved: mismatch.stock_reserved,
-          reservationReserved: mismatch.reservation_reserved,
-        })),
-      },
-      "[inventory] reserved stock reconciliation mismatch",
-    );
-    Sentry.captureMessage("[inventory] reserved stock reconciliation mismatch", {
-      level: "error",
-      tags: { subsystem: "inventory" },
-      extra: {
-        count: mismatches.length,
-        mismatches: mismatches.map((mismatch) => ({
-          productVariantId: mismatch.product_variant_id.toString(),
-          stockReserved: mismatch.stock_reserved,
-          reservationReserved: mismatch.reservation_reserved,
-        })),
-      },
-    });
-  }
-
-  if (lowStockVariants.length > 0) {
-    const variants = lowStockVariants.map((variant) => ({
-      productVariantId: variant.product_variant_id.toString(),
-      productId: variant.product_id.toString(),
-      sku: variant.sku,
-      variantName: variant.variant_name,
-      stockQuantity: variant.stock_quantity,
-      stockReserved: variant.stock_reserved,
-      bufferStock: variant.buffer_stock,
-      lowStockThreshold: variant.low_stock_threshold,
-      availableStock: variant.available_stock,
-    }));
-
-    logger.warn(
-      {
-        count: lowStockVariants.length,
-        variants,
-      },
-      "[inventory] low stock variants detected",
-    );
-    Sentry.captureMessage("[inventory] low stock variants detected", {
-      level: "warning",
-      tags: { subsystem: "inventory" },
-      extra: {
-        count: lowStockVariants.length,
-        variants,
-      },
-    });
-  }
-
-  return { mismatches: mismatches.length, lowStock: lowStockVariants.length };
 };
 
 export const updateOrderStatusByOrderNumber = async (

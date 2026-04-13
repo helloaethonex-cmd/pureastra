@@ -245,8 +245,6 @@ model ProductVariant {
   weight        Int?
 
   stockReserved Int @default(0) @map("stock_reserved")
-  bufferStock   Int @default(0) @map("buffer_stock")
-  lowStockThreshold Int @default(5) @map("low_stock_threshold")
 
   isActive Boolean @default(true) @map("is_active")
 
@@ -258,7 +256,6 @@ model ProductVariant {
   deletedAt             DateTime?              @map("deleted_at")
   cartItems             CartItem[]
   inventoryReservations InventoryReservation[]
-  inventoryMovements    InventoryMovement[]
   orderItems            OrderItem[]
   wishlistItems         WishlistItem[]
 
@@ -344,7 +341,7 @@ model InventoryReservation {
   cartId  BigInt? @map("cart_id")
 
   quantity Int
-  status   Int // 0: ACTIVE, 1: CONFIRMED, 2: RELEASED, 3: EXPIRED, 4: CONSUMED
+  status   Int // 0: ACTIVE, 1: CONFIRMED, 2: RELEASED, 3: EXPIRED
 
   expiresAt DateTime? @map("expires_at")
 
@@ -359,35 +356,7 @@ model InventoryReservation {
   @@index([status, expiresAt])
   @@index([cartId])
   @@index([orderId])
-  @@index([orderId, status])
-  @@index([productVariantId, status])
-  @@unique([orderId, productVariantId])
   @@map("inventory_reservations")
-}
-
-model InventoryMovement {
-  id BigInt @id @default(autoincrement())
-
-  productVariantId BigInt @map("product_variant_id")
-  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
-
-  type String @db.VarChar(30) // RESERVE, RELEASE, DEDUCT, ADJUST
-
-  quantity       Int
-  beforeQuantity Int? @map("before_quantity")
-  afterQuantity  Int? @map("after_quantity")
-
-  referenceType String? @map("reference_type") @db.VarChar(50)
-  referenceId   BigInt? @map("reference_id")
-
-  reason String? @db.VarChar(500)
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([productVariantId, createdAt])
-  @@index([type])
-  @@index([referenceType, referenceId])
-  @@map("inventory_movements")
 }
 
 model Address {

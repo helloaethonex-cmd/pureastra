@@ -14,43 +14,6 @@ import {
 import { AddCartItemInput, UpdateCartItemInput, MergeCartInput } from "./cart.types";
 import { AppError } from "../../lib/errors/app-error";
 
-const getAvailableStock = (variant: any) =>
-  variant.stockQuantity == null
-    ? null
-    : Math.max(
-        variant.stockQuantity -
-          (variant.stockReserved ?? 0) -
-          (variant.bufferStock ?? 0),
-        0,
-      );
-
-const withAvailableStock = (variant: any) => {
-  const availableStock = getAvailableStock(variant);
-  return {
-    ...variant,
-    availableStock,
-    isLowStock:
-      availableStock !== null &&
-      availableStock > 0 &&
-      availableStock < (variant.lowStockThreshold ?? 5),
-  };
-};
-
-const withCartItemAvailability = (item: any) => ({
-  ...item,
-  productVariant: item.productVariant
-    ? withAvailableStock(item.productVariant)
-    : item.productVariant,
-});
-
-const withCartAvailability = (cart: any) =>
-  cart
-    ? {
-        ...cart,
-        items: cart.items?.map(withCartItemAvailability) ?? [],
-      }
-    : cart;
-
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 
 export const getOrCreateCart = async (userId?: string, sessionId?: string) => {
@@ -67,25 +30,25 @@ export const getOrCreateCart = async (userId?: string, sessionId?: string) => {
   if (userId && sessionId) {
     const merged = await mergeGuestCart(BigInt(userId), sessionId);
     if (merged) {
-      return withCartAvailability(merged);
+      return merged;
     }
   }
 
   const uid = userId ? BigInt(userId) : undefined;
-  return withCartAvailability(await findOrCreateCart(uid, sessionId));
+  return findOrCreateCart(uid, sessionId);
 };
 
 export const getCartById = async (id: string) => {
   const cart = await findCartById(BigInt(id));
   if (!cart) throw new AppError(404, "Cart not found", "CART_NOT_FOUND");
-  return withCartAvailability(cart);
+  return cart;
 };
 
 // ─── Cart Items ───────────────────────────────────────────────────────────────
 
 export const addItemToCart = async (userId: string | undefined, sessionId: string | undefined, data: AddCartItemInput) => {
   const cart = await getOrCreateCart(userId, sessionId);
-  return withCartItemAvailability(await upsertCartItem(cart.id, data));
+  return upsertCartItem(cart.id, data);
 };
 
 export const updateItem = async (
@@ -110,7 +73,7 @@ export const updateItem = async (
     throw new AppError(404, "Cart item not found", "CART_ITEM_NOT_FOUND");
   }
 
-  return withCartItemAvailability(updated);
+  return updated;
 };
 
 export const removeItem = async (
@@ -169,5 +132,5 @@ export const mergeCart = async (userId: string, data: MergeCartInput) => {
   if (!merged) {
     throw new AppError(404, "Guest cart not found or already empty", "GUEST_CART_NOT_FOUND");
   }
-  return withCartAvailability(merged);
+  return merged;
 };

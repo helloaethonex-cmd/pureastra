@@ -22,7 +22,6 @@ export const INVENTORY_RESERVATION_STATUS = {
   CONFIRMED: 1,
   RELEASED: 2,
   EXPIRED: 3,
-  CONSUMED: 4,
 } as const;
 
 export const CART_STATUS = {
