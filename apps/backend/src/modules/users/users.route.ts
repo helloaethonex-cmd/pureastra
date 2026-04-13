@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../auth/auth.middleware";
-import { getMe } from "./users.controller";
+import { getMe, updateMe } from "./users.controller";
 
 const router = Router();
 
@@ -52,6 +52,53 @@ const router = Router();
  *               error: "Unauthorized"
  */
 router.get("/me", requireAuth, getMe);
+
+/**
+ * @openapi
+ * /api/v1/users/me:
+ *   patch:
+ *     tags:
+ *       - Users
+ *     summary: Update current user's profile
+ *     description: >
+ *       Updates editable fields of the authenticated user's profile.
+ *       Only provided fields are updated (partial update).
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Aarav Shah"
+ *               firstName:
+ *                 type: string
+ *                 example: "Aarav"
+ *               lastName:
+ *                 type: string
+ *                 example: "Shah"
+ *               phone:
+ *                 type: string
+ *                 example: "+919876543210"
+ *     responses:
+ *       200:
+ *         description: Updated user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Update failed
+ */
+router.patch("/me", requireAuth, updateMe);
 
 /**
  * @openapi

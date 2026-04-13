@@ -949,6 +949,17 @@ export const checkAdminAccess = async (): Promise<boolean> => {
 
 export const getMyProfile = () => apiFetch<UserProfile>("/users/me");
 
+export const updateMyProfile = (body: {
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}) =>
+  apiFetch<UserProfile>("/users/me", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
 // ─── Addresses ────────────────────────────────────────────────────────────────
 
 export const listMyAddresses = () => apiFetch<Address[]>("/addresses");
