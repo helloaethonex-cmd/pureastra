@@ -20,6 +20,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { getOrderInvoice } from "@/services/api";
 import { useMyOrders, useOrderDetail } from "@/hooks/useOrders";
+import { toShippingInclusiveFromBase } from "@/lib/shipping-pricing";
 
 // ── Status maps ───────────────────────────────────────────────────────────────
 const ORDER_STATUS_LABEL: Record<number, string> = {
@@ -122,6 +123,7 @@ function OrderConfirmationCard({ orderNumber }: { orderNumber: string }) {
     Number(order.taxAmount) -
     Number(order.discountAmount)
   ).toFixed(2);
+  const shippingDisplay = toShippingInclusiveFromBase(order.shippingAmount);
 
   const currentStep = order.orderStatus;
 
@@ -245,7 +247,13 @@ function OrderConfirmationCard({ orderNumber }: { orderNumber: string }) {
             {Number(order.shippingAmount) > 0 && (
               <div className="flex justify-between">
                 <span className="text-[#7B6A58]">Shipping</span>
-                <span>₹{Number(order.shippingAmount).toFixed(2)}</span>
+                <span>₹{shippingDisplay.inclusive.toFixed(2)}</span>
+              </div>
+            )}
+            {shippingDisplay.inclusive > 0 && shippingDisplay.gstComponent > 0 && (
+              <div className="flex justify-between text-xs text-[#9a7a65]">
+                <span />
+                <span>(includes ₹{shippingDisplay.gstComponent.toFixed(2)} GST)</span>
               </div>
             )}
             {Number(order.discountAmount) > 0 && (

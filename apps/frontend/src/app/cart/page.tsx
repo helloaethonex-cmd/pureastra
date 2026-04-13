@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,13 +19,7 @@ import {
 } from "@/hooks/useCart";
 import { useRouter } from "next/navigation";
 import AuthModal from "@/components/AuthModal";
-
-const toPriceNumber = (value: number | string | null | undefined) => {
-  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
-  return Number.isFinite(parsed) ? Number(parsed) : 0;
-};
-
-const SHIPPING_CHARGE = 49;
+import { getConfiguredShippingInclusive, toMoneyNumber } from "@/lib/shipping-pricing";
 
 // ── Main cart page ─────────────────────────────────────────────────────────────
 export default function OrderPage() {
@@ -46,15 +40,14 @@ export default function OrderPage() {
   const [showCheckout, setShowCheckout] = useState(false);
   void showCheckout; // kept for future use - checkout is now a page
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [resumeCheckoutAfterLogin, setResumeCheckoutAfterLogin] =
-    useState(false);
+  const resumeCheckoutAfterLoginRef = useRef(false);
 
   useEffect(() => {
-    if (isAuthenticated && resumeCheckoutAfterLogin) {
-      setResumeCheckoutAfterLogin(false);
+    if (isAuthenticated && resumeCheckoutAfterLoginRef.current) {
+      resumeCheckoutAfterLoginRef.current = false;
       router.push("/checkout");
     }
-  }, [isAuthenticated, resumeCheckoutAfterLogin, router]);
+  }, [isAuthenticated, router]);
 
   const increase = (itemId: string, quantity: number) => {
     updateItem.mutate({ itemId, quantity: quantity + 1 });
@@ -79,12 +72,13 @@ export default function OrderPage() {
   const items = cart?.items ?? [];
 
   const subtotal = items.reduce((acc, item) => {
-    const unitPrice = toPriceNumber(
+    const unitPrice = toMoneyNumber(
       item.priceSnapshot ?? item.productVariant.price,
     );
     return acc + unitPrice * item.quantity;
   }, 0);
-  const estimatedTotal = subtotal + SHIPPING_CHARGE;
+  const shippingInclusive = getConfiguredShippingInclusive();
+  const estimatedTotal = subtotal + (shippingInclusive ?? 0);
 
   return (
     <>
@@ -131,7 +125,7 @@ export default function OrderPage() {
                     product?.images?.[0]?.imageUrl ||
                     "/img/facewash.webp";
                   const itemName = product?.name || "Product";
-                  const itemPrice = toPriceNumber(
+                  const itemPrice = toMoneyNumber(
                     item.priceSnapshot ?? item.productVariant.price,
                   );
 
@@ -210,7 +204,11 @@ export default function OrderPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Delivery cost</span>
-                  <span className="text-[#5E2B15] font-medium">₹{SHIPPING_CHARGE.toFixed(2)}</span>
+                  <span className="text-[#5E2B15] font-medium">
+                    {shippingInclusive == null
+                      ? "Calculated at checkout"
+                      : `₹${shippingInclusive.toFixed(2)}`}
+                  </span>
                 </div>
                 <p className="text-xs text-[#9a7a65]">
                   Final prices, taxes & discounts will be confirmed at checkout.
@@ -235,7 +233,7 @@ export default function OrderPage() {
                   id="proceed-to-checkout-btn"
                   onClick={() => {
                     if (!isAuthenticated) {
-                      setResumeCheckoutAfterLogin(true);
+                      resumeCheckoutAfterLoginRef.current = true;
                       setIsAuthModalOpen(true);
                       return;
                     }

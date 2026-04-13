@@ -28,6 +28,7 @@ import {
   getActiveReferralAttribution,
   type ReferralAttribution,
 } from "@/lib/referral";
+import { toShippingInclusiveFromBase } from "@/lib/shipping-pricing";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 type Step = "address" | "preview" | "paying";
@@ -284,6 +285,7 @@ function PreviewStep({
   }
 
   const tot = preview.totals;
+  const shippingDisplay = toShippingInclusiveFromBase(tot.shippingAmount);
 
   return (
     <div>
@@ -315,9 +317,17 @@ function PreviewStep({
             <FontAwesomeIcon icon={faTruck} className="text-[10px]" /> Shipping
           </span>
           <span className="text-[#819744] font-semibold">
-            {Number(tot.shippingAmount) === 0 ? "FREE" : `₹${Number(tot.shippingAmount).toFixed(2)}`}
+            {shippingDisplay.inclusive <= 0
+              ? "FREE"
+              : `₹${shippingDisplay.inclusive.toFixed(2)}`}
           </span>
         </div>
+        {shippingDisplay.inclusive > 0 && shippingDisplay.gstComponent > 0 && (
+          <div className="flex justify-between text-xs text-[#9a7a65] -mt-1">
+            <span />
+            <span>(includes ₹{shippingDisplay.gstComponent.toFixed(2)} GST)</span>
+          </div>
+        )}
         {Number(tot.taxAmount) > 0 && (
           <div className="flex justify-between">
             <span className="text-[#7B6A58]">Tax</span>

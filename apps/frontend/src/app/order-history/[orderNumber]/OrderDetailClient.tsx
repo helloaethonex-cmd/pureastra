@@ -14,6 +14,7 @@ import {
   faTag,
 } from "@fortawesome/free-solid-svg-icons";
 import { useOrderDetail } from "@/hooks/useOrders";
+import { toShippingInclusiveFromBase } from "@/lib/shipping-pricing";
 
 // -- Status Maps ---------------------------------------------------------------
 const ORDER_STATUS_LABEL: Record<number, string> = {
@@ -82,6 +83,7 @@ export default function OrderDetailClient({ orderNumber }: { orderNumber: string
     (acc, item) => acc + Number(item.price ?? 0) * (item.quantity ?? 1),
     0,
   );
+  const shippingDisplay = toShippingInclusiveFromBase(order.shippingAmount);
 
   return (
     <div className="min-h-screen bg-[#F5F0E6]">
@@ -243,8 +245,18 @@ export default function OrderDetailClient({ orderNumber }: { orderNumber: string
                 <span className="flex items-center gap-1">
                   <FontAwesomeIcon icon={faTruck} className="text-xs" /> Shipping
                 </span>
-                <span>FREE</span>
+                <span>
+                  {shippingDisplay.inclusive > 0
+                    ? `Rs.${shippingDisplay.inclusive.toFixed(2)}`
+                    : "FREE"}
+                </span>
               </div>
+              {shippingDisplay.inclusive > 0 && shippingDisplay.gstComponent > 0 && (
+                <div className="flex justify-between text-xs text-[#9a7a65]">
+                  <span />
+                  <span>(includes Rs.{shippingDisplay.gstComponent.toFixed(2)} GST)</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-base text-[#5E2B15] border-t border-[#EDE3D2] pt-2 mt-1">
                 <span>Total Paid</span>
                 <span>Rs.{Number(order.totalPaid ?? itemsTotal).toFixed(2)}</span>
