@@ -46,17 +46,17 @@ const categoryIcons: Record<string, IconDefinition> = {
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-
- const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isDataReady, setIsDataReady] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { user } = useAuthStore();
   const signOut = useSignOut();
-  const { data: isAdmin } = useIsAdmin();
-  const { data: categories, isLoading: categoriesLoading } = useCategories();
-  const { data: cart } = useCart();
-  const { data: wishlist } = useWishlist(Boolean(user));
+  const { data: isAdmin } = useIsAdmin(Boolean(user) && isDataReady);
+  const { data: categories, isLoading: categoriesLoading } = useCategories(isDataReady);
+  const { data: cart } = useCart(isDataReady);
+  const { data: wishlist } = useWishlist(Boolean(user) && isDataReady);
 
   const cartCount = (cart?.items ?? []).reduce(
     (total, item) => total + item.quantity,
@@ -96,6 +96,13 @@ export default function Navbar() {
       document.removeEventListener("touchstart", handleOutside);
     };
   }, [isUserMenuOpen]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setIsDataReady(true);
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <>
@@ -174,6 +181,7 @@ export default function Navbar() {
                     {isAdmin && (
                       <Link
                         href="/admin"
+                        prefetch={false}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-[#819744] hover:bg-[#EBF1DC] transition font-medium"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
@@ -187,6 +195,7 @@ export default function Navbar() {
 
                     <Link
                       href="/profile"
+                      prefetch={false}
                       className="block px-4 py-2 text-sm text-[#5E2B16] hover:bg-[#FAF3E2] transition"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
@@ -227,6 +236,7 @@ export default function Navbar() {
             <Link
               key={`static-${index}`}
               href={item.path}
+              prefetch={index < 2}
               className="group flex items-center gap-2 text-[#5E2B16] font-medium text-base lg:text-lg hover:text-[#819744] transition"
             >
               <FontAwesomeIcon
@@ -316,6 +326,7 @@ export default function Navbar() {
                 <Link
                   key={index}
                   href={path}
+                  prefetch={false}
                   onClick={() => setIsOpen(false)}
                   // className={`h-[56px] w-[325px] flex items-center justify-center rounded-full text-[15px] font-medium transition-all duration-300
                    className={`h-[56px] w-full max-w-[320px] flex items-center justify-center text-center rounded-full text-[15px] font-medium transition-all duration-300

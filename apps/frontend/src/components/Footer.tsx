@@ -97,7 +97,7 @@ export default function Footer() {
               <ul className="space-y-2 text-sm text-[#f1f1f1] break-words">
                 {section.links.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href} className="hover:underline">
+                    <Link href={item.href} prefetch={false} className="hover:underline">
                       {item.label}
                     </Link>
                   </li>

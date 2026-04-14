@@ -10,10 +10,11 @@ import {
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
-export function useCategories() {
+export function useCategories(enabled = true) {
   return useQuery({
     queryKey: ["categories"],
     queryFn: listCategories,
+    enabled,
     staleTime: 1000 * 60 * 5,
   });
 }

@@ -33,10 +33,11 @@ import {
 
 // ─── Admin check ──────────────────────────────────────────────────────────────
 
-export function useIsAdmin() {
+export function useIsAdmin(enabled = true) {
   return useQuery({
     queryKey: ["isAdmin"],
     queryFn: checkAdminAccess,
+    enabled,
     staleTime: 1000 * 60 * 10,
     retry: false,
   });

@@ -124,7 +124,7 @@ export default function ProductCard({ active, product }: ProductCardProps) {
   return (
     <div className="group relative h-105 w-full scale-[0.85] overflow-hidden rounded-[25px] bg-[#D9D9D9] opacity-90 transition-all duration-400 ease-in-out before:pointer-events-none before:absolute before:bottom-0 before:z-1 before:h-30 before:w-full before:bg-linear-to-t before:from-black/25 before:to-transparent in-[.swiper-slide-active_&]:z-2 in-[.swiper-slide-active_&]:scale-100 in-[.swiper-slide-active_&]:opacity-100 in-[.swiper-slide-next_&]:scale-90 in-[.swiper-slide-next_&]:opacity-[0.85] in-[.swiper-slide-prev_&]:scale-90 in-[.swiper-slide-prev_&]:opacity-[0.85]">
       {/* Image */}
-      <Link href={`/product/${product.slug}`}>
+      <Link href={`/product/${product.slug}`} prefetch={false}>
         <div className="relative w-full h-full">
           <Image
             src={primaryImage}

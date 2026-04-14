@@ -77,7 +77,7 @@ export default function CategorySection() {
 
       {/* VIEW ALL */}
       <div className="text-right mb-[10px] md:mb-[15px] text-[#5E2B15] text-xs md:text-sm">
-        <Link href={viewAllHref}>View all &gt;</Link>
+        <Link href={viewAllHref} prefetch={false}>View all &gt;</Link>
       </div>
 
       {/* RESPONSIVE GRID */}

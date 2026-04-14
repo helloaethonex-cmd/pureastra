@@ -1,17 +1,39 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 export default function Hero() {
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+
+  useEffect(() => {
+    const connection = (
+      "connection" in navigator ? (navigator as Navigator & { connection?: { saveData?: boolean } }).connection : undefined
+    );
+    if (connection?.saveData) return;
+
+    const timer = window.setTimeout(() => {
+      setShouldLoadVideo(true);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <section className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden">
       {/* BACKGROUND VIDEO */}
       <video
-        autoPlay
+        autoPlay={shouldLoadVideo}
         loop
         muted
         playsInline
+        preload="none"
+        poster="/img/banner-1.webp"
         className="absolute top-0 left-0 w-full h-full object-cover"
       >
-        <source src="/video/hero-banner.mp4" type="video/mp4" />
+        {shouldLoadVideo ? (
+          <source src="/video/hero-banner.mp4" type="video/mp4" />
+        ) : null}
       </video>
 
       {/* DARK OVERLAY (optional but recommended) */}

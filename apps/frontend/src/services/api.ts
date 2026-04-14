@@ -1,10 +1,21 @@
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL + "/api/v1";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const hasBody = init?.body !== undefined && init?.body !== null;
+  const headers = new Headers(init?.headers);
+
+  // Avoid forcing JSON headers on GET/HEAD requests to reduce unnecessary preflights.
+  if (hasBody && method !== "GET" && method !== "HEAD") {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+  }
+
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
