@@ -159,6 +159,7 @@ const createOrderInTx = async (
   // ── Referral attribution (silent fail — never blocks order) ──────────────
   let influencerId: bigint | undefined;
   let referralCode: string | undefined;
+  let influencerCommissionRate: Prisma.Decimal | undefined;
   if (input.referralCode) {
     const influencer = await findActiveInfluencerByCode(
       tx,
@@ -167,6 +168,7 @@ const createOrderInTx = async (
     if (influencer) {
       influencerId = influencer.id;
       referralCode = influencer.referralCode;
+      influencerCommissionRate = influencer.commissionRate;
     }
   }
 
@@ -214,6 +216,16 @@ const createOrderInTx = async (
       referralCode,
     }),
   });
+
+  if (influencerId && influencerCommissionRate) {
+    await tx.$executeRaw(
+      Prisma.sql`
+        UPDATE "orders"
+        SET "influencer_commission_rate" = ${influencerCommissionRate}
+        WHERE "id" = ${order.id}
+      `,
+    );
+  }
 
   await createOrderItems(
     tx,

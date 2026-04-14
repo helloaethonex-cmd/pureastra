@@ -513,6 +513,7 @@ const createOrderAndPaymentInTx = async (
   // Referral attribution is best-effort and never blocks checkout.
   let influencerId: bigint | undefined;
   let referralCode: string | undefined;
+  let influencerCommissionRate: Prisma.Decimal | undefined;
   if (request.referralCode) {
     const influencer = await findActiveInfluencerByCode(
       tx,
@@ -521,6 +522,7 @@ const createOrderAndPaymentInTx = async (
     if (influencer) {
       influencerId = influencer.id;
       referralCode = influencer.referralCode;
+      influencerCommissionRate = influencer.commissionRate;
     }
   }
 
@@ -552,6 +554,16 @@ const createOrderAndPaymentInTx = async (
       referralCode,
     }),
   });
+
+  if (influencerId && influencerCommissionRate) {
+    await tx.$executeRaw(
+      Prisma.sql`
+        UPDATE "orders"
+        SET "influencer_commission_rate" = ${influencerCommissionRate}
+        WHERE "id" = ${order.id}
+      `,
+    );
+  }
 
   await createOrderItems(
     tx,

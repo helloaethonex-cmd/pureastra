@@ -433,6 +433,7 @@ model Order {
   // 🔥 INFLUENCER ATTRIBUTION (nullable — orders without referral are unaffected)
   influencerId BigInt? @map("influencer_id")
   referralCode String? @map("referral_code") @db.VarChar(30)
+  influencerCommissionRate Decimal? @map("influencer_commission_rate") @db.Decimal(5, 2)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

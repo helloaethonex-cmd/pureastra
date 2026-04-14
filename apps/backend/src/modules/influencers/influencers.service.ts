@@ -322,11 +322,11 @@ export const adminRecordPayout = async (
     const completedAmount = completedPayouts._sum.amount ?? new Prisma.Decimal(0);
     const payable = approvedAmount.sub(completedAmount);
 
-    if (payoutAmount.gt(payable)) {
+    if (!payoutAmount.eq(payable)) {
       throw new AppError(
         400,
-        "Payout amount exceeds payable commission balance",
-        "PAYOUT_EXCEEDS_PAYABLE",
+        "Partial payouts not supported yet",
+        "PARTIAL_PAYOUT_NOT_SUPPORTED",
       );
     }
 

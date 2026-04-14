@@ -432,20 +432,34 @@ export const confirmPaymentAttempt = async (
       payment.order.orderStatus !== ORDER_STATUS.CANCELLED
     ) {
       const influencerId = payment.order.influencerId;
+      const [orderSnapshot] = await tx.$queryRaw<
+        Array<{ influencer_commission_rate: Prisma.Decimal | null }>
+      >(
+        Prisma.sql`
+          SELECT "influencer_commission_rate"
+          FROM "orders"
+          WHERE "id" = ${payment.orderId}
+          LIMIT 1
+        `,
+      );
 
-      const influencer = await tx.influencer.findUnique({
-        where: { id: influencerId },
-        select: { commissionRate: true },
-      });
-
-      if (influencer) {
+      const commissionRate = orderSnapshot?.influencer_commission_rate ?? null;
+      if (!commissionRate) {
+        logger.warn(
+          {
+            orderId: payment.orderId.toString(),
+            influencerId: influencerId.toString(),
+          },
+          "[commission] skipped — commission rate snapshot missing on order",
+        );
+      } else {
         // Keep entirely in Decimal to avoid JS float drift.
         // nextTotalPaid is integer paise; divide by 100 inside Decimal.
         const totalPaidDecimal = new Prisma.Decimal(nextTotalPaid).div(100);
         // commissionRate is stored as percentage (e.g. 10.00 = 10%)
         // commission = totalPaid * (commissionRate / 100), rounded HALF_UP to 2dp
         const commissionAmount = totalPaidDecimal
-          .mul(influencer.commissionRate)
+          .mul(commissionRate)
           .div(100)
           .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
 
@@ -453,7 +467,7 @@ export const confirmPaymentAttempt = async (
           await createInfluencerSale(tx, {
             influencerId,
             orderId: payment.orderId,
-            commissionRate: influencer.commissionRate,
+            commissionRate,
             commissionAmount,
           });
           await incrementInfluencerEarnings(tx, influencerId, commissionAmount);
@@ -463,7 +477,7 @@ export const confirmPaymentAttempt = async (
               orderId: payment.orderId.toString(),
               influencerId: influencerId.toString(),
               commissionAmount: commissionAmount.toString(),
-              commissionRate: influencer.commissionRate.toString(),
+              commissionRate: commissionRate.toString(),
             },
             "[commission] created",
           );
@@ -482,15 +496,6 @@ export const confirmPaymentAttempt = async (
             throw commissionError;
           }
         }
-      } else {
-        // Influencer row deleted between order creation and payment — skip silently.
-        logger.warn(
-          {
-            orderId: payment.orderId.toString(),
-            influencerId: influencerId.toString(),
-          },
-          "[commission] skipped — influencer record not found",
-        );
       }
     } else if (
       fullyPaid &&
