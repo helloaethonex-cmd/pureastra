@@ -21,10 +21,20 @@ export function useCategories(enabled = true) {
 
 // ─── Products ─────────────────────────────────────────────────────────────────
 
-export function useProducts(params: ProductListParams = {}) {
+type UseProductsOptions = {
+  keepPreviousData?: boolean;
+};
+
+export function useProducts(
+  params: ProductListParams = {},
+  options?: UseProductsOptions,
+) {
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => listProducts(params),
+    placeholderData: options?.keepPreviousData
+      ? (previousData) => previousData
+      : undefined,
     staleTime: 1000 * 60 * 2,
   });
 }

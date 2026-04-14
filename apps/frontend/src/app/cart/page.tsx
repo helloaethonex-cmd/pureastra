@@ -20,6 +20,7 @@ import {
 import { useRouter } from "next/navigation";
 import AuthModal from "@/components/AuthModal";
 import { getConfiguredShippingInclusive, toMoneyNumber } from "@/lib/shipping-pricing";
+import { SkeletonLine } from "@/components/ui/Skeleton";
 
 // ── Main cart page ─────────────────────────────────────────────────────────────
 export default function OrderPage() {
@@ -95,8 +96,15 @@ export default function OrderPage() {
           <div className="mb-6 border-t border-[#D6C9B6]" />
 
           {authLoading || cartLoading ? (
-            <div className="py-20 text-center text-[#5E2B15]">
-              Loading cart...
+            <div className="space-y-8 py-4">
+              <CartItemSkeleton />
+              <CartItemSkeleton />
+              <div className="mt-10 space-y-3 text-[#5E2B15]">
+                <SkeletonLine className="h-5 w-full" />
+                <SkeletonLine className="h-5 w-4/5" />
+                <SkeletonLine className="h-6 w-full" />
+                <SkeletonLine className="h-11 w-full rounded-md" />
+              </div>
             </div>
           ) : isError ? (
             <div className="text-center py-20 text-red-600">
@@ -270,5 +278,25 @@ export default function OrderPage() {
         onClose={() => setIsAuthModalOpen(false)}
       />
     </>
+  );
+}
+
+function CartItemSkeleton() {
+  return (
+    <div className="flex gap-6 border-b pb-6">
+      <SkeletonLine className="h-[120px] w-[120px] rounded-md" />
+      <div className="flex-1 space-y-3">
+        <SkeletonLine className="h-5 w-2/3" />
+        <SkeletonLine className="h-4 w-1/3" />
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-3">
+            <SkeletonLine className="h-8 w-8 rounded" />
+            <SkeletonLine className="h-4 w-6" />
+            <SkeletonLine className="h-8 w-8 rounded" />
+          </div>
+          <SkeletonLine className="h-8 w-20 rounded" />
+        </div>
+      </div>
+    </div>
   );
 }

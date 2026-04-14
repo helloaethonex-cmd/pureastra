@@ -10,6 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import ProductCard from "./ProductCard";
 import { useProducts } from "@/hooks/useProducts";
+import { SkeletonGrid } from "@/components/ui/Skeleton";
 
 export default function BestProducts() {
   const { data, isLoading, isError } = useProducts({
@@ -29,7 +30,13 @@ export default function BestProducts() {
 
       {/* CONTENT */}
       {isLoading ? (
-        <div className="mt-4 text-[#5E2B15]">Loading products...</div>
+        <div className="mt-4 px-4 md:px-6 lg:px-10">
+          <SkeletonGrid
+            count={3}
+            className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            cardClassName="h-105 rounded-[25px]"
+          />
+        </div>
       ) : isError || products.length === 0 ? (
         <div className="mt-4 text-[#5E2B15]">
           Products unavailable right now.

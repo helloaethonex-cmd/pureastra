@@ -10,6 +10,7 @@ import {
   useMoveWishlistItemToCart,
 } from "@/hooks/useWishlist";
 import { useAuthStore } from "@/store/auth.store";
+import { SkeletonGrid, SkeletonLine } from "@/components/ui/Skeleton";
 
 export default function WishlistPage() {
   const { user, isLoading: authLoading } = useAuthStore();
@@ -43,7 +44,16 @@ export default function WishlistPage() {
         </h1>
 
         {authLoading || (user && isLoading) ? (
-          <div className="text-center py-20 text-[#5E2B15]">Loading wishlist...</div>
+          <div className="py-8">
+            <SkeletonGrid
+              count={6}
+              className="grid grid-cols-1 gap-6 md:gap-8 sm:grid-cols-2 lg:grid-cols-3"
+              cardClassName="h-[340px] rounded-2xl"
+            />
+            <div className="mx-auto mt-6 max-w-sm">
+              <SkeletonLine className="h-4 w-full" />
+            </div>
+          </div>
         ) : !user ? (
           <div className="text-center py-20">
             <h2 className="text-[#5E2B15] mb-4">Please sign in to view your wishlist.</h2>

@@ -16,6 +16,7 @@ import { useCategories, useProducts } from "@/hooks/useProducts";
 import { useAddCartItem } from "@/hooks/useCart";
 import { useAuthStore } from "@/store/auth.store";
 import { getProductReviewSummary, type Category } from "@/services/api";
+import { SkeletonGrid, SkeletonLine } from "@/components/ui/Skeleton";
 
 interface CategoryPageContentProps {
   categoryName: string;
@@ -46,12 +47,14 @@ export default function CategoryPageContent({
   const categoryId = categoryIdProp ?? resolvedCategory?.id;
   const categoryName = resolvedCategory?.name ?? categoryNameProp;
 
-  const { data, isLoading, isError } = useProducts({
+  const { data, isLoading, isFetching, isError } = useProducts({
     categoryId,
     minPrice,
     maxPrice,
     search: search || undefined,
     limit: 50,
+  }, {
+    keepPreviousData: true,
   });
 
   const products = data?.data ?? [];
@@ -208,15 +211,12 @@ export default function CategoryPageContent({
 
         {/* PRODUCT GRID */}
         <div>
-          {isLoading && (
-            <div className="grid grid-cols-3 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-[16px] overflow-hidden bg-gray-200 h-[280px] animate-pulse"
-                />
-              ))}
-            </div>
+          {isLoading && products.length === 0 && (
+            <SkeletonGrid
+              count={6}
+              className="grid grid-cols-3 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1"
+              cardClassName="h-[280px] rounded-[16px]"
+            />
           )}
 
           {isError && (
@@ -232,8 +232,15 @@ export default function CategoryPageContent({
             </div>
           )}
 
-          {!isLoading && products.length > 0 && (
-            <div className="grid grid-cols-3 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
+          {products.length > 0 && (
+            <>
+              {isFetching ? (
+                <div className="mb-3 flex items-center justify-end gap-2">
+                  <SkeletonLine className="h-3 w-3 rounded-full" />
+                  <p className="text-xs text-[#7B6A58]">Updating products...</p>
+                </div>
+              ) : null}
+              <div className="grid grid-cols-3 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
               {products.map((product) => {
                 const primaryImage = product.images.find((img) => img.position === 0) ?? product.images[0];
                 const minVariantPrice = product.variants.reduce(
@@ -302,7 +309,8 @@ export default function CategoryPageContent({
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
         </div>
 

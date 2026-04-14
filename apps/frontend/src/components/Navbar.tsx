@@ -31,6 +31,7 @@ import { useIsAdmin } from "@/hooks/useAdmin";
 import { useCategories } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
+import { SkeletonLine } from "@/components/ui/Skeleton";
 
 // Icon mapping for different category slugs
 const categoryIcons: Record<string, IconDefinition> = {
@@ -251,22 +252,30 @@ export default function Navbar() {
           ))}
 
           {/* Dynamic category menu items (only top-level categories) */}
-          {!categoriesLoading && categories?.filter((cat) => !cat.parentId).map((category) => (
-            <Link
-              key={category.id}
-              href={`/category/${category.slug}`}
-              className="group flex items-center gap-2 text-[#5E2B16] font-medium text-lg font-['Poppins',sans-serif] transition-all duration-300 hover:text-[#819744] hover:-translate-y-[2px]"
-            >
-              <FontAwesomeIcon
-                icon={categoryIcons[category.slug] || faTags}
-                className="text-sm transition-transform duration-300 group-hover:scale-110"
-              />
-              <span className="relative">
-                {category.name}
-                <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-[#819744] transition-all duration-300 group-hover:w-full"></span>
-              </span>
-            </Link>
-          ))}
+          {categoriesLoading ? (
+            <>
+              <SkeletonLine className="h-6 w-20 rounded-full" />
+              <SkeletonLine className="h-6 w-24 rounded-full" />
+              <SkeletonLine className="h-6 w-16 rounded-full" />
+            </>
+          ) : (
+            categories?.filter((cat) => !cat.parentId).map((category) => (
+              <Link
+                key={category.id}
+                href={`/category/${category.slug}`}
+                className="group flex items-center gap-2 text-[#5E2B16] font-medium text-lg font-['Poppins',sans-serif] transition-all duration-300 hover:text-[#819744] hover:-translate-y-[2px]"
+              >
+                <FontAwesomeIcon
+                  icon={categoryIcons[category.slug] || faTags}
+                  className="text-sm transition-transform duration-300 group-hover:scale-110"
+                />
+                <span className="relative">
+                  {category.name}
+                  <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-[#819744] transition-all duration-300 group-hover:w-full"></span>
+                </span>
+              </Link>
+            ))
+          )}
 
         </div>
       </div>

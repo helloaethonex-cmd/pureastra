@@ -5,6 +5,7 @@ import Link from "next/link";
 import ProductCard from "./ProductCard";
 import { useCategories, useProducts } from "@/hooks/useProducts";
 import { motion } from "framer-motion";
+import { SkeletonCard, SkeletonLine } from "@/components/ui/Skeleton";
 
 export default function CategorySection() {
   const { data: categories, isLoading: categoriesLoading } = useCategories();
@@ -19,11 +20,14 @@ export default function CategorySection() {
   const {
     data: productsData,
     isLoading: productsLoading,
+    isFetching: productsFetching,
     isError: productsError,
   } = useProducts({
     categoryId: activeCategoryId,
     limit: 6,
     isActive: true,
+  }, {
+    keepPreviousData: true,
   });
 
   const products = productsData?.data ?? [];
@@ -71,7 +75,11 @@ export default function CategorySection() {
             );
           })
         ) : (
-          <span className="text-sm text-[#6B4A3B]">Loading categories...</span>
+          <>
+            <SkeletonLine className="h-8 w-24 rounded-full" />
+            <SkeletonLine className="h-8 w-28 rounded-full" />
+            <SkeletonLine className="h-8 w-20 rounded-full" />
+          </>
         )}
       </div>
 
@@ -82,12 +90,9 @@ export default function CategorySection() {
 
       {/* RESPONSIVE GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[15px] md:gap-[20px] lg:gap-[25px]">
-        {productsLoading ? (
-          [...Array()].map((_, index) => (
-            <div
-              key={index}
-              className="h-[280px] w-full rounded-[25px] bg-[#D9D9D9] animate-pulse"
-            />
+        {productsLoading && products.length === 0 ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <SkeletonCard key={index} className="h-105 rounded-[25px]" />
           ))
         ) : productsError || products.length === 0 ? (
           <div className="col-span-full text-center text-[#5E2B15] py-8">
@@ -99,6 +104,9 @@ export default function CategorySection() {
           ))
         )}
       </div>
+      {productsFetching && products.length > 0 ? (
+        <p className="mt-4 text-center text-xs text-[#6B4A3B]">Updating products...</p>
+      ) : null}
 
     </section>
   );
