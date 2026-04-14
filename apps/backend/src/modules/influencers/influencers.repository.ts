@@ -78,6 +78,7 @@ export const createInfluencer = (
     email: string;
     referralCode: string;
     commissionRate: Prisma.Decimal;
+    userId?: bigint;
   },
 ) => {
   return tx.influencer.create({
@@ -86,6 +87,7 @@ export const createInfluencer = (
       email: data.email,
       referralCode: data.referralCode,
       commissionRate: data.commissionRate,
+      ...(data.userId !== undefined && { userId: data.userId }),
     },
   });
 };

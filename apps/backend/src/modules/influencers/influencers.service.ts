@@ -102,11 +102,18 @@ const serializeSale = (sale: {
 
 export const adminCreateInfluencer = async (input: CreateInfluencerInput) => {
   const influencer = await prisma.$transaction(async (tx) => {
+    // Verify target user exists and attach userId to influencer if present
+    const user = await tx.user.findUnique({ where: { email: input.email }, select: { id: true } });
+    if (!user) {
+      throw new AppError(404, "User does not exist", "USER_NOT_FOUND");
+    }
+
     return createInfluencer(tx, {
       name: input.name,
       email: input.email,
       referralCode: input.referralCode.toUpperCase(),
       commissionRate: new Prisma.Decimal(input.commissionRate.toFixed(2)),
+      userId: user.id,
     });
   });
 
