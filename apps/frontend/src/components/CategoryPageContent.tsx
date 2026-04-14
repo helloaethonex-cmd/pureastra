@@ -1,7 +1,7 @@
 "use client";
 import toast from "react-hot-toast";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,7 +15,7 @@ import {
 import { useCategories, useProducts } from "@/hooks/useProducts";
 import { useAddCartItem } from "@/hooks/useCart";
 import { useAuthStore } from "@/store/auth.store";
-import { type Category } from "@/services/api";
+import { getProductReviewSummary, type Category } from "@/services/api";
 
 interface CategoryPageContentProps {
   categoryName: string;
@@ -33,6 +33,7 @@ export default function CategoryPageContent({
   const [minPrice, setMinPrice] = useState<number | undefined>();
   const [maxPrice, setMaxPrice] = useState<number | undefined>();
   const [search, setSearch] = useState("");
+  const [ratingByProductId, setRatingByProductId] = useState<Record<string, number>>({});
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
 
@@ -54,6 +55,38 @@ export default function CategoryPageContent({
   });
 
   const products = data?.data ?? [];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (products.length === 0) {
+      setRatingByProductId({});
+      return;
+    }
+
+    const loadRatings = async () => {
+      const entries = await Promise.all(
+        products.map(async (product) => {
+          try {
+            const summary = await getProductReviewSummary(product.id);
+            return [product.id, Number(summary.avgRating ?? 0)] as const;
+          } catch {
+            return [product.id, 0] as const;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      setRatingByProductId(Object.fromEntries(entries));
+    };
+
+    loadRatings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [products]);
 
   const handleAddToCart = (productVariantId?: string) => {
     if (!user) {
@@ -207,6 +240,7 @@ export default function CategoryPageContent({
                   (min, v) => (v.price != null && v.price < min ? v.price : min),
                   Infinity
                 );
+                const displayRating = ratingByProductId[product.id] ?? 0;
 
                 return (
                   <div
@@ -239,7 +273,7 @@ export default function CategoryPageContent({
                         <h3 className="font-semibold text-sm">{product.name}</h3>
                         <div className="flex items-center gap-1 text-xs text-[#F59E0B]">
                           <FontAwesomeIcon icon={faStar} />
-                          <span>—</span>
+                          <span>{displayRating > 0 ? displayRating.toFixed(1) : "New"}</span>
                         </div>
                       </div>
                       {product.description && (

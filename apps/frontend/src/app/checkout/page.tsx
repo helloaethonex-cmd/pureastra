@@ -285,6 +285,7 @@ function PreviewStep({
   }
 
   const tot = preview.totals;
+  const productTotalWithTax = Number(tot.productTotal) + Number(tot.taxAmount);
   const shippingDisplay = toShippingInclusiveFromBase(tot.shippingAmount);
 
   return (
@@ -309,8 +310,8 @@ function PreviewStep({
       {/* Totals */}
       <div className="bg-white rounded-2xl border border-[#EDE3D2] p-4 space-y-2.5 text-sm text-[#5E2B15]">
         <div className="flex justify-between">
-          <span className="text-[#7B6A58]">Product Total</span>
-          <span>₹{Number(tot.productTotal).toFixed(2)}</span>
+          <span className="text-[#7B6A58]">Product Total (incl. tax)</span>
+          <span>₹{productTotalWithTax.toFixed(2)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-[#7B6A58] flex items-center gap-1">
@@ -326,12 +327,6 @@ function PreviewStep({
           <div className="flex justify-between text-xs text-[#9a7a65] -mt-1">
             <span />
             <span>(includes ₹{shippingDisplay.gstComponent.toFixed(2)} GST)</span>
-          </div>
-        )}
-        {Number(tot.taxAmount) > 0 && (
-          <div className="flex justify-between">
-            <span className="text-[#7B6A58]">Tax</span>
-            <span>₹{Number(tot.taxAmount).toFixed(2)}</span>
           </div>
         )}
         {Number(tot.discountAmount) > 0 && (
