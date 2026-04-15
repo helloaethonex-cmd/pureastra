@@ -1169,7 +1169,7 @@ export default function ProductClient({ product }: { product: Product }) {
     () => displayImages[0]?.heroImageUrl ?? displayImages[0]?.imageUrl ?? "/img/facewash.webp",
     [displayImages],
   );
-  const showHeroImage = heroLoaded;
+  const showHeroImage = heroLoaded || !activeImage.placeholder;
 
   const activeVariant = product.variants.find((v) => v.id === activeVariantId);
 
@@ -1404,7 +1404,7 @@ export default function ProductClient({ product }: { product: Product }) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
               whileHover={{ scale: 1.05 }}
-              className="w-full aspect-square max-h-[500px] flex items-center justify-center overflow-hidden"
+              className="w-full h-[380px] sm:h-[320px] md:h-[500px] flex items-center justify-center overflow-hidden"
               onTouchStart={(e) => (startX = e.touches[0].clientX)}
               onTouchEnd={(e) => {
                 const endX = e.changedTouches[0].clientX;
@@ -1417,25 +1417,19 @@ export default function ProductClient({ product }: { product: Product }) {
                 transition={{ duration: 0.4 }}
                 className="relative w-full h-full"
               >
-                <div
-                  aria-hidden
-                  className={`absolute inset-0 transition-opacity duration-300 ${
-                    heroLoaded ? "opacity-0" : "opacity-100"
-                  } ${
-                    activeImage.placeholder
-                      ? "bg-center bg-cover"
-                      : "bg-gradient-to-br from-[#EEE2CF] via-[#E5D7C0] to-[#DCCCB2] animate-pulse"
-                  }`}
-                  style={
-                    activeImage.placeholder
-                      ? {
-                          backgroundImage: `url(${activeImage.placeholder})`,
-                          filter: "blur(18px)",
-                          transform: "scale(1.08)",
-                        }
-                      : undefined
-                  }
-                />
+                {activeImage.placeholder && (
+                  <div
+                    aria-hidden
+                    className={`absolute inset-0 bg-center bg-cover transition-opacity duration-300 ${
+                      heroLoaded ? "opacity-0" : "opacity-100"
+                    }`}
+                    style={{
+                      backgroundImage: `url(${activeImage.placeholder})`,
+                      filter: "blur(18px)",
+                      transform: "scale(1.08)",
+                    }}
+                  />
+                )}
                 <Image
                   src={activeImage.heroImageUrl ?? activeImage.imageUrl}
                   alt={product.name}
