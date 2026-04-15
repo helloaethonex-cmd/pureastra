@@ -1,7 +1,7 @@
 "use client";
 import toast from "react-hot-toast";
 
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -99,6 +99,15 @@ function getRelativeDateLabel(dateISO: string) {
   const years = Math.floor(months / 12);
   return `${years} year${years > 1 ? "s" : ""} ago`;
 }
+
+type ProductGalleryImage = {
+  imageUrl: string;
+  heroImageUrl?: string | null;
+  thumbnailImageUrl?: string | null;
+  placeholder?: string | null;
+  width?: number | null;
+  height?: number | null;
+};
 
 // ─── Benefits Section ─────────────────────────────────────────────────────────
 
@@ -1136,8 +1145,31 @@ export default function ProductClient({ product }: { product: Product }) {
   // Images (sorted by position)
   const images = [...product.images]
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-    .map((img) => img.imageUrl);
-  const displayImages = images.length > 0 ? images : ["/img/facewash.webp"];
+    .map<ProductGalleryImage>((img) => ({
+      imageUrl: img.imageUrl,
+      heroImageUrl: img.heroImageUrl ?? img.imageUrl,
+      thumbnailImageUrl: img.thumbnailImageUrl ?? img.imageUrl,
+      placeholder: img.placeholder ?? null,
+      width: img.width ?? null,
+      height: img.height ?? null,
+    }));
+  const displayImages: ProductGalleryImage[] =
+    images.length > 0
+      ? images
+      : [{ imageUrl: "/img/facewash.webp", heroImageUrl: "/img/facewash.webp", thumbnailImageUrl: "/img/facewash.webp" }];
+
+  const activeImage = displayImages[activeImg] ?? displayImages[0];
+  const [heroLoaded, setHeroLoaded] = useState(false);
+
+  useEffect(() => {
+    setHeroLoaded(false);
+  }, [activeImg]);
+
+  const defaultFallbackImage = useMemo(
+    () => displayImages[0]?.heroImageUrl ?? displayImages[0]?.imageUrl ?? "/img/facewash.webp",
+    [displayImages],
+  );
+  const showHeroImage = heroLoaded || !activeImage.placeholder;
 
   const activeVariant = product.variants.find((v) => v.id === activeVariantId);
 
@@ -1372,7 +1404,7 @@ export default function ProductClient({ product }: { product: Product }) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
               whileHover={{ scale: 1.05 }}
-              className="w-full h-[380px] sm:h-[320px] md:h-[500px] flex items-center justify-center overflow-hidden"
+              className="w-full aspect-square max-h-[500px] flex items-center justify-center overflow-hidden"
               onTouchStart={(e) => (startX = e.touches[0].clientX)}
               onTouchEnd={(e) => {
                 const endX = e.changedTouches[0].clientX;
@@ -1383,14 +1415,35 @@ export default function ProductClient({ product }: { product: Product }) {
               <motion.div
                 whileHover={{ scale: 1.2 }}
                 transition={{ duration: 0.4 }}
-                className="w-full h-full"
+                className="relative w-full h-full"
               >
+                {activeImage.placeholder && (
+                  <div
+                    aria-hidden
+                    className={`absolute inset-0 bg-center bg-cover transition-opacity duration-300 ${
+                      heroLoaded ? "opacity-0" : "opacity-100"
+                    }`}
+                    style={{
+                      backgroundImage: `url(${activeImage.placeholder})`,
+                      filter: "blur(18px)",
+                      transform: "scale(1.08)",
+                    }}
+                  />
+                )}
                 <Image
-                  src={displayImages[activeImg]}
+                  src={activeImage.heroImageUrl ?? activeImage.imageUrl}
                   alt={product.name}
-                  width={665}
-                  height={646}
-                  className="w-full h-full object-contain"
+                  fill
+                  priority={activeImg === 0}
+                  loading={activeImg === 0 ? undefined : "lazy"}
+                  fetchPriority={activeImg === 0 ? "high" : "auto"}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  placeholder={activeImage.placeholder ? "blur" : "empty"}
+                  blurDataURL={activeImage.placeholder ?? undefined}
+                  onLoad={() => setHeroLoaded(true)}
+                  className={`w-full h-full object-contain transition-opacity duration-300 ${
+                    showHeroImage ? "opacity-100" : "opacity-0"
+                  }`}
                 />
               </motion.div>
             </motion.div>
@@ -1410,10 +1463,13 @@ export default function ProductClient({ product }: { product: Product }) {
                   }`}
                 >
                   <Image
-                    src={img}
+                    src={img.thumbnailImageUrl ?? img.imageUrl}
                     alt={`thumb-${i}`}
                     width={100}
                     height={100}
+                    sizes="90px"
+                    placeholder={img.placeholder ? "blur" : "empty"}
+                    blurDataURL={img.placeholder ?? undefined}
                     className="w-full h-full object-cover"
                   />
                 </motion.div>
@@ -1705,7 +1761,7 @@ export default function ProductClient({ product }: { product: Product }) {
           </div>
           <BeforeAfterSection
             section={beforeAfterSection}
-            fallbackImage={displayImages[0]}
+            fallbackImage={defaultFallbackImage}
           />
         </div>
 
@@ -1726,7 +1782,7 @@ export default function ProductClient({ product }: { product: Product }) {
                 const img =
                   item.images.find((im) => im.position === 0)?.imageUrl ??
                   item.images[0]?.imageUrl ??
-                  displayImages[0];
+                  defaultFallbackImage;
                 const minPrice = item.variants.reduce(
                   (min, v) =>
                     v.price != null && Number(v.price) < min

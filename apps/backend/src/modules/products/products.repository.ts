@@ -224,6 +224,11 @@ export const addProductImage = async (productId: bigint, data: AddProductImageIn
       productId,
       variantId: data.variantId ?? null,
       imageUrl: data.imageUrl,
+      heroImageUrl: data.heroImageUrl ?? null,
+      thumbnailImageUrl: data.thumbnailImageUrl ?? null,
+      width: data.width ?? null,
+      height: data.height ?? null,
+      placeholder: data.placeholder ?? null,
       position: data.position ?? 0,
     },
   });

@@ -24,6 +24,11 @@ export type UpdateVariantInput = z.infer<typeof updateVariantSchema>;
 
 export const addProductImageSchema = z.object({
   imageUrl: z.string().url(),
+  heroImageUrl: z.string().url().optional(),
+  thumbnailImageUrl: z.string().url().optional(),
+  width: z.coerce.number().int().positive().optional(),
+  height: z.coerce.number().int().positive().optional(),
+  placeholder: z.string().optional(),
   variantId: z.coerce.bigint().optional(),
   position: z.coerce.number().int().min(0).optional(),
 });

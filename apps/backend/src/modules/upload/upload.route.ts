@@ -4,16 +4,22 @@ import { requireAuth, requireRole } from "../auth/auth.middleware";
 import { uploadImage, uploadReviewImage } from "./upload.controller";
 
 const router = Router();
+const ALLOWED_UPLOAD_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+]);
 
 // Store file in memory buffer (no disk writes)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB max
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    if (ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only image files are allowed"));
+      cb(new Error("Only JPG, PNG, WEBP, and AVIF images are allowed"));
     }
   },
 });

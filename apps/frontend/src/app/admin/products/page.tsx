@@ -66,6 +66,14 @@ type Variant = {
   stockQuantity: string;
 };
 
+const MAX_PRODUCT_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024;
+const ALLOWED_PRODUCT_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+]);
+
 // ─── Toast System ─────────────────────────────────────────────────────────────
 
 type ToastState = {
@@ -164,6 +172,33 @@ function ImageManager({
     (a, b) => Number(a.position ?? 0) - Number(b.position ?? 0),
   );
 
+  const handleFileSelect = (candidate: File | null) => {
+    if (!candidate) {
+      setFile(null);
+      return;
+    }
+
+    if (!ALLOWED_PRODUCT_IMAGE_MIME_TYPES.has(candidate.type)) {
+      onToast({
+        type: "error",
+        message: "Only JPG, PNG, WEBP, and AVIF images are supported.",
+      });
+      setFile(null);
+      return;
+    }
+
+    if (candidate.size > MAX_PRODUCT_IMAGE_UPLOAD_BYTES) {
+      onToast({
+        type: "error",
+        message: "Image must be 8MB or smaller.",
+      });
+      setFile(null);
+      return;
+    }
+
+    setFile(candidate);
+  };
+
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
@@ -249,7 +284,7 @@ function ImageManager({
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
               className="text-xs text-gray-700 w-full"
             />
           </label>

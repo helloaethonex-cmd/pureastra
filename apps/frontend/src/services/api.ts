@@ -60,6 +60,11 @@ export interface ProductVariantDetail {
 export interface ProductImage {
   id: string;
   imageUrl: string;
+  heroImageUrl?: string | null;
+  thumbnailImageUrl?: string | null;
+  width?: number | null;
+  height?: number | null;
+  placeholder?: string | null;
   position?: number | null;
   variantId?: string | null;
 }
@@ -770,7 +775,16 @@ export const deleteProduct = (id: string) =>
 
 export const addProductImage = (
   productId: string,
-  body: { imageUrl: string; position?: number; variantId?: string }
+  body: {
+    imageUrl: string;
+    heroImageUrl?: string;
+    thumbnailImageUrl?: string;
+    width?: number;
+    height?: number;
+    placeholder?: string;
+    position?: number;
+    variantId?: string;
+  }
 ) =>
   apiFetch<ProductImage>(`/products/${productId}/images`, {
     method: "POST",
@@ -784,11 +798,25 @@ export const deleteProductImage = (productId: string, imageId: string) =>
 
 export const setProductImagePosition = async (
   productId: string,
-  image: { id: string; imageUrl: string; variantId?: string | null },
+  image: {
+    id: string;
+    imageUrl: string;
+    heroImageUrl?: string | null;
+    thumbnailImageUrl?: string | null;
+    width?: number | null;
+    height?: number | null;
+    placeholder?: string | null;
+    variantId?: string | null;
+  },
   position: number,
 ) => {
   const created = await addProductImage(productId, {
     imageUrl: image.imageUrl,
+    heroImageUrl: image.heroImageUrl ?? undefined,
+    thumbnailImageUrl: image.thumbnailImageUrl ?? undefined,
+    width: image.width ?? undefined,
+    height: image.height ?? undefined,
+    placeholder: image.placeholder ?? undefined,
     variantId: image.variantId ?? undefined,
     position,
   });
@@ -799,7 +827,16 @@ export const setProductImagePosition = async (
 
 export const setProductCoverImage = async (
   productId: string,
-  image: { id: string; imageUrl: string; variantId?: string | null },
+  image: {
+    id: string;
+    imageUrl: string;
+    heroImageUrl?: string | null;
+    thumbnailImageUrl?: string | null;
+    width?: number | null;
+    height?: number | null;
+    placeholder?: string | null;
+    variantId?: string | null;
+  },
 ) => setProductImagePosition(productId, image, 0);
 
 export const assignProductCategories = (
@@ -912,7 +949,16 @@ export const deleteProductContentSection = (productId: string, sectionId: string
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
-export const uploadImageToR2 = async (file: File): Promise<string> => {
+export interface UploadedImageAsset {
+  url: string;
+  heroImageUrl: string;
+  thumbnailImageUrl: string;
+  width: number;
+  height: number;
+  placeholder: string;
+}
+
+export const uploadImageToR2 = async (file: File): Promise<UploadedImageAsset> => {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -928,8 +974,8 @@ export const uploadImageToR2 = async (file: File): Promise<string> => {
     throw new Error(body?.error ?? `Upload failed ${res.status}`);
   }
 
-  const data = await res.json();
-  return data.url as string;
+  const data = (await res.json()) as UploadedImageAsset;
+  return data;
 };
 
 export const uploadReviewImage = async (file: File): Promise<string> => {

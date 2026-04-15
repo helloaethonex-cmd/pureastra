@@ -1,39 +1,113 @@
 import { Request, Response } from "express";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
+import { uploadBufferToR2 } from "../../lib/r2";
 
-const r2Client = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
-  },
-});
+const PRODUCT_HERO_SIZE = 1200;
+const PRODUCT_THUMB_SIZE = 240;
+const PRODUCT_PLACEHOLDER_SIZE = 24;
+const IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
-const BUCKET = process.env.R2_BUCKET_NAME ?? "pureastra-media";
-const PUBLIC_URL = process.env.R2_PUBLIC_URL ?? "https://pub-dummy.r2.dev";
+type UploadedProductImage = {
+  url: string;
+  heroImageUrl: string;
+  thumbnailImageUrl: string;
+  width: number;
+  height: number;
+  placeholder: string;
+};
 
-const uploadToR2 = async (file: Express.Multer.File, keyPrefix: string) => {
-  const ext = file.originalname.split(".").pop() ?? "jpg";
+const uploadRawImageToR2 = async (
+  file: Express.Multer.File,
+  keyPrefix: string,
+): Promise<string> => {
+  const ext = file.originalname.split(".").pop()?.toLowerCase() ?? "jpg";
   const key = `${keyPrefix}/${uuidv4()}.${ext}`;
 
-  await r2Client.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    })
-  );
+  return uploadBufferToR2(key, file.buffer, file.mimetype, {
+    cacheControl: IMAGE_CACHE_CONTROL,
+  });
+};
 
-  return `${PUBLIC_URL}/${key}`;
+const processAndUploadProductImage = async (
+  file: Express.Multer.File,
+): Promise<UploadedProductImage> => {
+  const image = sharp(file.buffer, { failOn: "none" }).rotate();
+  const metadata = await image.metadata();
+
+  const width = metadata.width ?? PRODUCT_HERO_SIZE;
+  const height = metadata.height ?? PRODUCT_HERO_SIZE;
+
+  const [heroBuffer, thumbnailBuffer, placeholderBuffer] = await Promise.all([
+    image
+      .clone()
+      .resize({
+        width: PRODUCT_HERO_SIZE,
+        height: PRODUCT_HERO_SIZE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({
+        quality: 84,
+        effort: 6,
+      })
+      .toBuffer(),
+    image
+      .clone()
+      .resize({
+        width: PRODUCT_THUMB_SIZE,
+        height: PRODUCT_THUMB_SIZE,
+        fit: "cover",
+      })
+      .webp({
+        quality: 78,
+        effort: 6,
+      })
+      .toBuffer(),
+    image
+      .clone()
+      .resize({
+        width: PRODUCT_PLACEHOLDER_SIZE,
+        height: PRODUCT_PLACEHOLDER_SIZE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({
+        quality: 45,
+        effort: 4,
+      })
+      .toBuffer(),
+  ]);
+
+  const baseKey = `${uuidv4()}`;
+  const [heroImageUrl, thumbnailImageUrl] = await Promise.all([
+    uploadBufferToR2(`products/hero/${baseKey}.webp`, heroBuffer, "image/webp", {
+      cacheControl: IMAGE_CACHE_CONTROL,
+    }),
+    uploadBufferToR2(
+      `products/thumb/${baseKey}.webp`,
+      thumbnailBuffer,
+      "image/webp",
+      {
+        cacheControl: IMAGE_CACHE_CONTROL,
+      },
+    ),
+  ]);
+
+  return {
+    url: heroImageUrl,
+    heroImageUrl,
+    thumbnailImageUrl,
+    width,
+    height,
+    placeholder: `data:image/webp;base64,${placeholderBuffer.toString("base64")}`,
+  };
 };
 
 /**
  * POST /api/v1/upload/image
  * Accepts multipart/form-data with field "file"
- * Returns { url: string }
+ * Returns optimized image metadata
  */
 export const uploadImage = async (req: Request, res: Response) => {
   try {
@@ -43,8 +117,8 @@ export const uploadImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
-    const url = await uploadToR2(file, "products");
-    res.status(200).json({ url });
+    const uploaded = await processAndUploadProductImage(file);
+    res.status(200).json(uploaded);
   } catch (err: any) {
     console.error("[upload] R2 error:", err);
     res.status(500).json({ error: "Upload failed" });
@@ -64,7 +138,7 @@ export const uploadReviewImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
-    const url = await uploadToR2(file, "reviews");
+    const url = await uploadRawImageToR2(file, "reviews");
     res.status(200).json({ url });
   } catch (err: any) {
     console.error("[upload:review] R2 error:", err);

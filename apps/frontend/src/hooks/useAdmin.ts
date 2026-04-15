@@ -149,8 +149,17 @@ export function useAddProductImage(productId: string) {
       position?: number;
       variantId?: string;
     }) => {
-      const imageUrl = await uploadImageToR2(file);
-      return addProductImage(productId, { imageUrl, position, variantId });
+      const uploaded = await uploadImageToR2(file);
+      return addProductImage(productId, {
+        imageUrl: uploaded.url,
+        heroImageUrl: uploaded.heroImageUrl,
+        thumbnailImageUrl: uploaded.thumbnailImageUrl,
+        width: uploaded.width,
+        height: uploaded.height,
+        placeholder: uploaded.placeholder,
+        position,
+        variantId,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });

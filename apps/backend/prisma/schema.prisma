@@ -285,6 +285,11 @@ model ProductImage {
   variantId BigInt? @map("variant_id")
 
   imageUrl String? @map("image_url")
+  heroImageUrl String? @map("hero_image_url")
+  thumbnailImageUrl String? @map("thumbnail_image_url")
+  width Int?
+  height Int?
+  placeholder String?
   position Int?
 
   product Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)

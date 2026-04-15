@@ -29,6 +29,9 @@ export const uploadBufferToR2 = async (
   key: string,
   body: Buffer,
   contentType: string,
+  options?: {
+    cacheControl?: string;
+  },
 ): Promise<string> => {
   await r2Client.send(
     new PutObjectCommand({
@@ -36,6 +39,7 @@ export const uploadBufferToR2 = async (
       Key: key,
       Body: body,
       ContentType: contentType,
+      CacheControl: options?.cacheControl,
     }),
   );
 
