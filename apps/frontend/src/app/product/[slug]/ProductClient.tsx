@@ -1169,7 +1169,7 @@ export default function ProductClient({ product }: { product: Product }) {
     () => displayImages[0]?.heroImageUrl ?? displayImages[0]?.imageUrl ?? "/img/facewash.webp",
     [displayImages],
   );
-  const showHeroImage = heroLoaded || !activeImage.placeholder;
+  const showHeroImage = heroLoaded;
 
   const activeVariant = product.variants.find((v) => v.id === activeVariantId);
 
@@ -1417,19 +1417,25 @@ export default function ProductClient({ product }: { product: Product }) {
                 transition={{ duration: 0.4 }}
                 className="relative w-full h-full"
               >
-                {activeImage.placeholder && (
-                  <div
-                    aria-hidden
-                    className={`absolute inset-0 bg-center bg-cover transition-opacity duration-300 ${
-                      heroLoaded ? "opacity-0" : "opacity-100"
-                    }`}
-                    style={{
-                      backgroundImage: `url(${activeImage.placeholder})`,
-                      filter: "blur(18px)",
-                      transform: "scale(1.08)",
-                    }}
-                  />
-                )}
+                <div
+                  aria-hidden
+                  className={`absolute inset-0 transition-opacity duration-300 ${
+                    heroLoaded ? "opacity-0" : "opacity-100"
+                  } ${
+                    activeImage.placeholder
+                      ? "bg-center bg-cover"
+                      : "bg-gradient-to-br from-[#EEE2CF] via-[#E5D7C0] to-[#DCCCB2] animate-pulse"
+                  }`}
+                  style={
+                    activeImage.placeholder
+                      ? {
+                          backgroundImage: `url(${activeImage.placeholder})`,
+                          filter: "blur(18px)",
+                          transform: "scale(1.08)",
+                        }
+                      : undefined
+                  }
+                />
                 <Image
                   src={activeImage.heroImageUrl ?? activeImage.imageUrl}
                   alt={product.name}
