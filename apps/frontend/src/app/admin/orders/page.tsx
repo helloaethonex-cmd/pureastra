@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -13,7 +13,6 @@ import {
   faTags,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-  useAdminOrders,
   useIsAdmin,
   useUpdateAdminOrderStatus,
   useDownloadShippingLabel,
@@ -21,6 +20,7 @@ import {
 } from "@/hooks/useAdmin";
 import {
   getAdminOrderInvoice,
+  listAdminOrders,
   regenerateAdminInvoicePdf,
   type OrderInvoiceResponse,
 } from "@/services/api";
@@ -42,28 +42,101 @@ const PAYMENT_STATUS_LABEL: Record<number, string> = {
 };
 
 const isLabelEligible = (orderStatus: number) => orderStatus <= 2;
+const PAGE_SIZE = 20;
+
+const isFakeOrderTimestamp = (createdAt: string) => {
+  const dt = new Date(createdAt);
+  return (
+    dt.getFullYear() === 2026 &&
+    dt.getMonth() === 3 &&
+    dt.getDate() === 15 &&
+    dt.getHours() === 23 &&
+    (dt.getMinutes() === 55 || dt.getMinutes() === 56)
+  );
+};
 
 export default function AdminOrdersPage() {
   const router = useRouter();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [allOrders, setAllOrders] = useState<
+    Array<{
+      id: string;
+      orderNumber: string;
+      userId: string;
+      orderStatus: number;
+      paymentStatus: number;
+      totalPaid: string;
+      createdAt: string;
+    }>
+  >([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedInvoice, setSelectedInvoice] = useState<OrderInvoiceResponse | null>(null);
   const [invoiceOrderNumber, setInvoiceOrderNumber] = useState<string | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [regeneratingOrder, setRegeneratingOrder] = useState<string | null>(null);
-
-  const { data, isLoading } = useAdminOrders({
-    page,
-    limit: 20,
-    search: search || undefined,
-    sortOrder: "desc",
-  });
   const updateStatus = useUpdateAdminOrderStatus();
   const downloadLabel = useDownloadShippingLabel();
   const downloadBulk = useDownloadBulkShippingLabels();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAllOrders = async () => {
+      setOrdersLoading(true);
+      setOrdersError(null);
+
+      try {
+        const collected: Array<{
+          id: string;
+          orderNumber: string;
+          userId: string;
+          orderStatus: number;
+          paymentStatus: number;
+          totalPaid: string;
+          createdAt: string;
+        }> = [];
+
+        let currentPage = 1;
+        let totalPages = 1;
+
+        while (currentPage <= totalPages) {
+          const response = await listAdminOrders({
+            page: currentPage,
+            limit: 100,
+            search: search || undefined,
+            sortOrder: "desc",
+          });
+
+          totalPages = response.pagination.totalPages;
+          collected.push(...response.data);
+          currentPage += 1;
+        }
+
+        if (cancelled) return;
+
+        setAllOrders(collected.filter((order) => !isFakeOrderTimestamp(order.createdAt)));
+      } catch (err) {
+        if (cancelled) return;
+        setAllOrders([]);
+        setOrdersError(err instanceof Error ? err.message : "Failed to load orders");
+      } finally {
+        if (!cancelled) {
+          setOrdersLoading(false);
+        }
+      }
+    };
+
+    loadAllOrders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [search]);
 
   if (adminLoading) {
     return (
@@ -78,12 +151,28 @@ export default function AdminOrdersPage() {
     return null;
   }
 
-  const orders = data?.data ?? [];
-  const pagination = data?.pagination;
-  const eligibleOrders = orders.filter((order) => isLabelEligible(order.orderStatus));
+  const totalPages = Math.max(1, Math.ceil(allOrders.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageEnd = pageStart + PAGE_SIZE;
+  const filteredOrders = useMemo(
+    () => allOrders.slice(pageStart, pageEnd),
+    [allOrders, pageStart, pageEnd],
+  );
+
+  const validOrderIdSet = useMemo(
+    () => new Set(allOrders.map((order) => order.id)),
+    [allOrders],
+  );
+  const effectiveSelectedIds = useMemo(
+    () => new Set(Array.from(selectedIds).filter((id) => validOrderIdSet.has(id))),
+    [selectedIds, validOrderIdSet],
+  );
+
+  const eligibleOrders = filteredOrders.filter((order) => isLabelEligible(order.orderStatus));
   const allEligibleSelected =
     eligibleOrders.length > 0 &&
-    eligibleOrders.every((order) => selectedIds.has(order.id));
+    eligibleOrders.every((order) => effectiveSelectedIds.has(order.id));
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -123,12 +212,17 @@ export default function AdminOrdersPage() {
   };
 
   const handleBulkLabel = () => {
-    if (selectedIds.size === 0) {
+    const eligibleIdSet = new Set(eligibleOrders.map((order) => order.id));
+    const selectedEligibleIds = Array.from(effectiveSelectedIds).filter((id) =>
+      eligibleIdSet.has(id),
+    );
+
+    if (selectedEligibleIds.length === 0) {
       toast.error("Select at least one order first");
       return;
     }
 
-    downloadBulk.mutate(Array.from(selectedIds), {
+    downloadBulk.mutate(selectedEligibleIds, {
       onSuccess: () => setSelectedIds(new Set()),
       onError: (err) =>
         toast.error(err instanceof Error ? err.message : "Failed to download bulk labels"),
@@ -196,7 +290,7 @@ export default function AdminOrdersPage() {
             className="w-full sm:w-80 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           />
 
-          {selectedIds.size > 0 ? (
+          {effectiveSelectedIds.size > 0 ? (
             <button
               onClick={handleBulkLabel}
               disabled={downloadBulk.isPending}
@@ -207,7 +301,7 @@ export default function AdminOrdersPage() {
               ) : (
                 <FontAwesomeIcon icon={faTags} />
               )}
-              Download Labels ({selectedIds.size})
+              Download Labels ({effectiveSelectedIds.size})
             </button>
           ) : null}
         </div>
@@ -236,16 +330,20 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
+              {ordersLoading ? (
                 <tr>
                   <td className="px-4 py-4" colSpan={8}>Loading orders...</td>
                 </tr>
-              ) : orders.length === 0 ? (
+              ) : ordersError ? (
+                <tr>
+                  <td className="px-4 py-4 text-red-600" colSpan={8}>{ordersError}</td>
+                </tr>
+              ) : filteredOrders.length === 0 ? (
                 <tr>
                   <td className="px-4 py-4" colSpan={8}>No orders found</td>
                 </tr>
               ) : (
-                orders.map((order) => {
+                filteredOrders.map((order) => {
                   const eligible = isLabelEligible(order.orderStatus);
                   const isSinglePending =
                     downloadLabel.isPending && downloadLabel.variables === order.id;
@@ -255,7 +353,7 @@ export default function AdminOrdersPage() {
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
-                          checked={selectedIds.has(order.id)}
+                          checked={effectiveSelectedIds.has(order.id)}
                           onChange={() => toggleSelect(order.id)}
                           disabled={!eligible}
                           title={eligible ? "Select for bulk label" : "Not eligible for shipping label"}
@@ -315,22 +413,22 @@ export default function AdminOrdersPage() {
           </table>
         </div>
 
-        {pagination ? (
+        {!ordersLoading && allOrders.length > 0 ? (
           <div className="flex items-center justify-between mt-4 text-sm text-[#5E2B16]">
             <span>
-              Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+              Page {safePage} of {totalPages} ({allOrders.length} total)
             </span>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={pagination.page <= 1}
+                disabled={safePage <= 1}
                 className="px-3 py-1 border rounded disabled:opacity-50"
               >
                 Prev
               </button>
               <button
-                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                disabled={pagination.page >= pagination.totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
                 className="px-3 py-1 border rounded disabled:opacity-50"
               >
                 Next

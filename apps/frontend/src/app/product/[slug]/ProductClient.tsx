@@ -1,7 +1,13 @@
 "use client";
 import toast from "react-hot-toast";
 
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,7 +21,8 @@ import {
   faHandHoldingHeart,
   faGlobe,
   faPaw,
-  faClipboardCheck, faHandSparkles,
+  faClipboardCheck,
+  faHandSparkles,
   faSnowflake,
   faArrowRight,
   faBolt,
@@ -175,8 +182,7 @@ function IngredientsGridSection({
 
   const list: string[] = content?.list ?? [];
   const text: string = content?.text ?? "";
-  const cardItems: { title: string; desc: string }[] =
-    content?.cardItems ?? [];
+  const cardItems: { title: string; desc: string }[] = content?.cardItems ?? [];
 
   if (!list.length && !text && !cardItems.length) return null;
 
@@ -186,7 +192,7 @@ function IngredientsGridSection({
     "Papaya Extract": "/img/ingredients/papaya.png",
     "Tangerine Extract": "/img/ingredients/tangerine.png",
     "Vitamin E": "/img/ingredients/vitamin-e.png",
-    "Glycerine": "/img/ingredients/glycerine.png",
+    Glycerine: "/img/ingredients/glycerine.png",
     "Sodium PCA": "/img/ingredients/sodium-pca.png",
   };
 
@@ -201,14 +207,14 @@ function IngredientsGridSection({
       {cardItems.length > 0 && (
         <div className="grid md:grid-cols-2 gap-6">
           {cardItems.map((item, i) => (
-           <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            viewport={{ once: true }}
-            whileHover={{ y: -4 }}
-            className="
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              viewport={{ once: true }}
+              whileHover={{ y: -4 }}
+              className="
               group
               bg-[#F3F6EA]/70 
               backdrop-blur-sm
@@ -219,10 +225,11 @@ function IngredientsGridSection({
               hover:shadow-md
               transition
             "
-          >
+            >
               {/* IMAGE (FIXED) */}
-              
-              <div className="
+
+              <div
+                className="
                 w-14 h-14 
                 rounded-full 
                 overflow-hidden 
@@ -230,7 +237,8 @@ function IngredientsGridSection({
                 border border-[#e0e6d0]
                 flex items-center justify-center
                 bg-transparent
-              ">
+              "
+              >
                 <img
                   src={
                     ingredientImages[item.title] ||
@@ -263,7 +271,6 @@ function IngredientsGridSection({
           ))}
         </div>
       )}
-
 
       {/* DESCRIPTION */}
       {text && (
@@ -300,11 +307,7 @@ function ResultsSection({
     const text = rest?.replace(/\d+%/, "").trim();
 
     // fallback images
-    const images = [
-      "/img/week-1.png",
-      "/img/week-2.png",
-      "/img/week-3.png",
-    ];
+    const images = ["/img/week-1.png", "/img/week-2.png", "/img/week-3.png"];
 
     return {
       week: weekPart,
@@ -344,9 +347,7 @@ function ResultsSection({
 
           {/* TEXT */}
           <div className="flex-1">
-            <p className="text-[#819744] font-semibold text-sm">
-              {item.week}
-            </p>
+            <p className="text-[#819744] font-semibold text-sm">{item.week}</p>
 
             <p className="text-[#8b5e3c] text-[14px] md:text-[16px]">
               {item.text}
@@ -354,7 +355,6 @@ function ResultsSection({
 
             {/* PROGRESS BAR */}
             <div className="mt-2 h-2 bg-[#e5ead7] rounded-full overflow-hidden relative">
-              
               {/* MAIN FILL */}
               <motion.div
                 initial={{ width: 0 }}
@@ -366,7 +366,6 @@ function ResultsSection({
                 }}
                 className="h-full bg-[#819744] rounded-full relative overflow-hidden"
               >
-                
                 {/* SHIMMER EFFECT (moving light) */}
                 <motion.div
                   initial={{ x: "-100%" }}
@@ -378,9 +377,7 @@ function ResultsSection({
                   }}
                   className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
                 />
-
               </motion.div>
-
             </div>
           </div>
 
@@ -595,7 +592,8 @@ function UsageInstructionSection({
             className="relative"
           >
             {/* CARD */}
-            <div className="
+            <div
+              className="
               bg-white/40 backdrop-blur-md 
               border border-white/30 
               rounded-2xl 
@@ -603,14 +601,16 @@ function UsageInstructionSection({
               shadow-[0_10px_25px_rgba(0,0,0,0.06)]
               hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)]
               transition
-            ">
+            "
+            >
               <p className="text-[#8b5e3c] text-[14px] md:text-[16px] leading-relaxed pl-10">
                 {step}
               </p>
             </div>
 
             {/* FLOATING ICON */}
-            <div className="
+            <div
+              className="
               absolute 
               -left-4 top-1/2 -translate-y-1/2 
               w-12 h-12 
@@ -618,7 +618,8 @@ function UsageInstructionSection({
               rounded-full 
               bg-[#819744] text-white 
               shadow-lg
-            ">
+            "
+            >
               <FontAwesomeIcon icon={stepIcons[i % stepIcons.length]} />
             </div>
           </motion.div>
@@ -640,8 +641,10 @@ function BeforeAfterSection({
   const content = section?.content as any;
   const beforeLabel: string = content?.beforeLabel ?? "Dull Skin";
   const afterLabel: string = content?.afterLabel ?? "Radiant Skin";
-  const beforeImg: string = content?.beforeImage ?? fallbackImage ?? "/img/before1.webp";
-  const afterImg: string = content?.afterImage ?? fallbackImage ?? "/img/after1.webp";
+  const beforeImg: string =
+    content?.beforeImage ?? fallbackImage ?? "/img/before1.webp";
+  const afterImg: string =
+    content?.afterImage ?? fallbackImage ?? "/img/after1.webp";
   const caption: string = content?.caption ?? "Brighter skin in just 2 weeks";
 
   return (
@@ -1131,6 +1134,102 @@ export default function ProductClient({ product }: { product: Product }) {
   const allReviewImages = reviewList.flatMap((r) => r.images ?? []);
   const reviewEligibility = reviewEligibilityQuery.data;
 
+  const reviewMetricDefinitionById = useMemo(
+    () => new Map(reviewMetrics.map((metric) => [metric.id, metric])),
+    [reviewMetrics],
+  );
+
+  const reviewSummaryMetrics = reviewSummary?.metrics ?? [];
+  const reviewMetricSummary = useMemo(() => {
+    if (reviewSummaryMetrics.length > 0) {
+      return reviewSummaryMetrics.map((metric) => {
+        const definition = reviewMetricDefinitionById.get(metric.metricId);
+        return {
+          metricId: metric.metricId,
+          name: metric.name,
+          icon: metric.icon,
+          average: Number(metric.average ?? 0),
+          unit: definition?.unit ?? "PERCENT",
+          minValue: definition?.minValue ?? 0,
+          maxValue:
+            definition?.maxValue ??
+            ((definition?.unit ?? "PERCENT") === "RATING" ? 5 : 100),
+        };
+      });
+    }
+
+    if (reviewList.length === 0) {
+      return [];
+    }
+
+    const grouped = new Map<
+      string,
+      {
+        metricId: string;
+        name: string;
+        icon: string | null;
+        unit: ReviewMetric["unit"];
+        total: number;
+        count: number;
+        minValue: number;
+        maxValue: number;
+      }
+    >();
+
+    for (const review of reviewList) {
+      for (const metric of review.metrics ?? []) {
+        const definition = reviewMetricDefinitionById.get(metric.metricId);
+        const existing = grouped.get(metric.metricId);
+
+        if (existing) {
+          existing.total += Number(metric.value ?? 0);
+          existing.count += 1;
+          continue;
+        }
+
+        grouped.set(metric.metricId, {
+          metricId: metric.metricId,
+          name: metric.name,
+          icon: metric.icon,
+          unit: metric.unit,
+          total: Number(metric.value ?? 0),
+          count: 1,
+          minValue: definition?.minValue ?? 0,
+          maxValue:
+            definition?.maxValue ?? (metric.unit === "RATING" ? 5 : 100),
+        });
+      }
+    }
+
+    return Array.from(grouped.values()).map((metric) => ({
+      metricId: metric.metricId,
+      name: metric.name,
+      icon: metric.icon,
+      unit: metric.unit,
+      average: metric.count > 0 ? metric.total / metric.count : 0,
+      minValue: metric.minValue,
+      maxValue: metric.maxValue,
+    }));
+  }, [reviewSummaryMetrics, reviewList, reviewMetricDefinitionById]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") {
+      return;
+    }
+
+    console.info("[ProductClient] review metrics", {
+      summaryMetrics: reviewSummaryMetrics.length,
+      renderedMetrics: reviewMetricSummary.length,
+      metricDefinitions: reviewMetrics.length,
+      reviews: reviewList.length,
+    });
+  }, [
+    reviewSummaryMetrics.length,
+    reviewMetricSummary.length,
+    reviewMetrics.length,
+    reviewList.length,
+  ]);
+
   // Related products from same category
   const categoryId = product.categories?.[0]?.category?.id;
   const { data: relatedData } = useProducts({
@@ -1156,7 +1255,13 @@ export default function ProductClient({ product }: { product: Product }) {
   const displayImages: ProductGalleryImage[] =
     images.length > 0
       ? images
-      : [{ imageUrl: "/img/facewash.webp", heroImageUrl: "/img/facewash.webp", thumbnailImageUrl: "/img/facewash.webp" }];
+      : [
+          {
+            imageUrl: "/img/facewash.webp",
+            heroImageUrl: "/img/facewash.webp",
+            thumbnailImageUrl: "/img/facewash.webp",
+          },
+        ];
 
   const activeImage = displayImages[activeImg] ?? displayImages[0];
   const [heroLoaded, setHeroLoaded] = useState(false);
@@ -1166,7 +1271,10 @@ export default function ProductClient({ product }: { product: Product }) {
   }, [activeImg]);
 
   const defaultFallbackImage = useMemo(
-    () => displayImages[0]?.heroImageUrl ?? displayImages[0]?.imageUrl ?? "/img/facewash.webp",
+    () =>
+      displayImages[0]?.heroImageUrl ??
+      displayImages[0]?.imageUrl ??
+      "/img/facewash.webp",
     [displayImages],
   );
   const showHeroImage = heroLoaded || !activeImage.placeholder;
@@ -1542,14 +1650,24 @@ export default function ProductClient({ product }: { product: Product }) {
             </div>
 
             {/* Description */}
-            
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
               className="text-[#5E2B16] text-[13px] sm:text-[14px] md:text-[15px] leading-5 md:leading-6 max-w-full md:max-w-[600px] mb-6"
             >
-              Discover the power of our Vitamin C Face Wash, enriched with stable Vitamin C, natural papaya and tangerine extracts, and hydrating sodium PCA. This gentle, toxin-free, fragrance-free, paraben-free, sulfate-free, and SLS-free formula cleanses effectively while keeping your skin balanced, refreshed, and nourished. Say goodbye to dullness and uneven skin, lock in moisture for soft, supple skin, and enjoy balanced care that leaves your face feeling clean, energized, and healthy. Safe for all skin types, including sensitive skin, teens, and beginners, it delivers hydration, natural glow, and gentle daily care you can trust.
+              Discover the power of our Vitamin C Face Wash, enriched with
+              stable Vitamin C, natural papaya and tangerine extracts, and
+              hydrating sodium PCA. This gentle, toxin-free, fragrance-free,
+              paraben-free, sulfate-free, and SLS-free formula cleanses
+              effectively while keeping your skin balanced, refreshed, and
+              nourished. Say goodbye to dullness and uneven skin, lock in
+              moisture for soft, supple skin, and enjoy balanced care that
+              leaves your face feeling clean, energized, and healthy. Safe for
+              all skin types, including sensitive skin, teens, and beginners, it
+              delivers hydration, natural glow, and gentle daily care you can
+              trust.
             </motion.div>
 
             {/* Variants / Size */}
@@ -1648,8 +1766,6 @@ export default function ProductClient({ product }: { product: Product }) {
                 </button>
               </div>
             </div>
-
-           
           </div>
         </div>
 
@@ -1659,7 +1775,9 @@ export default function ProductClient({ product }: { product: Product }) {
             <p className="text-[#5E2B16] font-bold truncate text-sm">
               {activePrice != null ? `₹${activePrice}` : ""}
             </p>
-            <p className="text-[10px] text-[#8B5E3C] truncate">Inclusive of taxes</p>
+            <p className="text-[10px] text-[#8B5E3C] truncate">
+              Inclusive of taxes
+            </p>
           </div>
           <div className="min-w-0 flex flex-1 gap-2">
             <button
@@ -1707,7 +1825,9 @@ export default function ProductClient({ product }: { product: Product }) {
                     className="inline-flex items-center gap-2 bg-[#819744] text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#6e8539] transition"
                   >
                     {showIngredients ? "Hide Ingredients" : "View Ingredients"}
-                    <FontAwesomeIcon icon={showIngredients ? faMinus : faPlus} />
+                    <FontAwesomeIcon
+                      icon={showIngredients ? faMinus : faPlus}
+                    />
                   </button>
 
                   <AnimatePresence initial={false}>
@@ -1895,28 +2015,39 @@ export default function ProductClient({ product }: { product: Product }) {
                 buyers
               </p>
 
-              {(reviewSummary?.metrics?.length ?? 0) > 0 && (
+              {reviewMetricSummary.length > 0 && (
                 <div className="space-y-2 text-[11px] md:text-[12px] mb-4">
-                  {reviewSummary?.metrics.map((metric) => (
-                    <div key={metric.metricId}>
-                      <div className="flex justify-between items-center text-[#5E2B16] mb-1">
-                        <div className="flex items-center gap-1">
-                          <FontAwesomeIcon
-                            icon={getMetricIcon(metric.name, metric.icon)}
-                            className="text-[#819744]"
-                          />
-                          <span>{metric.name}</span>
+                  {reviewMetricSummary.map((metric) => {
+                    const range = Math.max(metric.maxValue - metric.minValue, 1);
+                    const normalized =
+                      ((metric.average - metric.minValue) / range) * 100;
+                    const clampedWidth = Math.max(0, Math.min(100, normalized));
+                    const valueLabel =
+                      metric.unit === "RATING"
+                        ? metric.average.toFixed(1)
+                        : `${Math.round(metric.average)}%`;
+
+                    return (
+                      <div key={metric.metricId}>
+                        <div className="flex justify-between items-center text-[#5E2B16] mb-1">
+                          <div className="flex items-center gap-1">
+                            <FontAwesomeIcon
+                              icon={getMetricIcon(metric.name, metric.icon)}
+                              className="text-[#819744]"
+                            />
+                            <span>{metric.name}</span>
+                          </div>
+                          <span>{valueLabel}</span>
                         </div>
-                        <span>{metric.average}%</span>
+                        <div className="w-full bg-white/60 rounded-full h-2">
+                          <div
+                            className="bg-[#819744] h-2 rounded-full"
+                            style={{ width: `${clampedWidth}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-white/60 rounded-full h-2">
-                        <div
-                          className="bg-[#819744] h-2 rounded-full"
-                          style={{ width: `${metric.average}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -1949,7 +2080,9 @@ export default function ProductClient({ product }: { product: Product }) {
                           <FontAwesomeIcon
                             icon={faStar}
                             className={
-                              star <= reviewRating ? "opacity-100" : "opacity-35"
+                              star <= reviewRating
+                                ? "opacity-100"
+                                : "opacity-35"
                             }
                           />
                         </button>
@@ -2041,7 +2174,8 @@ export default function ProductClient({ product }: { product: Product }) {
                       </p>
                       {reviewMetrics.map((metric: ReviewMetric) => {
                         const range = metric.maxValue - metric.minValue || 1;
-                        const value = metricRatings[metric.id] ?? metric.minValue;
+                        const value =
+                          metricRatings[metric.id] ?? metric.minValue;
                         return (
                           <div key={metric.id}>
                             <div className="flex items-center justify-between text-xs text-[#5E2B16] mb-1">

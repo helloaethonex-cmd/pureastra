@@ -1,7 +1,7 @@
 "use client";
 import toast from "react-hot-toast";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -57,24 +57,34 @@ export default function CategoryPageContent({
     keepPreviousData: true,
   });
 
-  const products = data?.data ?? [];
+  const products = useMemo(() => data?.data ?? [], [data?.data]);
+  const productIds = useMemo(
+    () => products.map((product) => product.id),
+    [products],
+  );
+  const productIdsKey = useMemo(
+    () => productIds.join("|"),
+    [productIds],
+  );
 
   useEffect(() => {
     let cancelled = false;
 
-    if (products.length === 0) {
-      setRatingByProductId({});
+    if (productIds.length === 0) {
+      setRatingByProductId((prev) =>
+        Object.keys(prev).length === 0 ? prev : {},
+      );
       return;
     }
 
     const loadRatings = async () => {
       const entries = await Promise.all(
-        products.map(async (product) => {
+        productIds.map(async (productId) => {
           try {
-            const summary = await getProductReviewSummary(product.id);
-            return [product.id, Number(summary.avgRating ?? 0)] as const;
+            const summary = await getProductReviewSummary(productId);
+            return [productId, Number(summary.avgRating ?? 0)] as const;
           } catch {
-            return [product.id, 0] as const;
+            return [productId, 0] as const;
           }
         }),
       );
@@ -89,7 +99,7 @@ export default function CategoryPageContent({
     return () => {
       cancelled = true;
     };
-  }, [products]);
+  }, [productIds, productIdsKey]);
 
   const handleAddToCart = (productVariantId?: string) => {
     if (!user) {
