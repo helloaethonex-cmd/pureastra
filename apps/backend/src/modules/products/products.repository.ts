@@ -231,7 +231,7 @@ export const addProductImage = async (productId: bigint, data: AddProductImageIn
       placeholder: data.placeholder ?? null,
       position: data.position ?? 0,
     },
-  });
+   });
 };
 
 export const deleteProductImage = async (imageId: bigint) => {
