@@ -23,6 +23,17 @@ const getBackendBase = () =>
     "",
   );
 
+const isBackendSameOrigin = (request: NextRequest) => {
+  const backendBase = getBackendBase();
+  if (!backendBase) return false;
+
+  try {
+    return new URL(backendBase).origin === request.nextUrl.origin;
+  } catch {
+    return false;
+  }
+};
+
 const cookieHeader = (request: NextRequest) =>
   request.cookies
     .getAll()
@@ -54,12 +65,17 @@ async function isAdminRequest(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const canUseFrontendCookiesForAuth = isBackendSameOrigin(request);
 
   if (pathname === "/login") {
     return NextResponse.next();
   }
 
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    if (!canUseFrontendCookiesForAuth) {
+      return NextResponse.next();
+    }
+
     if (await isAdminRequest(request)) {
       return NextResponse.next();
     }
@@ -68,6 +84,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (protectedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
+    if (!canUseFrontendCookiesForAuth) {
+      return NextResponse.next();
+    }
+
     if (hasSessionCookie(request)) {
       return NextResponse.next();
     }
