@@ -4,8 +4,12 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/srv/pureastra}"
 COMPOSE_FILE="${COMPOSE_FILE:-infra/docker-compose.yml}"
 BRANCH="${BRANCH:-main}"
-BACKEND_IMAGE="${BACKEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/backend}"
-BACKEND_TAG="${BACKEND_TAG:-main}"
+FRONTEND_IMAGE="${FRONTEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/frontend}"
+FRONTEND_TAG="${FRONTEND_TAG:-main}"
+FRONTEND_BACKEND_URL="${FRONTEND_BACKEND_URL:-http://backend:5050}"
+NEXT_PUBLIC_BACKEND_URL="${NEXT_PUBLIC_BACKEND_URL:-}"
+NEXT_PUBLIC_SHIPPING_GST_RATE="${NEXT_PUBLIC_SHIPPING_GST_RATE:-}"
+NEXT_PUBLIC_FLAT_SHIPPING_CHARGE_INCLUSIVE="${NEXT_PUBLIC_FLAT_SHIPPING_CHARGE_INCLUSIVE:-}"
 GHCR_USERNAME="${GHCR_USERNAME:-}"
 GHCR_TOKEN="${GHCR_TOKEN:-}"
 
@@ -46,6 +50,7 @@ git pull --ff-only origin "${BRANCH}"
 echo "[deploy] ensuring backend env file exists"
 if [ ! -f "apps/backend/.env" ]; then
   echo "[deploy] missing apps/backend/.env"
+  echo "[deploy] frontend depends on the backend service in docker compose"
   exit 1
 fi
 
@@ -57,31 +62,30 @@ fi
 echo "[deploy] authenticating with ghcr.io"
 echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
 
-export BACKEND_IMAGE
-export BACKEND_TAG
+export FRONTEND_IMAGE
+export FRONTEND_TAG
+export FRONTEND_BACKEND_URL
+export NEXT_PUBLIC_BACKEND_URL
+export NEXT_PUBLIC_SHIPPING_GST_RATE
+export NEXT_PUBLIC_FLAT_SHIPPING_CHARGE_INCLUSIVE
 
 echo "[deploy] writing compose image defaults"
-upsert_compose_env "BACKEND_IMAGE" "${BACKEND_IMAGE}"
-upsert_compose_env "BACKEND_TAG" "${BACKEND_TAG}"
+upsert_compose_env "FRONTEND_IMAGE" "${FRONTEND_IMAGE}"
+upsert_compose_env "FRONTEND_TAG" "${FRONTEND_TAG}"
+upsert_compose_env "FRONTEND_BACKEND_URL" "${FRONTEND_BACKEND_URL}"
+upsert_compose_env "NEXT_PUBLIC_BACKEND_URL" "${NEXT_PUBLIC_BACKEND_URL}"
+upsert_compose_env "NEXT_PUBLIC_SHIPPING_GST_RATE" "${NEXT_PUBLIC_SHIPPING_GST_RATE}"
+upsert_compose_env "NEXT_PUBLIC_FLAT_SHIPPING_CHARGE_INCLUSIVE" "${NEXT_PUBLIC_FLAT_SHIPPING_CHARGE_INCLUSIVE}"
 
 echo "[deploy] cleaning stopped containers"
 docker container prune -f > /dev/null 2>&1 || true
 
-echo "[deploy] pulling latest backend image"
-docker compose -f "${COMPOSE_FILE}" pull backend worker-inventory worker-email
+echo "[deploy] pulling latest frontend image"
+docker compose -f "${COMPOSE_FILE}" pull frontend
 
-echo "[deploy] starting redis first"
-docker compose -f "${COMPOSE_FILE}" up -d redis
+echo "[deploy] deploying frontend"
+docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans frontend
 
-echo "[deploy] applying prisma migrations (one-off container)"
-docker compose -f "${COMPOSE_FILE}" run --rm backend npx prisma migrate deploy --config prisma.config.mjs
-
-echo "[deploy] deploying backend and workers"
-docker compose -f "${COMPOSE_FILE}" up -d --remove-orphans backend worker-inventory worker-email
-
-# Remove ALL unused images after deploy.
-# Safe because the new image is now running — old tagged builds are unused.
-# This is what prevents disk filling up over multiple deploys.
 echo "[deploy] cleaning unused images (dangling + old builds)"
 docker image prune -a -f > /dev/null 2>&1 || true
 

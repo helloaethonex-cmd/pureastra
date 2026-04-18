@@ -56,9 +56,6 @@ docs/
 infra/scripts
 infra/docker-compose*.yml
 
-# ─── Packages workspace (only backend is built) ───────────────────────────────
+# ─── Packages workspace ──────────────────────────────────────────────────────
 packages/*
 !packages/*/package.json
-
-# ─── Frontend (not needed for backend image) ─────────────────────────────────
-apps/frontend
