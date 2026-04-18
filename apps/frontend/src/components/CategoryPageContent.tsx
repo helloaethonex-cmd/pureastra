@@ -15,19 +15,27 @@ import {
 import { useCategories, useProducts } from "@/hooks/useProducts";
 import { useAddCartItem } from "@/hooks/useCart";
 import { useAuthStore } from "@/store/auth.store";
-import { getProductReviewSummary, type Category } from "@/services/api";
+import {
+  getProductReviewSummary,
+  type Category,
+  type ProductListResponse,
+} from "@/services/api";
 import { SkeletonGrid, SkeletonLine } from "@/components/ui/Skeleton";
 
 interface CategoryPageContentProps {
   categoryName: string;
   categoryId?: string;
   categorySlug?: string; // alternative to categoryId — resolved at runtime via useCategories
+  initialCategories?: Category[];
+  initialProducts?: ProductListResponse;
 }
 
 export default function CategoryPageContent({
   categoryName: categoryNameProp,
   categoryId: categoryIdProp,
   categorySlug,
+  initialCategories,
+  initialProducts,
 }: CategoryPageContentProps) {
   const [openProduct, setOpenProduct] = useState(true);
   const [openPrice, setOpenPrice] = useState(true);
@@ -38,7 +46,9 @@ export default function CategoryPageContent({
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
 
-  const { data: categoriesData } = useCategories();
+  const { data: categoriesData } = useCategories({
+    initialData: initialCategories,
+  });
 
   // Resolve categoryId from slug if not provided directly
   const resolvedCategory = categorySlug
@@ -49,11 +59,14 @@ export default function CategoryPageContent({
 
   const { data, isLoading, isFetching, isError } = useProducts({
     categoryId,
+    isActive: true,
     minPrice,
     maxPrice,
     search: search || undefined,
     limit: 50,
   }, {
+    enabled: Boolean(categoryId) || !categorySlug,
+    initialData: initialProducts,
     keepPreviousData: true,
   });
 

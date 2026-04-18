@@ -44,6 +44,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type {
   Product,
   ProductContentSection,
+  ProductListResponse,
   Address,
   ReviewMetric,
 } from "@/services/api";
@@ -1078,7 +1079,13 @@ function BuyNowPanel({
 
 // ─── Main ProductClient ───────────────────────────────────────────────────────
 
-export default function ProductClient({ product }: { product: Product }) {
+export default function ProductClient({
+  product,
+  initialRelatedProducts,
+}: {
+  product: Product;
+  initialRelatedProducts?: ProductListResponse;
+}) {
   const MAX_REVIEW_IMAGES = 5;
 
   const router = useRouter();
@@ -1236,6 +1243,9 @@ export default function ProductClient({ product }: { product: Product }) {
     categoryId,
     limit: 4,
     isActive: true,
+  }, {
+    enabled: Boolean(categoryId),
+    initialData: initialRelatedProducts,
   });
   const relatedProducts = (relatedData?.data ?? [])
     .filter((p) => p.id !== product.id)

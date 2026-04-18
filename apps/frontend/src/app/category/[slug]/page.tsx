@@ -1,86 +1,70 @@
 import CategoryPageContent from "@/components/CategoryPageContent";
 import type { Category } from "@/services/api";
+import {
+  listCategories,
+  listProducts,
+} from "@/services/server-api";
 
-const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+export const revalidate = 300;
+export const dynamicParams = true;
 
-function requireBackendUrl() {
-  if (!BASE) {
-    throw new Error("NEXT_PUBLIC_BACKEND_URL is required for static export.");
-  }
-  return BASE;
-}
+const CATEGORY_REVALIDATE_SECONDS = 300;
 
-async function fetchCategories(): Promise<Category[]> {
-  try {
-    const base = requireBackendUrl();
-    const res = await fetch(`${base}/api/v1/products/categories`, {
-      cache: "force-cache",
-    });
+const KNOWN_CATEGORY_SLUGS = [
+  "body-care",
+  "hair-care",
+  "face-care",
+  "combos",
+  "mini-products",
+  "offers",
+  "about",
+  "blogs",
+] as const;
 
-    if (!res.ok) {
-      return [];
-    }
+type CategorySlugPageProps = {
+  params: Promise<{ slug: string }>;
+};
 
-    return (await res.json()) as Category[];
-  } catch (error) {
-    console.warn("[fetchCategories] backend unavailable during build");
-    return [];
-  }
-}
-
-function collectCategorySlugs(categories: Category[]): string[] {
-  const slugs: string[] = [];
-  for (const category of categories) {
-    if (category.slug) {
-      slugs.push(category.slug);
-    }
-    for (const child of category.children ?? []) {
-      if (child.slug) {
-        slugs.push(child.slug);
-      }
-    }
-  }
-  return slugs;
+function collectCategories(categories: Category[]): Category[] {
+  return categories.flatMap((category) => [
+    category,
+    ...(category.children ?? []),
+  ]);
 }
 
 function findCategoryBySlug(categories: Category[], slug: string) {
-  for (const category of categories) {
-    if (category.slug === slug) {
-      return category;
-    }
-    const child = category.children?.find((item) => item.slug === slug);
-    if (child) {
-      return child;
-    }
-  }
-  return null;
+  return collectCategories(categories).find((category) => category.slug === slug);
 }
 
 export async function generateStaticParams() {
-  const categories = await fetchCategories();
-  const slugs = collectCategorySlugs(categories);
-
-  // Next.js requires at least one param for export
-  if (slugs.length === 0) {
-    return [{ slug: '__no_categories__' }];
-  }
-  
-  return slugs.map((slug) => ({ slug }));
+  return KNOWN_CATEGORY_SLUGS.map((slug) => ({ slug }));
 }
 
-export const dynamicParams = false;
-
-export default async function CategorySlugPage(props: {
-  params: Promise<{ slug: string }>;
-}) {
-  const params = await props.params;
-  const categories = await fetchCategories();
-  const matchedCategory = findCategoryBySlug(categories, params.slug);
+export default async function CategorySlugPage(props: CategorySlugPageProps) {
+  const { slug } = await props.params;
+  const categories = await listCategories(CATEGORY_REVALIDATE_SECONDS).catch(
+    () => undefined,
+  );
+  const categoryList = categories ?? [];
+  const matchedCategory = findCategoryBySlug(categoryList, slug);
+  const initialProducts = matchedCategory
+    ? await listProducts(
+        {
+          categoryId: matchedCategory.id,
+          isActive: true,
+          limit: 50,
+        },
+        CATEGORY_REVALIDATE_SECONDS,
+      ).catch(() => undefined)
+    : undefined;
 
   return (
     <CategoryPageContent
-      categoryName={matchedCategory?.name ?? params.slug.replace(/-/g, " ")}
+      categoryName={matchedCategory?.name ?? slug.replace(/-/g, " ")}
       categoryId={matchedCategory?.id}
+      categorySlug={slug}
+      initialCategories={categories}
+      initialProducts={initialProducts}
     />
   );
 }

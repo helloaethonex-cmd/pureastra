@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import VerifyEmailPage from "./VerifyEmailPage";
 
+export const dynamic = "force-dynamic";
+
 export default function Page() {
   return (
     <Suspense

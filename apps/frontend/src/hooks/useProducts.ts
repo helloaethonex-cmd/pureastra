@@ -1,20 +1,31 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   listCategories,
   listProducts,
   getProductBySlug,
+  type Category,
+  type ProductListResponse,
   type ProductListParams,
 } from "@/services/api";
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 
-export function useCategories(enabled = true) {
+type UseCategoriesOptions = {
+  enabled?: boolean;
+  initialData?: Category[];
+};
+
+export function useCategories(options: boolean | UseCategoriesOptions = true) {
+  const resolvedOptions =
+    typeof options === "boolean" ? { enabled: options } : options;
+
   return useQuery({
     queryKey: ["categories"],
     queryFn: listCategories,
-    enabled,
+    enabled: resolvedOptions.enabled ?? true,
+    initialData: resolvedOptions.initialData,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -22,7 +33,9 @@ export function useCategories(enabled = true) {
 // ─── Products ─────────────────────────────────────────────────────────────────
 
 type UseProductsOptions = {
+  enabled?: boolean;
   keepPreviousData?: boolean;
+  initialData?: ProductListResponse;
 };
 
 export function useProducts(
@@ -32,9 +45,11 @@ export function useProducts(
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => listProducts(params),
+    enabled: options?.enabled ?? true,
     placeholderData: options?.keepPreviousData
       ? (previousData) => previousData
       : undefined,
+    initialData: options?.initialData,
     staleTime: 1000 * 60 * 2,
   });
 }

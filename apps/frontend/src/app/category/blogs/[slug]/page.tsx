@@ -1,11 +1,18 @@
 import { blogs } from "@/data/blogs";
 import Image from "next/image";
 
-// ✅ required for static export
+export const revalidate = 3600;
+export const dynamicParams = true;
+
+const KNOWN_BLOG_SLUGS = [
+  "vitamin-c-benefits",
+  "daily-skincare-routine",
+  "natural-ingredients",
+] as const;
+
+// Blog posts are local content, so these can stay pre-rendered.
 export async function generateStaticParams() {
-  return blogs.map((b) => ({
-    slug: b.slug,
-  }));
+  return KNOWN_BLOG_SLUGS.map((slug) => ({ slug }));
 }
 
 type PageProps = {

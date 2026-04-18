@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeftLong,
@@ -13,8 +15,9 @@ import {
   faCircle,
   faTag,
 } from "@fortawesome/free-solid-svg-icons";
-import { useOrderDetail } from "@/hooks/useOrders";
+import { getOrderDetail, type OrderDetailResponse } from "@/services/api";
 import { toShippingInclusiveFromBase } from "@/lib/shipping-pricing";
+import { useRequireClientSession } from "@/hooks/useRequireClientSession";
 
 // -- Status Maps ---------------------------------------------------------------
 const ORDER_STATUS_LABEL: Record<number, string> = {
@@ -51,9 +54,43 @@ const paymentBadge = (ps: number) => {
 
 // -- Order Detail Page ---------------------------------------------------------
 export default function OrderDetailClient({ orderNumber }: { orderNumber: string }) {
-  const { data: order, isLoading, isError } = useOrderDetail(orderNumber);
+  useRequireClientSession();
+  const router = useRouter();
+  const [order, setOrder] = useState<OrderDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    let cancelled = false;
+
+    setLoading(true);
+    setIsError(false);
+
+    getOrderDetail(orderNumber)
+      .then((data) => {
+        if (!cancelled) {
+          setOrder(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsError(true);
+          setOrder(null);
+          router.push("/login");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderNumber, router]);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F0E6] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-[#5E2B16]">

@@ -4,6 +4,8 @@ import ConcernStrip from "@/components/ConcernStrip";
 import dynamic from "next/dynamic";
 import Transformation from "@/components/Transformation";
 
+export const revalidate = 60;
+
 const GlowRoutine = dynamic(() => import("@/components/GlowRoutine"));
 const CategorySection = dynamic(() => import("@/components/CategorySection"));
 const AboutPureAstra = dynamic(() => import("@/components/AboutPureAstra"));
