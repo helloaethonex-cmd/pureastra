@@ -40,32 +40,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/frontend}:${FRONTEND_TAG:-main}
-    container_name: pureastra_frontend
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      HOSTNAME: 0.0.0.0
-      # Server-side rendering and middleware should use the Docker network.
-      BACKEND_URL: ${FRONTEND_BACKEND_URL:-http://backend:5050}
-      # Client-side calls are baked into the image, but this keeps runtime
-      # server code aligned with the value used during the image build.
-      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-}
-      NEXT_PUBLIC_SHIPPING_GST_RATE: ${NEXT_PUBLIC_SHIPPING_GST_RATE:-}
-      NEXT_PUBLIC_FLAT_SHIPPING_CHARGE_INCLUSIVE: ${NEXT_PUBLIC_FLAT_SHIPPING_CHARGE_INCLUSIVE:-}
-    depends_on:
-      backend:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
   worker-inventory:
     image: ${BACKEND_IMAGE:-ghcr.io/helloaethonex-cmd/pureastra/backend}:${BACKEND_TAG:-main}
     container_name: pureastra_worker_inventory

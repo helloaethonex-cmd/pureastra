@@ -9,30 +9,6 @@ BACKEND_TAG="${BACKEND_TAG:-main}"
 GHCR_USERNAME="${GHCR_USERNAME:-}"
 GHCR_TOKEN="${GHCR_TOKEN:-}"
 
-COMPOSE_ENV_FILE="${APP_DIR}/infra/.env"
-
-upsert_compose_env() {
-  local key="$1"
-  local value="$2"
-  local tmp_file
-
-  mkdir -p "$(dirname "${COMPOSE_ENV_FILE}")"
-  touch "${COMPOSE_ENV_FILE}"
-  tmp_file="$(mktemp)"
-
-  if grep -q "^${key}=" "${COMPOSE_ENV_FILE}"; then
-    awk -v key="${key}" -v value="${value}" '
-      index($0, key "=") == 1 { print key "=" value; next }
-      { print }
-    ' "${COMPOSE_ENV_FILE}" > "${tmp_file}"
-  else
-    cp "${COMPOSE_ENV_FILE}" "${tmp_file}"
-    printf "%s=%s\n" "${key}" "${value}" >> "${tmp_file}"
-  fi
-
-  mv "${tmp_file}" "${COMPOSE_ENV_FILE}"
-}
-
 echo "[deploy] app dir: ${APP_DIR}"
 echo "[deploy] branch: ${BRANCH}"
 
@@ -61,8 +37,10 @@ export BACKEND_IMAGE
 export BACKEND_TAG
 
 echo "[deploy] writing compose image defaults"
-upsert_compose_env "BACKEND_IMAGE" "${BACKEND_IMAGE}"
-upsert_compose_env "BACKEND_TAG" "${BACKEND_TAG}"
+cat > "${APP_DIR}/infra/.env" <<EOF
+BACKEND_IMAGE=${BACKEND_IMAGE}
+BACKEND_TAG=${BACKEND_TAG}
+EOF
 
 echo "[deploy] cleaning stopped containers"
 docker container prune -f > /dev/null 2>&1 || true
