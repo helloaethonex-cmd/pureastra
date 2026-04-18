@@ -693,7 +693,7 @@ function BeforeAfterSection({
           className="w-[140px] h-[200px] sm:w-[200px] sm:h-[260px] md:w-[284px] md:h-[368px] bg-[#FAF3E2] rounded-[20px] md:rounded-[29px] overflow-hidden border border-black shadow-[0_6px_15px_rgba(0,0,0,0.08)] flex flex-col transition-all duration-300"
         >
           <div className="relative w-full h-[160px] sm:h-[220px] md:h-[313px]">
-            <Image src={afterImg} alt="after" fill className="object-cover" />
+            <Image src={afterImg} alt="after" fill className="object-cover object-top" />
           </div>
           <div className="h-[40px] md:h-[55px] flex items-center justify-center bg-[#FAF3E2]">
             <p className="text-[12px] md:text-sm text-[#819744] font-bold">

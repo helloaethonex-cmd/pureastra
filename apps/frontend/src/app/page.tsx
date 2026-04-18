@@ -2,6 +2,7 @@ import Hero from "@/components/Hero";
 import BestProducts from "@/components/BestProducts";
 import ConcernStrip from "@/components/ConcernStrip";
 import dynamic from "next/dynamic";
+import Transformation from "@/components/Transformation";
 
 const GlowRoutine = dynamic(() => import("@/components/GlowRoutine"));
 const CategorySection = dynamic(() => import("@/components/CategorySection"));
@@ -21,7 +22,7 @@ export default function Home() {
       <CategorySection />
       <AboutPureAstra />
       <OurPromise />
-      {/* <Transformation /> */}
+      <Transformation />
       {/* <VideoBanner /> */}
       {/* <Testimonial /> */}
       {/* <Footer /> */}
