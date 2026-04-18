@@ -19,6 +19,8 @@ export default function Transformation() {
     { before: "/img/before1.webp", after: "/img/after1.webp" },
     { before: "/img/before1.webp", after: "/img/after1.webp" },
   ];
+  // show only the first item (don't loop all images)
+  const item = data[0];
 
   return (
     <section className="bg-[#FAF3E2] text-center px-4 sm:px-6 md:px-[40px] py-10 md:py-[60px] relative">
@@ -31,7 +33,7 @@ export default function Transformation() {
       <Swiper
         centeredSlides={true}
         spaceBetween={16}
-        loop={true}
+        loop={false}
         navigation={{
           nextEl: ".trans-next",
           prevEl: ".trans-prev",
@@ -44,80 +46,78 @@ export default function Transformation() {
           1024: { slidesPerView: 3, spaceBetween: 20 }, // desktop SAME
         }}
       >
-        {data.map((item, index) => (
-          <SwiperSlide key={index}>
-            <div className="flex items-center justify-center gap-2 sm:gap-3 relative">
+        <SwiperSlide>
+          <div className="flex items-center justify-center gap-2 sm:gap-3 relative">
 
-              {/* BEFORE CARD */}
-              <div className="
-                w-[160px] h-[230px]
-                sm:w-[220px] sm:h-[300px]
-                md:w-[284px] md:h-[368px]   /* desktop SAME */
-                bg-[#FAF3E2] rounded-[20px] md:rounded-[29px]
-                overflow-hidden border border-black
-                shadow-[0_8px_20px_rgba(0,0,0,0.08)]
-                flex flex-col transition-transform duration-300 hover:-translate-y-1
-              ">
-                <div className="relative w-full h-[70%] md:h-[313px]">
-                  <Image
-                    src={item.before}
-                    alt="Before result"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 160px, (max-width: 1024px) 220px, 284px"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
-                    Dull Skin
-                  </p>
-                </div>
+            {/* BEFORE CARD */}
+            <div className="\
+              w-[160px] h-[230px]
+              sm:w-[220px] sm:h-[300px]
+              md:w-[284px] md:h-[368px]   /* desktop SAME */
+              bg-[#FAF3E2] rounded-[20px] md:rounded-[29px]
+              overflow-hidden border border-black
+              shadow-[0_8px_20px_rgba(0,0,0,0.08)]
+              flex flex-col transition-transform duration-300 hover:-translate-y-1
+            ">
+              <div className="relative w-full h-[70%] md:h-[313px]">
+                <Image
+                  src={item.before}
+                  alt="Before result"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 160px, (max-width: 1024px) 220px, 284px"
+                  loading="lazy"
+                />
               </div>
-
-              {/* ARROW */}
-              <div className="absolute left-1/2 -translate-x-1/2 z-10">
-                <div className="
-                  w-[60px] h-[35px]
-                  sm:w-[80px] sm:h-[45px]
-                  md:w-[114px] md:h-[59px]  /* desktop SAME */
-                  bg-[#FAF3E2] rounded-full border border-black
-                  flex items-center justify-center shadow-md
-                ">
-                  <FontAwesomeIcon icon={faArrowRight} className="text-sm md:text-lg" />
-                </div>
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+                  Dull Skin
+                </p>
               </div>
-
-              {/* AFTER CARD */}
-              <div className="
-                w-[160px] h-[230px]
-                sm:w-[220px] sm:h-[300px]
-                md:w-[284px] md:h-[368px]  /* desktop SAME */
-                bg-[#FAF3E2] rounded-[20px] md:rounded-[29px]
-                overflow-hidden border border-black
-                shadow-[0_8px_20px_rgba(0,0,0,0.08)]
-                flex flex-col transition-transform duration-300 hover:-translate-y-1
-              ">
-                <div className="relative w-full h-[70%] md:h-[313px]">
-                  <Image
-                    src={item.after}
-                    alt="After result"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 160px, (max-width: 1024px) 220px, 284px"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
-                    Radiant Skin
-                  </p>
-                </div>
-              </div>
-
             </div>
-          </SwiperSlide>
-        ))}
+
+            {/* ARROW */}
+            <div className="absolute left-1/2 -translate-x-1/2 z-10">
+              <div className="\
+                w-[60px] h-[35px]
+                sm:w-[80px] sm:h-[45px]
+                md:w-[114px] md:h-[59px]  /* desktop SAME */
+                bg-[#FAF3E2] rounded-full border border-black
+                flex items-center justify-center shadow-md
+              ">
+                <FontAwesomeIcon icon={faArrowRight} className="text-sm md:text-lg" />
+              </div>
+            </div>
+
+            {/* AFTER CARD */}
+            <div className="\
+              w-[160px] h-[230px]
+              sm:w-[220px] sm:h-[300px]
+              md:w-[284px] md:h-[368px]  /* desktop SAME */
+              bg-[#FAF3E2] rounded-[20px] md:rounded-[29px]
+              overflow-hidden border border-black
+              shadow-[0_8px_20px_rgba(0,0,0,0.08)]
+              flex flex-col transition-transform duration-300 hover:-translate-y-1
+            ">
+              <div className="relative w-full h-[70%] md:h-[313px]">
+                <Image
+                  src={item.after}
+                  alt="After result"
+                  fill
+                  className="object-cover object-top"
+                  sizes="(max-width: 768px) 160px, (max-width: 1024px) 220px, 284px"
+                  loading="lazy"
+                />
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-xs sm:text-sm text-[#819744] font-bold font-['Roboto_Serif',serif]">
+                  Radiant Skin
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </SwiperSlide>
       </Swiper>
 
       {/* NAV BUTTONS */}
