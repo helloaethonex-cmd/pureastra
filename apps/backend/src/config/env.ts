@@ -107,6 +107,7 @@ export const envSchema = z
     // Seller config (for GST invoices)
     SELLER_NAME: z.string().min(1).default("Pureastra"),
     SELLER_ADDRESS: z.string().min(1).default("India"),
+    SELLER_PHONE: z.string().trim().optional().default(""),
     SELLER_GSTIN: z.string().min(1).optional(),
     SELLER_STATE: z.string().min(1).default("MAHARASHTRA"),
     FLAT_SHIPPING_CHARGE_INCLUSIVE: z.coerce.number().min(0).default(0),

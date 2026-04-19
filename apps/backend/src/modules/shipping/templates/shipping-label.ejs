@@ -107,6 +107,9 @@
         <div class="bold">FROM</div>
         <div><%= label.seller.name %></div>
         <div class="address-line"><%= label.seller.address %></div>
+        <% if (label.seller.phone) { %>
+          <div>Phone: <%= label.seller.phone %></div>
+        <% } %>
         <div><%= label.seller.stateName %> (<%= label.seller.stateCode %>)</div>
       </div>
 
