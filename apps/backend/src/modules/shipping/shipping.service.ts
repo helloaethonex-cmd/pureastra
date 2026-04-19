@@ -37,6 +37,7 @@ type OrderForLabel = {
 type ShippingLabelContext = {
   seller: {
     name: string;
+    address: string;
     stateName: string;
     stateCode: string;
   };
@@ -209,6 +210,7 @@ async function buildLabelContext(
   return {
     seller: {
       name: normalizeUpper(env.SELLER_NAME),
+      address: normalizeText(env.SELLER_ADDRESS),
       stateName: STATE_NAME_BY_CODE[sellerStateCode] ?? normalizeUpper(env.SELLER_STATE),
       stateCode: sellerStateCode,
     },
