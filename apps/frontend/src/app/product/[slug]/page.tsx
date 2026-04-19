@@ -176,7 +176,7 @@ export async function generateMetadata(
       openGraph: {
         title,
         description,
-        type: "product",
+        type: "website",
         url: pageUrl,
         images: [
           {
@@ -206,7 +206,7 @@ export async function generateMetadata(
       openGraph: {
         title: "Shop Pureastra Skincare",
         description: DEFAULT_DESCRIPTION,
-        type: "product",
+        type: "website",
         url: pageUrl,
         images: [
           {
