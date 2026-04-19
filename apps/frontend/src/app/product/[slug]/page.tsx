@@ -19,9 +19,6 @@ const isMissingResource = (error: unknown) =>
 
 const DEFAULT_DESCRIPTION = "Natural skincare products";
 const DEFAULT_OG_IMAGE = "/img/pureastra.webp";
-const OG_TARGET_RATIO = 1200 / 630;
-const OG_RATIO_TOLERANCE = 0.28;
-const SOCIAL_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 
 const getSiteOrigin = () => {
   const siteUrl =
@@ -50,21 +47,6 @@ const asAbsoluteUrl = (input: string | null | undefined, origin: string) => {
   } catch {
     return null;
   }
-};
-
-const hasSupportedSocialImageExtension = (url: string) => {
-  try {
-    const pathname = new URL(url).pathname.toLowerCase();
-    return [...SOCIAL_IMAGE_EXTENSIONS].some((ext) => pathname.endsWith(ext));
-  } catch {
-    return false;
-  }
-};
-
-const isLikelyOgRatio = (width?: number | null, height?: number | null) => {
-  if (!width || !height || width <= 0 || height <= 0) return false;
-  const ratio = width / height;
-  return Math.abs(ratio - OG_TARGET_RATIO) <= OG_RATIO_TOLERANCE;
 };
 
 const normalizeDescription = (value: string | null | undefined) => {
@@ -132,35 +114,15 @@ export async function generateMetadata(
   try {
     const product = await getProductBySlug(slug);
     const images = product.images ?? [];
-
-    const bestRatioImage = images.find(
-      (image) =>
-        Boolean(image.heroImageUrl) &&
-        isLikelyOgRatio(image.width, image.height),
-    );
-
+    const mainImage =
+      images.find((image) => image.position === 0) ?? images[0];
     const firstHeroImage = images.find((image) => Boolean(image.heroImageUrl));
     const firstImage = images.find((image) => Boolean(image.imageUrl));
-    const selectedImage = bestRatioImage ?? firstHeroImage ?? firstImage;
-
-    const selectedImageUrl =
-      selectedImage?.heroImageUrl ?? selectedImage?.imageUrl ?? DEFAULT_OG_IMAGE;
-
-    const selectedImageAbsolute = asAbsoluteUrl(selectedImageUrl, origin);
-    const selectedImageSupported =
-      selectedImageAbsolute && hasSupportedSocialImageExtension(selectedImageAbsolute);
-
-    const shouldUseSelectedImage =
-      Boolean(selectedImageSupported) &&
-      (bestRatioImage !== undefined ||
-        !selectedImage?.width ||
-        !selectedImage?.height ||
-        isLikelyOgRatio(selectedImage.width, selectedImage.height));
-
-    const fallbackImage = asAbsoluteUrl(DEFAULT_OG_IMAGE, origin)!;
+    const selectedImage = mainImage ?? firstHeroImage ?? firstImage;
     const versionSeed = selectedImage?.id ?? product.id;
+    const ogImageEndpoint = `${origin}/api/og/product/${encodeURIComponent(slug)}`;
     const ogImage = addImageVersion(
-      shouldUseSelectedImage ? selectedImageAbsolute! : fallbackImage,
+      ogImageEndpoint,
       versionSeed,
     );
 
