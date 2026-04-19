@@ -25,15 +25,17 @@ const getSiteOrigin = () => {
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.APP_URL;
+  const isProd = process.env.NODE_ENV === "production";
+  const defaultOrigin = isProd ? "https://www.pureastra.in" : "http://localhost:3000";
 
   if (!siteUrl) {
-    return "http://localhost:3000";
+    return defaultOrigin;
   }
 
   try {
     return new URL(siteUrl).origin;
   } catch {
-    return "http://localhost:3000";
+    return defaultOrigin;
   }
 };
 
