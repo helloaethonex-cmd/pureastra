@@ -6,7 +6,7 @@ import {
   faEnvelope,
   faPhone,
 } from "@fortawesome/free-solid-svg-icons";
-import { faFacebookF, faInstagram ,  faLinkedinIn } from "@fortawesome/free-brands-svg-icons";
+import { faFacebookF, faInstagram ,  faLinkedinIn, faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 
 const footerSections = [
   {
@@ -60,6 +60,14 @@ export default function Footer() {
 
             {/* SOCIAL */}
             <div className="mt-4 flex gap-4 text-lg">
+              <a
+                href="https://wa.me/919400206479"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:scale-110 transition"
+              >
+                <FontAwesomeIcon icon={faWhatsapp} />
+              </a>
               <a
                 href="https://www.facebook.com/share/1Ho4ajBRTp/"
                 target="_blank"
