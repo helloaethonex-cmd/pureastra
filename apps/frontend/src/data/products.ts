@@ -2,6 +2,7 @@ export type ProductType = {
   slug: string;
   name: string;
   price: number;
+  mrp?: number;
   rating: number;
   images: string[];
   desc: string;
@@ -12,6 +13,7 @@ export const products: ProductType[] = [
     slug: "vitamin-c-face-wash",
     name: "Vitamin C Face Wash",
     price: 590,
+    mrp: 690,
     rating: 4.5,
     images: [
       "/img/facewash.webp",
@@ -24,6 +26,7 @@ export const products: ProductType[] = [
     slug: "rice-cleanser",
     name: "Rice Cleanser",
     price: 499,
+    mrp: 549,
     rating: 4.4,
     images: [
       "/img/banner-2.webp",
@@ -35,6 +38,7 @@ export const products: ProductType[] = [
     slug: "aloe-face-wash",
     name: "Aloe Face Wash",
     price: 549,
+    mrp: 599,
     rating: 4.2,
     images: [
       "/img/banner-3.webp",

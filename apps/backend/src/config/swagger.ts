@@ -191,6 +191,12 @@ export const swaggerSpec = swaggerJSDoc({
               nullable: true,
               example: 1299.99,
             },
+            mrp: {
+              type: "number",
+              format: "decimal",
+              nullable: true,
+              example: 1499.99,
+            },
             costPrice: {
               type: "number",
               format: "decimal",
@@ -221,6 +227,7 @@ export const swaggerSpec = swaggerJSDoc({
             variantName: { type: "string", example: "100ml / Rose Quartz" },
             sku: { type: "string", example: "SK-RQTZ-100" },
             price: { type: "number", example: 1299.99 },
+            mrp: { type: "number", example: 1499.99 },
             costPrice: { type: "number", example: 600.0 },
             stockQuantity: { type: "integer", minimum: 0, example: 200 },
             weight: { type: "integer", minimum: 0, example: 150 },
@@ -233,6 +240,7 @@ export const swaggerSpec = swaggerJSDoc({
             variantName: { type: "string", example: "200ml / Rose Quartz" },
             sku: { type: "string", example: "SK-RQTZ-200" },
             price: { type: "number", example: 1799.99 },
+            mrp: { type: "number", example: 1999.99 },
             costPrice: { type: "number", example: 850.0 },
             stockQuantity: { type: "integer", minimum: 0, example: 300 },
             weight: { type: "integer", minimum: 0, example: 200 },

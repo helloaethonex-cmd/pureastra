@@ -40,6 +40,7 @@ export interface ProductVariant {
   variantName?: string | null;
   sku?: string | null;
   price?: number | null;
+  mrp?: number | null;
   stockQuantity?: number | null;
   isActive: boolean;
 }
@@ -49,6 +50,7 @@ export interface ProductVariantDetail {
   variantName?: string | null;
   sku?: string | null;
   price?: number | null;
+  mrp?: number | null;
   costPrice?: number | null;
   stockQuantity?: number | null;
   reservedQuantity?: number | null;
@@ -179,6 +181,7 @@ export interface CartProductVariant {
   id: string;
   variantName?: string | null;
   price?: number | string | null;
+  mrp?: number | string | null;
   product: CartProduct;
   images?: CartVariantImage[];
 }
@@ -439,6 +442,7 @@ export interface WishlistProductVariant {
   variantName?: string | null;
   sku?: string | null;
   price?: number | string | null;
+  mrp?: number | string | null;
   product: WishlistProduct;
   images?: WishlistVariantImage[];
 }
@@ -745,6 +749,7 @@ export const createProduct = (body: {
     variantName?: string;
     sku?: string;
     price?: number;
+    mrp?: number;
     stockQuantity?: number;
   }[];
 }) =>
@@ -862,6 +867,7 @@ export const addProductVariant = (
     variantName?: string;
     sku?: string;
     price?: number;
+    mrp?: number;
     costPrice?: number;
     stockQuantity?: number;
     reservedQuantity?: number;
@@ -881,6 +887,7 @@ export const updateProductVariant = (
     variantName?: string;
     sku?: string;
     price?: number;
+    mrp?: number;
     costPrice?: number;
     stockQuantity?: number;
     reservedQuantity?: number;

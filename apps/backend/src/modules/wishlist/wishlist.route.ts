@@ -34,6 +34,10 @@ const router = Router();
  *                 type: object
  *                 properties:
  *                   id:
+                      mrp:
+                        type: string
+                        nullable: true
+                        example: "1499.00"
  *                     type: string
  *                     example: "12"
  *                   userId:

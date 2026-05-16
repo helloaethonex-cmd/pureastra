@@ -266,10 +266,24 @@ export default function CategoryPageContent({
               <div className="grid grid-cols-3 gap-8 max-lg:grid-cols-2 max-sm:grid-cols-1">
               {products.map((product) => {
                 const primaryImage = product.images.find((img) => img.position === 0) ?? product.images[0];
-                const minVariantPrice = product.variants.reduce(
-                  (min, v) => (v.price != null && v.price < min ? v.price : min),
-                  Infinity
+                const minVariant = product.variants.reduce(
+                  (best, v) => {
+                    const price = v.price != null ? Number(v.price) : 0;
+                    if (price <= 0) return best;
+                    if (!best || price < best.price) {
+                      return {
+                        price,
+                        mrp: v.mrp != null ? Number(v.mrp) : 0,
+                      };
+                    }
+                    return best;
+                  },
+                  null as { price: number; mrp: number } | null,
                 );
+                const minVariantPrice = minVariant?.price ?? 0;
+                const minVariantMrp = minVariant?.mrp ?? 0;
+                const hasDiscount =
+                  minVariantMrp > minVariantPrice && minVariantPrice > 0;
                 const displayRating = ratingByProductId[product.id] ?? 0;
 
                 return (
@@ -313,10 +327,15 @@ export default function CategoryPageContent({
                       )}
                       <div className="flex justify-between text-xs mt-2">
                         <span>{product.brand ?? ""}</span>
-                        <span>
-                          {minVariantPrice !== Infinity
-                            ? `₹ ${minVariantPrice}`
-                            : "—"}
+                        <span className="flex items-center gap-2">
+                          {hasDiscount && (
+                            <span className="text-[11px] text-white/70 line-through">
+                              ₹{minVariantMrp}
+                            </span>
+                          )}
+                          <span>
+                            {minVariantPrice > 0 ? `₹ ${minVariantPrice}` : "—"}
+                          </span>
                         </span>
                       </div>
                     </div>

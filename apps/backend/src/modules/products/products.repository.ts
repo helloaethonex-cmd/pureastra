@@ -125,6 +125,7 @@ export const createProduct = async (data: CreateProductInput) => {
           create: variants.map((v) => ({
             ...v,
             price: v.price !== undefined ? v.price : undefined,
+            mrp: v.mrp !== undefined ? v.mrp : undefined,
             costPrice: v.costPrice !== undefined ? v.costPrice : undefined,
           })),
         },
@@ -186,6 +187,7 @@ export const createVariant = async (productId: bigint, data: CreateVariantInput)
       ...data,
       productId,
       price: data.price !== undefined ? data.price : undefined,
+      mrp: data.mrp !== undefined ? data.mrp : undefined,
       costPrice: data.costPrice !== undefined ? data.costPrice : undefined,
     },
     include: { images: true },

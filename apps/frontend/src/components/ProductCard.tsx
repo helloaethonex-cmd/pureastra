@@ -49,13 +49,20 @@ export default function ProductCard({ active, product }: ProductCardProps) {
     "/img/facewash.webp";
 
   const activeVariant = product.variants[0];
-  const minPrice = product.variants.reduce((min, variant) => {
+  const cheapestVariant = product.variants.reduce<
+    { price: number; mrp: number } | null
+  >((best, variant) => {
     const variantPrice = toNumber(variant.price);
-    if (variantPrice <= 0) return min;
-    return variantPrice < min ? variantPrice : min;
-  }, Infinity);
+    if (variantPrice <= 0) return best;
+    if (!best || variantPrice < best.price) {
+      return { price: variantPrice, mrp: toNumber(variant.mrp) };
+    }
+    return best;
+  }, null);
 
-  const displayPrice = minPrice === Infinity ? 0 : minPrice;
+  const displayPrice = cheapestVariant?.price ?? 0;
+  const displayMrp = cheapestVariant?.mrp ?? 0;
+  const hasDiscount = displayMrp > displayPrice && displayPrice > 0;
   const isWishlisted = Boolean(
     activeVariant?.id &&
       wishlistItems?.some((item) => item.productVariantId === activeVariant.id),
@@ -175,7 +182,14 @@ export default function ProductCard({ active, product }: ProductCardProps) {
 
         <div className="flex justify-between">
           <span>{activeVariant?.variantName ?? "Default"}</span>
-          <span>{displayPrice > 0 ? `₹${displayPrice.toFixed(2)}` : "-"}</span>
+          <span className="flex items-center gap-2">
+            {hasDiscount && (
+              <span className="text-[12px] text-white/70 line-through">
+                ₹{displayMrp.toFixed(2)}
+              </span>
+            )}
+            <span>{displayPrice > 0 ? `₹${displayPrice.toFixed(2)}` : "-"}</span>
+          </span>
         </div>
       </div>
 

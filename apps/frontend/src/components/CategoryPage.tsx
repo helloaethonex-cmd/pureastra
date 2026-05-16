@@ -73,6 +73,10 @@ export default function CategoryPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
+              {(() => {
+                const hasDiscount =
+                  product.mrp != null && product.mrp > product.price;
+                return (
         {/* ================= SIDEBAR ================= */}
         <div className="backdrop-blur-md bg-white/20 border border-white/30 p-5 rounded-2xl shadow-lg h-fit">
 
@@ -151,11 +155,15 @@ export default function CategoryPage({
         {/* ================= PRODUCTS ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
 
-          {filteredProducts.map((product) => (
-            <div
-              key={product.slug}
-              className="relative rounded-2xl overflow-hidden backdrop-blur-md bg-white/20 border border-white/30 shadow-lg hover:scale-[1.03] transition"
-            >
+          {filteredProducts.map((product) => {
+            const hasDiscount =
+              product.mrp != null && product.mrp > product.price;
+
+            return (
+              <div
+                key={product.slug}
+                className="relative rounded-2xl overflow-hidden backdrop-blur-md bg-white/20 border border-white/30 shadow-lg hover:scale-[1.03] transition"
+              >
 
               {/* TAG */}
               {product.tag && (
@@ -203,13 +211,20 @@ export default function CategoryPage({
 
                 <div className="flex justify-between text-xs mt-2">
                   <span>{product.size}</span>
-                  <span>₹{product.price}</span>
+                  <span className="flex items-center gap-2">
+                    {hasDiscount && (
+                      <span className="text-[11px] text-white/70 line-through">
+                        ₹{product.mrp}
+                      </span>
+                    )}
+                    <span>₹{product.price}</span>
+                  </span>
                 </div>
 
               </div>
-
             </div>
-          ))}
+            );
+          })}
 
         </div>
 

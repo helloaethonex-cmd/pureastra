@@ -138,6 +138,8 @@ export default function OrderPage() {
                   const itemPrice = toMoneyNumber(
                     item.priceSnapshot ?? item.productVariant.price,
                   );
+                  const itemMrp = toMoneyNumber(item.productVariant.mrp);
+                  const hasDiscount = itemMrp > itemPrice && itemPrice > 0;
 
                   return (
                     <div key={item.id} className="flex gap-6 border-b pb-6">
@@ -156,8 +158,13 @@ export default function OrderPage() {
                           <h2 className="text-lg font-semibold text-[#5E2B15]">
                             {itemName}
                           </h2>
-                          <p className="font-semibold">
-                            ₹{itemPrice.toFixed(2)}
+                          <p className="font-semibold flex items-center gap-2">
+                            {hasDiscount && (
+                              <span className="text-[12px] text-[#9a7a65] line-through">
+                                ₹{itemMrp.toFixed(2)}
+                              </span>
+                            )}
+                            <span>₹{itemPrice.toFixed(2)}</span>
                           </p>
                         </div>
                         <p className="text-sm text-[#7B6A58]">

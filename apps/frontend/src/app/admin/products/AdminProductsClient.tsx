@@ -63,6 +63,7 @@ type Variant = {
   variantName: string;
   sku: string;
   price: string;
+  mrp: string;
   stockQuantity: string;
 };
 
@@ -426,7 +427,7 @@ export default function ProductsPage() {
   const [autoSlug, setAutoSlug] = useState(true);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [variants, setVariants] = useState<Variant[]>([
-    { variantName: "", sku: "", price: "", stockQuantity: "" },
+    { variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" },
   ]);
   const [toast, setToast] = useState<ToastState>({ type: "idle" });
   const [contentSectionsByProduct, setContentSectionsByProduct] = useState<
@@ -479,7 +480,7 @@ export default function ProductsPage() {
   const addVariant = () =>
     setVariants((v) => [
       ...v,
-      { variantName: "", sku: "", price: "", stockQuantity: "" },
+      { variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" },
     ]);
 
   const removeVariant = (i: number) =>
@@ -509,11 +510,12 @@ export default function ProductsPage() {
     showUpdating("Creating product…");
     try {
       const validVariants = variants
-        .filter((v) => v.variantName || v.sku || v.price)
+        .filter((v) => v.variantName || v.sku || v.price || v.mrp)
         .map((v) => ({
           variantName: v.variantName || undefined,
           sku: v.sku || undefined,
           price: v.price ? Number(v.price) : undefined,
+          mrp: v.mrp ? Number(v.mrp) : undefined,
           stockQuantity: v.stockQuantity ? Number(v.stockQuantity) : undefined,
         }));
 
@@ -530,7 +532,7 @@ export default function ProductsPage() {
       showSuccess(`Product "${created.name}" created!`);
       setForm({ name: "", slug: "", description: "", brand: "", isActive: true });
       setSelectedCategoryIds([]);
-      setVariants([{ variantName: "", sku: "", price: "", stockQuantity: "" }]);
+      setVariants([{ variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" }]);
       setAutoSlug(true);
       setShowCreateForm(false);
     } catch (err: any) {
@@ -597,6 +599,7 @@ export default function ProductsPage() {
     if (!variantName) return;
     const sku = window.prompt("SKU (optional)") || undefined;
     const priceInput = window.prompt("Price (optional)") || "";
+    const mrpInput = window.prompt("MRP (optional)") || "";
     const stockInput = window.prompt("Stock quantity (optional)") || "";
     showUpdating("Adding variant…");
     try {
@@ -604,6 +607,7 @@ export default function ProductsPage() {
         variantName,
         sku,
         price: priceInput ? Number(priceInput) : undefined,
+        mrp: mrpInput ? Number(mrpInput) : undefined,
         stockQuantity: stockInput ? Number(stockInput) : undefined,
       });
       await refreshProducts();
@@ -617,6 +621,7 @@ export default function ProductsPage() {
     const variantName = window.prompt("Variant name", variant.variantName ?? "") ?? undefined;
     const sku = window.prompt("SKU", variant.sku ?? "") ?? undefined;
     const priceInput = window.prompt("Price", String(variant.price ?? "")) ?? "";
+    const mrpInput = window.prompt("MRP", String(variant.mrp ?? "")) ?? "";
     const stockInput = window.prompt("Stock quantity", String(variant.stockQuantity ?? "")) ?? "";
     const activeInput = window.prompt("Is active? (yes/no)", variant.isActive ? "yes" : "no") ?? "yes";
     showUpdating("Updating variant…");
@@ -625,6 +630,7 @@ export default function ProductsPage() {
         variantName,
         sku,
         price: priceInput ? Number(priceInput) : undefined,
+        mrp: mrpInput ? Number(mrpInput) : undefined,
         stockQuantity: stockInput ? Number(stockInput) : undefined,
         isActive: activeInput.toLowerCase() !== "no",
       });
@@ -772,7 +778,7 @@ export default function ProductsPage() {
                 setEditingId(null);
                 setForm({ name: "", slug: "", description: "", brand: "", isActive: true });
                 setSelectedCategoryIds([]);
-                setVariants([{ variantName: "", sku: "", price: "", stockQuantity: "" }]);
+                setVariants([{ variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" }]);
                 setAutoSlug(true);
               }}
               className="flex-none px-3 sm:px-4 py-2 bg-[#9E6E5B] hover:bg-[#8a5e4e] text-white rounded-lg transition flex items-center gap-2 text-sm font-medium"
@@ -905,6 +911,13 @@ export default function ProductsPage() {
                         placeholder="Price (₹)"
                         value={v.price}
                         onChange={(e) => updateVariant(i, "price", e.target.value)}
+                        className="border border-gray-200 rounded px-2.5 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] bg-white"
+                      />
+                      <input
+                        type="number"
+                        placeholder="MRP (₹)"
+                        value={v.mrp}
+                        onChange={(e) => updateVariant(i, "mrp", e.target.value)}
                         className="border border-gray-200 rounded px-2.5 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] bg-white"
                       />
                       <div className="flex gap-2">
@@ -1124,6 +1137,7 @@ export default function ProductsPage() {
                             <div className="font-semibold text-gray-800">{variant.variantName || "Variant"}</div>
                             <div className="text-gray-500 text-[11px]">SKU: {variant.sku || "—"}</div>
                             <div className="text-gray-700 font-medium">₹{variant.price ?? "—"}</div>
+                            <div className="text-gray-500 text-[11px]">MRP: {variant.mrp ?? "—"}</div>
                             <div className="text-gray-400 text-[11px]">Stock: {variant.stockQuantity ?? "—"}</div>
                             <div className="mt-1.5 flex gap-1">
                               <button

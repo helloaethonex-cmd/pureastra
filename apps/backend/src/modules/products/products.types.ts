@@ -6,6 +6,7 @@ export const createVariantSchema = z.object({
   variantName: z.string().optional(),
   sku: z.string().optional(),
   price: z.coerce.number().positive().optional(),
+  mrp: z.coerce.number().positive().optional(),
   costPrice: z.coerce.number().positive().optional(),
   gstRate: z.coerce.number().min(0).max(100).default(18),
   stockQuantity: z.coerce.number().int().min(0).optional(),

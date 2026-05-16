@@ -238,6 +238,7 @@ model ProductVariant {
   sku         String? @unique
 
   price     Decimal? @db.Decimal(10, 2)
+  mrp       Decimal? @map("mrp") @db.Decimal(10, 2)
   costPrice Decimal? @map("cost_price") @db.Decimal(10, 2)
   gstRate   Decimal  @default(18) @map("gst_rate") @db.Decimal(5, 2)
 

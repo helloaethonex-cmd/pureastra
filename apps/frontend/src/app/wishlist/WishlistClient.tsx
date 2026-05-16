@@ -83,6 +83,8 @@ export default function WishlistPage() {
                   item.productVariant.images?.[0]?.imageUrl ||
                   "/img/facewash.webp";
                 const price = toNumber(item.productVariant.price);
+                const mrp = toNumber(item.productVariant.mrp);
+                const hasDiscount = mrp > price && price > 0;
                 const name = item.productVariant.product.name;
                 const slug = item.productVariant.product.slug;
                 return (
@@ -125,7 +127,14 @@ export default function WishlistPage() {
                     {/* PRICE */}
                     <div className={`flex justify-between mt-2 ${item.isAvailable ? "text-white" : "text-red-500"} text-sm`}>
                       <span>{item.isAvailable ? "Available" : "Out of Stock"}</span>
-                      <span className="font-medium">{price > 0 ? `₹${price.toFixed(2)}` : "-"}</span>
+                      <span className="font-medium flex items-center gap-2">
+                        {hasDiscount && (
+                          <span className="text-[11px] text-white/70 line-through">
+                            ₹{mrp.toFixed(2)}
+                          </span>
+                        )}
+                        <span>{price > 0 ? `₹${price.toFixed(2)}` : "-"}</span>
+                      </span>
                     </div>
 
                     {slug && (

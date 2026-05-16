@@ -99,6 +99,7 @@ export function useCreateProduct() {
         variantName?: string;
         sku?: string;
         price?: number;
+        mrp?: number;
         stockQuantity?: number;
       }[];
     }) => createProduct(body),

@@ -7,6 +7,7 @@ const wishlistItemInclude = {
       isActive: true,
       deletedAt: true,
       price: true,
+      mrp: true,
       variantName: true,
       sku: true,
       product: {

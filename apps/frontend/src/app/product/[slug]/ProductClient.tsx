@@ -1294,6 +1294,10 @@ export default function ProductClient({
   // Compute price display
   const activePrice =
     activeVariant?.price != null ? Number(activeVariant.price) : null;
+  const activeMrp =
+    activeVariant?.mrp != null ? Number(activeVariant.mrp) : null;
+  const hasActiveDiscount =
+    activePrice != null && activeMrp != null && activeMrp > activePrice;
 
   // Content sections
   const sections = product.contentSections ?? [];
@@ -1708,9 +1712,20 @@ export default function ProductClient({
             {activePrice != null && (
               <div className="mb-4">
                 <div className="flex items-center gap-3">
-                  <p className="text-[28px] font-bold text-[#5E2B16]">
-                    ₹{activePrice}
-                  </p>
+                  {hasActiveDiscount ? (
+                    <>
+                      <p className="text-[18px] text-[#9a7a65] line-through">
+                        ₹{activeMrp}
+                      </p>
+                      <p className="text-[28px] font-bold text-[#5E2B16]">
+                        ₹{activePrice}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-[28px] font-bold text-[#5E2B16]">
+                      ₹{activePrice}
+                    </p>
+                  )}
                   <p className="text-sm text-[#8B5E3C]">
                     (MRP Inclusive of all taxes)
                   </p>
@@ -1783,7 +1798,18 @@ export default function ProductClient({
         <div className="fixed inset-x-0 bottom-0 w-full max-w-full overflow-x-hidden bg-white border-t px-2 py-2 flex items-center gap-2 md:hidden z-50">
           <div className="shrink-0 min-w-0 max-w-[34%]">
             <p className="text-[#5E2B16] font-bold truncate text-sm">
-              {activePrice != null ? `₹${activePrice}` : ""}
+              {activePrice != null ? (
+                <span className="flex items-center gap-2">
+                  {hasActiveDiscount && activeMrp != null ? (
+                    <span className="text-[11px] text-[#9a7a65] line-through">
+                      ₹{activeMrp}
+                    </span>
+                  ) : null}
+                  <span>₹{activePrice}</span>
+                </span>
+              ) : (
+                ""
+              )}
             </p>
             <p className="text-[10px] text-[#8B5E3C] truncate">
               Inclusive of taxes
@@ -1914,12 +1940,23 @@ export default function ProductClient({
                   item.images[0]?.imageUrl ??
                   defaultFallbackImage;
                 const minPrice = item.variants.reduce(
-                  (min, v) =>
-                    v.price != null && Number(v.price) < min
-                      ? Number(v.price)
-                      : min,
-                  Infinity,
+                  (best, v) => {
+                    const price = v.price != null ? Number(v.price) : 0;
+                    if (price <= 0) return best;
+                    if (!best || price < best.price) {
+                      return {
+                        price,
+                        mrp: v.mrp != null ? Number(v.mrp) : 0,
+                      };
+                    }
+                    return best;
+                  },
+                  null as { price: number; mrp: number } | null,
                 );
+                const minPriceValue = minPrice?.price ?? 0;
+                const minMrpValue = minPrice?.mrp ?? 0;
+                const hasDiscount =
+                  minMrpValue > minPriceValue && minPriceValue > 0;
                 return (
                   <Link key={item.id} href={`/product/${item.slug}`}>
                     <motion.div
@@ -1965,8 +2002,15 @@ export default function ProductClient({
                         )}
                         <div className="flex justify-between items-center mt-3 text-[13px]">
                           <span>{item.variants[0]?.variantName ?? ""}</span>
-                          <span className="font-semibold">
-                            {minPrice !== Infinity ? `₹${minPrice}` : ""}
+                          <span className="font-semibold flex items-center gap-2">
+                            {hasDiscount && (
+                              <span className="text-[11px] text-white/70 line-through">
+                                ₹{minMrpValue}
+                              </span>
+                            )}
+                            <span>
+                              {minPriceValue > 0 ? `₹${minPriceValue}` : ""}
+                            </span>
                           </span>
                         </div>
                       </motion.div>
