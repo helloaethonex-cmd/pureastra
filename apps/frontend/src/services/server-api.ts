@@ -4,8 +4,10 @@ import type {
   ProductListParams,
   ProductListResponse,
 } from "@/services/api";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 export const CATALOG_REVALIDATE_SECONDS = 60;
+const isBuildPhase = process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
 
 export class ServerApiError extends Error {
   status?: number;
@@ -79,32 +81,56 @@ async function serverApiFetch<T>(
 
 export const listCategories = (
   revalidate = CATALOG_REVALIDATE_SECONDS,
-) =>
-  serverApiFetch<Category[]>("/products/categories", {
+) => {
+  if (isBuildPhase) return Promise.resolve([]);
+
+  return serverApiFetch<Category[]>("/products/categories", {
     next: {
       revalidate,
       tags: ["categories"],
     },
   });
+};
 
 export const listProducts = (
   params: ProductListParams = {},
   revalidate = CATALOG_REVALIDATE_SECONDS,
-) =>
-  serverApiFetch<ProductListResponse>(`/products${toQueryString(params)}`, {
-    next: {
-      revalidate,
-      tags: ["products"],
+) => {
+  if (isBuildPhase) {
+    return Promise.resolve({
+      data: [],
+      total: 0,
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+      totalPages: 0,
+    });
+  }
+
+  return serverApiFetch<ProductListResponse>(
+    `/products${toQueryString(params)}`,
+    {
+      next: {
+        revalidate,
+        tags: ["products"],
+      },
     },
-  });
+  );
+};
 
 export const getProductBySlug = (
   slug: string,
   revalidate = CATALOG_REVALIDATE_SECONDS,
-) =>
-  serverApiFetch<Product>(`/products/slug/${encodeURIComponent(slug)}`, {
+) => {
+  if (isBuildPhase) {
+    return Promise.reject(
+      new ServerApiError("Backend unavailable during build.", 503),
+    );
+  }
+
+  return serverApiFetch<Product>(`/products/slug/${encodeURIComponent(slug)}`, {
     next: {
       revalidate,
       tags: [`product:${slug}`],
     },
   });
+};

@@ -16,12 +16,18 @@ type Product = {
   slug: string;
   name: string;
   desc: string;
-  price: string;
+  price: number | string;
+  mrp?: number | string;
   size: string;
   img: string;
   type?: string;
   tag?: string;
   rating: number;
+};
+
+const toNumber = (value: number | string | null | undefined) => {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : value;
+  return Number.isFinite(parsed) ? Number(parsed) : 0;
 };
 
 export default function CategoryPage({
@@ -73,10 +79,6 @@ export default function CategoryPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
 
-              {(() => {
-                const hasDiscount =
-                  product.mrp != null && product.mrp > product.price;
-                return (
         {/* ================= SIDEBAR ================= */}
         <div className="backdrop-blur-md bg-white/20 border border-white/30 p-5 rounded-2xl shadow-lg h-fit">
 
@@ -156,8 +158,9 @@ export default function CategoryPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
 
           {filteredProducts.map((product) => {
-            const hasDiscount =
-              product.mrp != null && product.mrp > product.price;
+            const price = toNumber(product.price);
+            const mrp = toNumber(product.mrp);
+            const hasDiscount = mrp > price && price > 0;
 
             return (
               <div
@@ -214,10 +217,10 @@ export default function CategoryPage({
                   <span className="flex items-center gap-2">
                     {hasDiscount && (
                       <span className="text-[11px] text-white/70 line-through">
-                        ₹{product.mrp}
+                        ₹{mrp}
                       </span>
                     )}
-                    <span>₹{product.price}</span>
+                    <span>₹{price}</span>
                   </span>
                 </div>
 
