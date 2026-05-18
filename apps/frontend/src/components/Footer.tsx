@@ -43,9 +43,10 @@ const footerSections = [
 
 export default function Footer() {
   return (
-    <footer className="bg-[#8B543E] text-white px-5 sm:px-8 md:px-10 py-10 font-sans w-full overflow-x-hidden">
+    <>
+      <footer className="bg-[#8B543E] text-white px-5 sm:px-8 md:px-10 py-10 font-sans w-full overflow-x-hidden">
 
-      <div className="max-w-[1200px] mx-auto">
+        <div className="max-w-[1200px] mx-auto">
 
         {/* GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
@@ -136,7 +137,18 @@ export default function Footer() {
           © 2026 Pureastra. All rights reserved.
         </div>
 
-      </div>
-    </footer>
+        </div>
+      </footer>
+
+      <a
+        href="https://wa.me/919400206479"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat on WhatsApp"
+        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition-transform duration-300 hover:scale-110"
+      >
+        <FontAwesomeIcon icon={faWhatsapp} className="text-2xl" />
+      </a>
+    </>
   );
 }

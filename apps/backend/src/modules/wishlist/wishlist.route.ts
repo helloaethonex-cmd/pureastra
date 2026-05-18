@@ -19,10 +19,6 @@ const router = Router();
  *     description: >
  *       Returns all wishlist items for the authenticated user (single default wishlist model).
  *       Results are ordered by `createdAt` descending (newest first).
- *       Items are returned even if product/variant becomes inactive/deleted, and include
- *       `isAvailable` so UI can show unavailable state instead of silently dropping items.
- *     security:
- *       - cookieAuth: []
  *     responses:
  *       200:
  *         description: Wishlist items fetched successfully
@@ -32,102 +28,102 @@ const router = Router();
  *               type: array
  *               items:
  *                 type: object
- *                 properties:
- *                   id:
-                      mrp:
-                        type: string
-                        nullable: true
-                        example: "1499.00"
- *                     type: string
- *                     example: "12"
- *                   userId:
- *                     type: string
- *                     example: "5"
- *                   productVariantId:
- *                     type: string
- *                     example: "42"
- *                   createdAt:
- *                     type: string
- *                     format: date-time
- *                     example: "2026-03-30T18:20:41.231Z"
- *                   updatedAt:
- *                     type: string
- *                     format: date-time
- *                     example: "2026-03-30T18:20:41.231Z"
- *                   isAvailable:
- *                     type: boolean
- *                     example: true
- *                   productVariant:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                         example: "42"
- *                       variantName:
- *                         type: string
- *                         nullable: true
- *                         example: "Blue / M"
- *                       sku:
- *                         type: string
- *                         nullable: true
- *                         example: "TSHIRT-BLU-M"
- *                       price:
- *                         type: string
- *                         nullable: true
- *                         example: "1299.00"
- *                       isActive:
- *                         type: boolean
- *                         example: true
- *                       deletedAt:
- *                         type: string
- *                         format: date-time
- *                         nullable: true
- *                         example: null
- *                       product:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                             example: "10"
- *                           uuid:
- *                             type: string
- *                             format: uuid
- *                             example: "d7c9318f-f8f9-4b9b-b497-6459be4fdf85"
- *                           name:
- *                             type: string
- *                             example: "Cotton T-Shirt"
- *                           slug:
- *                             type: string
- *                             nullable: true
- *                             example: "cotton-tshirt"
- *                           brand:
- *                             type: string
- *                             nullable: true
- *                             example: "Pureastra"
- *                           isActive:
- *                             type: boolean
- *                             example: true
- *                           deletedAt:
- *                             type: string
- *                             format: date-time
- *                             nullable: true
- *                             example: null
- *                       images:
- *                         type: array
- *                         items:
- *                           type: object
- *                           properties:
- *                             id:
- *                               type: string
- *                               example: "7"
- *                             imageUrl:
- *                               type: string
- *                               nullable: true
- *                               example: "https://cdn.example.com/products/10/hero.jpg"
- *                             position:
- *                               type: integer
- *                               nullable: true
- *                               example: 0
+*                 properties:
+*                   id:
+*                     type: string
+*                     example: "12"
+*                   userId:
+*                     type: string
+*                     example: "5"
+*                   productVariantId:
+*                     type: string
+*                     example: "42"
+*                   createdAt:
+*                     type: string
+*                     format: date-time
+*                     example: "2026-03-30T18:20:41.231Z"
+*                   updatedAt:
+*                     type: string
+*                     format: date-time
+*                     example: "2026-03-30T18:20:41.231Z"
+*                   isAvailable:
+*                     type: boolean
+*                     example: true
+*                   productVariant:
+*                     type: object
+*                     properties:
+*                       id:
+*                         type: string
+*                         example: "42"
+*                       variantName:
+*                         type: string
+*                         nullable: true
+*                         example: "Blue / M"
+*                       sku:
+*                         type: string
+*                         nullable: true
+*                         example: "TSHIRT-BLU-M"
+*                       price:
+*                         type: string
+*                         nullable: true
+*                         example: "1299.00"
+*                       mrp:
+*                         type: string
+*                         nullable: true
+*                         example: "1499.00"
+*                       isActive:
+*                         type: boolean
+*                         example: true
+*                       deletedAt:
+*                         type: string
+*                         format: date-time
+*                         nullable: true
+*                         example: null
+*                       product:
+*                         type: object
+*                         properties:
+*                           id:
+*                             type: string
+*                             example: "10"
+*                           uuid:
+*                             type: string
+*                             format: uuid
+*                             example: "d7c9318f-f8f9-4b9b-b497-6459be4fdf85"
+*                           name:
+*                             type: string
+*                             example: "Cotton T-Shirt"
+*                           slug:
+*                             type: string
+*                             nullable: true
+*                             example: "cotton-tshirt"
+*                           brand:
+*                             type: string
+*                             nullable: true
+*                             example: "Pureastra"
+*                           isActive:
+*                             type: boolean
+*                             example: true
+*                           deletedAt:
+*                             type: string
+*                             format: date-time
+*                             nullable: true
+*                             example: null
+*                       images:
+*                         type: array
+*                         items:
+*                           type: object
+*                           properties:
+*                             id:
+*                               type: string
+*                               example: "7"
+*                             imageUrl:
+*                               type: string
+*                               nullable: true
+*                               example: "https://cdn.example.com/products/10/hero.jpg"
+*                             position:
+*                               type: integer
+*                               nullable: true
+*                               example: 0
  *             example:
  *               - id: "12"
  *                 userId: "5"
@@ -140,6 +136,7 @@ const router = Router();
  *                   variantName: "Blue / M"
  *                   sku: "TSHIRT-BLU-M"
  *                   price: "1299.00"
+ *                   mrp: "1499.00"
  *                   isActive: true
  *                   deletedAt: null
  *                   product:

@@ -1527,8 +1527,8 @@ export default function ProductClient({
               transition={{ duration: 0.6 }}
               whileHover={{ scale: 1.05 }}
               className="w-full h-[380px] sm:h-[320px] md:h-[500px] flex items-center justify-center overflow-hidden"
-              onTouchStart={(e) => (startX = e.touches[0].clientX)}
-              onTouchEnd={(e) => {
+              onTouchStart={(e: React.TouchEvent<HTMLDivElement>) => (startX = e.touches[0].clientX)}
+              onTouchEnd={(e: React.TouchEvent<HTMLDivElement>) => {
                 const endX = e.changedTouches[0].clientX;
                 if (startX - endX > 50) handleSwipe("left");
                 if (endX - startX > 50) handleSwipe("right");
@@ -1720,15 +1720,17 @@ export default function ProductClient({
                       <p className="text-[28px] font-bold text-[#5E2B16]">
                         ₹{activePrice}
                       </p>
+                      <p className="text-sm text-[#2E7D32] font-semibold">
+                        {activeMrp != null
+                          ? `${(activeMrp - activePrice).toFixed(0)}rs off`
+                          : ""}
+                      </p>
                     </>
                   ) : (
                     <p className="text-[28px] font-bold text-[#5E2B16]">
                       ₹{activePrice}
                     </p>
                   )}
-                  <p className="text-sm text-[#8B5E3C]">
-                    (MRP Inclusive of all taxes)
-                  </p>
                 </div>
               </div>
             )}
