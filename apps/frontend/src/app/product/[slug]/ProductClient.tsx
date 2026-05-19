@@ -117,6 +117,28 @@ type ProductGalleryImage = {
   height?: number | null;
 };
 
+const DISCOUNT_END_AT = new Date("2026-06-04T23:59:59+05:30").getTime();
+
+type DiscountTimeLeft = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
+function getDiscountTimeLeft(): DiscountTimeLeft | null {
+  const diff = DISCOUNT_END_AT - Date.now();
+  if (diff <= 0) return null;
+
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return { days, hours, minutes, seconds };
+}
+
 // ─── Benefits Section ─────────────────────────────────────────────────────────
 
 function BenefitsSection({
@@ -1106,6 +1128,8 @@ export default function ProductClient({
   const [showBuyNow, setShowBuyNow] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [resumeBuyNowAfterLogin, setResumeBuyNowAfterLogin] = useState(false);
+  const [discountTimeLeft, setDiscountTimeLeft] =
+    useState<DiscountTimeLeft | null>(null);
   const { user } = useAuthStore();
   const addCartItem = useAddCartItem();
   const reviewsQuery = useProductReviews(product.id, {
@@ -1298,6 +1322,16 @@ export default function ProductClient({
     activeVariant?.mrp != null ? Number(activeVariant.mrp) : null;
   const hasActiveDiscount =
     activePrice != null && activeMrp != null && activeMrp > activePrice;
+
+  useEffect(() => {
+    setDiscountTimeLeft(getDiscountTimeLeft());
+
+    const timer = window.setInterval(() => {
+      setDiscountTimeLeft(getDiscountTimeLeft());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Content sections
   const sections = product.contentSections ?? [];
@@ -1720,11 +1754,26 @@ export default function ProductClient({
                       <p className="text-[28px] font-bold text-[#5E2B16]">
                         ₹{activePrice}
                       </p>
-                      <p className="text-sm text-[#2E7D32] font-semibold">
-                        {activeMrp != null
-                          ? `${(activeMrp - activePrice).toFixed(0)}rs off`
-                          : ""}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-base font-semibold">
+                        <p className="text-[#2E7D32]">
+                          {activeMrp != null
+                            ? `${(activeMrp - activePrice).toFixed(0)}rs off`
+                            : ""}
+                        </p>
+                        {discountTimeLeft ? (
+                          <p
+                            className="rounded-full bg-[#F4F7E9] px-3 py-1 text-base text-[#5E2B16] border border-[#D9DFC8]"
+                            aria-live="polite"
+                          >
+                            Ends in {discountTimeLeft.days}d{" "}
+                            {String(discountTimeLeft.hours).padStart(2, "0")}h{" "}
+                            {String(discountTimeLeft.minutes).padStart(2, "0")}
+                            m{" "}
+                            {String(discountTimeLeft.seconds).padStart(2, "0")}
+                            s
+                          </p>
+                        ) : null}
+                      </div>
                     </>
                   ) : (
                     <p className="text-[28px] font-bold text-[#5E2B16]">
