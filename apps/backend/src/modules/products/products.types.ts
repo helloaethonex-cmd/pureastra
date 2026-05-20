@@ -85,6 +85,7 @@ export const createProductSchema = z.object({
   slug: z.string().optional(),
   description: z.string().optional(),
   brand: z.string().optional(),
+  discountEndsAt: z.coerce.date().nullable().optional(),
   isActive: z.boolean().default(true),
   categoryIds: z.array(z.coerce.bigint()).optional(),
   variants: z.array(createVariantSchema).optional(),
@@ -95,6 +96,7 @@ export const updateProductSchema = z.object({
   slug: z.string().optional(),
   description: z.string().optional(),
   brand: z.string().optional(),
+  discountEndsAt: z.coerce.date().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

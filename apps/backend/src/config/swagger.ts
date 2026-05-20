@@ -402,6 +402,12 @@ export const swaggerSpec = swaggerJSDoc({
               example: "Lightweight daily serum with HA.",
             },
             brand: { type: "string", nullable: true, example: "Pureastra" },
+            discountEndsAt: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+              example: "2026-06-04T18:29:59.000Z",
+            },
             isActive: { type: "boolean", example: true },
             variants: {
               type: "array",
@@ -456,6 +462,12 @@ export const swaggerSpec = swaggerJSDoc({
               example: "Lightweight daily serum with HA.",
             },
             brand: { type: "string", example: "Pureastra" },
+            discountEndsAt: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+              example: "2026-06-04T18:29:59.000Z",
+            },
             isActive: { type: "boolean", default: true },
             categoryIds: {
               type: "array",
@@ -478,6 +490,12 @@ export const swaggerSpec = swaggerJSDoc({
             slug: { type: "string", example: "ultra-hydrating-serum" },
             description: { type: "string", example: "Updated description" },
             brand: { type: "string", example: "Pureastra Pro" },
+            discountEndsAt: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+              example: "2026-06-04T18:29:59.000Z",
+            },
             isActive: { type: "boolean", example: false },
           },
         },

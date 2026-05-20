@@ -99,6 +99,7 @@ export interface Product {
   slug: string;
   description?: string | null;
   brand?: string | null;
+  discountEndsAt?: string | null;
   isActive: boolean;
   variants: ProductVariant[];
   images: ProductImage[];
@@ -743,6 +744,7 @@ export const createProduct = (body: {
   slug?: string;
   description?: string;
   brand?: string;
+  discountEndsAt?: string | null;
   isActive?: boolean;
   categoryIds?: string[];
   variants?: {
@@ -765,6 +767,7 @@ export const updateProduct = (
     slug?: string;
     description?: string;
     brand?: string;
+    discountEndsAt?: string | null;
     isActive?: boolean;
   }
 ) =>

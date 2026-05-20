@@ -93,6 +93,7 @@ export function useCreateProduct() {
       slug?: string;
       description?: string;
       brand?: string;
+      discountEndsAt?: string | null;
       isActive?: boolean;
       categoryIds?: string[];
       variants?: {
@@ -119,6 +120,7 @@ export function useUpdateProduct() {
       slug?: string;
       description?: string;
       brand?: string;
+      discountEndsAt?: string | null;
       isActive?: boolean;
     }) => updateProduct(id, body),
     onSuccess: () => {

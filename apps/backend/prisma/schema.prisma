@@ -191,6 +191,7 @@ model Product {
 
   brand    String?
   isActive Boolean @default(true) @map("is_active")
+  discountEndsAt DateTime? @map("discount_ends_at")
 
   variants        ProductVariant[]
   categories      ProductCategory[]

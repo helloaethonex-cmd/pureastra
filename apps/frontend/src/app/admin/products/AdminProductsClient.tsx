@@ -59,6 +59,18 @@ function slugify(str: string) {
     .replace(/^-|-$/g, "");
 }
 
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocal(value: string) {
+  return value ? new Date(value).toISOString() : undefined;
+}
+
 type Variant = {
   variantName: string;
   sku: string;
@@ -422,6 +434,7 @@ export default function ProductsPage() {
     slug: "",
     description: "",
     brand: "",
+    discountEndsAt: "",
     isActive: true,
   });
   const [autoSlug, setAutoSlug] = useState(true);
@@ -493,6 +506,7 @@ export default function ProductsPage() {
       slug: product.slug,
       description: product.description || "",
       brand: product.brand || "",
+      discountEndsAt: toDateTimeLocal(product.discountEndsAt),
       isActive: product.isActive,
     });
     setAutoSlug(false);
@@ -501,7 +515,7 @@ export default function ProductsPage() {
 
   const cancelEdit = () => {
     setEditingId(null);
-    setForm({ name: "", slug: "", description: "", brand: "", isActive: true });
+    setForm({ name: "", slug: "", description: "", brand: "", discountEndsAt: "", isActive: true });
     setAutoSlug(true);
   };
 
@@ -524,13 +538,14 @@ export default function ProductsPage() {
         slug: form.slug || undefined,
         description: form.description || undefined,
         brand: form.brand || undefined,
+        discountEndsAt: fromDateTimeLocal(form.discountEndsAt),
         isActive: form.isActive,
         categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
         variants: validVariants.length > 0 ? validVariants : undefined,
       });
 
       showSuccess(`Product "${created.name}" created!`);
-      setForm({ name: "", slug: "", description: "", brand: "", isActive: true });
+      setForm({ name: "", slug: "", description: "", brand: "", discountEndsAt: "", isActive: true });
       setSelectedCategoryIds([]);
       setVariants([{ variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" }]);
       setAutoSlug(true);
@@ -551,6 +566,7 @@ export default function ProductsPage() {
         slug: form.slug || undefined,
         description: form.description || undefined,
         brand: form.brand || undefined,
+        discountEndsAt: fromDateTimeLocal(form.discountEndsAt) ?? null,
         isActive: form.isActive,
       });
       showSuccess("Product updated!");
@@ -776,7 +792,7 @@ export default function ProductsPage() {
               onClick={() => {
                 setShowCreateForm(!showCreateForm);
                 setEditingId(null);
-                setForm({ name: "", slug: "", description: "", brand: "", isActive: true });
+                setForm({ name: "", slug: "", description: "", brand: "", discountEndsAt: "", isActive: true });
                 setSelectedCategoryIds([]);
                 setVariants([{ variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" }]);
                 setAutoSlug(true);
@@ -829,6 +845,15 @@ export default function ProductsPage() {
                     value={form.brand}
                     onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))}
                     placeholder="e.g. Pureastra"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#9E6E5B]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#5E2B16] mb-1">Discount Ends At</label>
+                  <input
+                    type="datetime-local"
+                    value={form.discountEndsAt}
+                    onChange={(e) => setForm((p) => ({ ...p, discountEndsAt: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#9E6E5B]"
                   />
                 </div>
@@ -1005,6 +1030,12 @@ export default function ProductsPage() {
                               placeholder="Brand"
                               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm"
                             />
+                            <input
+                              type="datetime-local"
+                              value={form.discountEndsAt}
+                              onChange={(e) => setForm((p) => ({ ...p, discountEndsAt: e.target.value }))}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm"
+                            />
                             <label className="flex items-center gap-2 sm:pt-0">
                               <input
                                 type="checkbox"
@@ -1050,6 +1081,11 @@ export default function ProductsPage() {
                           <p className="text-xs text-gray-500 font-mono truncate">{product.slug}</p>
                           {product.brand && (
                             <p className="text-xs text-gray-500 mt-0.5">Brand: {product.brand}</p>
+                          )}
+                          {product.discountEndsAt && (
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Discount ends: {new Date(product.discountEndsAt).toLocaleString()}
+                            </p>
                           )}
                           {product.description && (
                             <p className="text-sm text-gray-600 mt-1 line-clamp-2">
