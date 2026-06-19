@@ -172,6 +172,7 @@ export const getGstReportDetailed = async (
       return {
         invoiceNumber: row.invoice.invoiceNumber,
         issuedAt: row.invoice.issuedAt.toISOString(),
+        customerName: row.invoice.customerName ?? "",
         customerState,
         taxableValue: toMoneyString(row.taxableValue),
         gstRate: toMoneyString(row.gstRate),
@@ -219,6 +220,7 @@ export const getGstReportDetailedCsv = async (
   const header = [
     "invoiceNumber",
     "issuedAt",
+    "customerName",
     "customerState",
     "taxableValue",
     "gstRate",
@@ -235,6 +237,7 @@ export const getGstReportDetailedCsv = async (
       [
         row.invoiceNumber,
         row.issuedAt,
+        row.customerName,
         row.customerState,
         row.taxableValue,
         row.gstRate,
@@ -251,6 +254,7 @@ export const getGstReportDetailedCsv = async (
   lines.push(
     [
       "TOTAL",
+      "",
       "",
       "",
       detailed.totals.taxableValue,

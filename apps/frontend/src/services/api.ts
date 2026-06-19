@@ -587,6 +587,7 @@ export interface AdminGstSummaryResponse {
 export interface AdminGstDetailedRow {
   invoiceNumber: string;
   issuedAt: string;
+  customerName: string;
   customerState: string;
   taxableValue: string;
   gstRate: string;

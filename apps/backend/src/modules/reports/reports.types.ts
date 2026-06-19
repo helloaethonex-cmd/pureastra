@@ -94,6 +94,7 @@ export type GstSummaryReport = {
 export type GstDetailedReportRow = {
   invoiceNumber: string;
   issuedAt: string;
+  customerName: string;
   customerState: string;
   taxableValue: string;
   gstRate: string;

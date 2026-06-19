@@ -81,6 +81,7 @@ export const findGstDetailedRows = (
         select: {
           invoiceNumber: true,
           issuedAt: true,
+          customerName: true,
           customerAddress: true,
           igst: true,
         },

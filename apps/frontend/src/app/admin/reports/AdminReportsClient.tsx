@@ -9,6 +9,8 @@ import {
   faFileInvoiceDollar,
   faDownload,
   faRotate,
+  faFilePdf,
+  faFileExcel,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   useAdminGstDetailed,
@@ -17,6 +19,7 @@ import {
   useDownloadAdminGstCsv,
   useIsAdmin,
 } from "@/hooks/useAdmin";
+import type { AdminGstDetailedRow } from "@/services/api";
 
 const asCurrency = (value: string | number) =>
   new Intl.NumberFormat("en-IN", {
@@ -26,6 +29,71 @@ const asCurrency = (value: string | number) =>
   }).format(Number(value || 0));
 
 const isoDate = (date: Date) => date.toISOString().slice(0, 10);
+
+async function downloadPdf(
+  rows: AdminGstDetailedRow[],
+  totals: { taxableValue: string; cgst: string; sgst: string; igst: string },
+  from: string,
+  to: string,
+) {
+  const { default: jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+
+  const doc = new jsPDF({ orientation: "landscape" });
+  doc.setFontSize(14);
+  doc.text(`GST Report: ${from} to ${to}`, 14, 15);
+
+  autoTable(doc, {
+    startY: 22,
+    head: [["Invoice", "Issued", "Customer", "State", "Taxable", "GST%", "CGST", "SGST", "IGST"]],
+    body: rows.map((r) => [
+      r.invoiceNumber,
+      new Date(r.issuedAt).toLocaleDateString(),
+      r.customerName || "-",
+      r.customerState || "-",
+      r.taxableValue,
+      `${r.gstRate}%`,
+      r.cgst,
+      r.sgst,
+      r.igst,
+    ]),
+    foot: [["TOTAL", "", "", "", totals.taxableValue, "", totals.cgst, totals.sgst, totals.igst]],
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [94, 43, 22] },
+    footStyles: { fillColor: [242, 236, 223], textColor: [94, 43, 22], fontStyle: "bold" },
+  });
+
+  doc.save(`gst-report-${from}-to-${to}.pdf`);
+}
+
+async function downloadExcel(
+  rows: AdminGstDetailedRow[],
+  totals: { taxableValue: string; cgst: string; sgst: string; igst: string },
+  from: string,
+  to: string,
+) {
+  const XLSX = await import("xlsx");
+
+  const header = ["Invoice", "Issued", "Customer", "State", "Taxable Value", "GST Rate", "CGST", "SGST", "IGST", "Total Amount"];
+  const data = rows.map((r) => [
+    r.invoiceNumber,
+    new Date(r.issuedAt).toLocaleDateString(),
+    r.customerName || "-",
+    r.customerState || "-",
+    Number(r.taxableValue),
+    `${r.gstRate}%`,
+    Number(r.cgst),
+    Number(r.sgst),
+    Number(r.igst),
+    Number(r.totalAmount),
+  ]);
+  const totalRow = ["TOTAL", "", "", "", Number(totals.taxableValue), "", Number(totals.cgst), Number(totals.sgst), Number(totals.igst), ""];
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...data, totalRow]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "GST Report");
+  XLSX.writeFile(wb, `gst-report-${from}-to-${to}.xlsx`);
+}
 
 export default function AdminReportsPage() {
   const router = useRouter();
@@ -38,6 +106,8 @@ export default function AdminReportsPage() {
   const [to, setTo] = useState(isoDate(today));
   const [sort, setSort] = useState<"issuedAt:asc" | "issuedAt:desc">("issuedAt:desc");
   const [page, setPage] = useState(1);
+  const [pdfPending, setPdfPending] = useState(false);
+  const [xlsxPending, setXlsxPending] = useState(false);
 
   const overview = useAdminOverviewReport({ from, to });
   const summary = useAdminGstSummary({ from, to, sort });
@@ -77,6 +147,36 @@ export default function AdminReportsPage() {
       window.URL.revokeObjectURL(url);
     } catch {
       // mutation error text is surfaced by React Query state
+    }
+  };
+
+  const handleExportPdf = async (exportAll: boolean) => {
+    setPdfPending(true);
+    try {
+      if (exportAll) {
+        const { getAdminGstReportDetailed } = await import("@/services/api");
+        const data = await getAdminGstReportDetailed({ from, to, sort, page: 1, limit: 20000 });
+        await downloadPdf(data.rows, data.totals, from, to);
+      } else if (detailed.data) {
+        await downloadPdf(detailed.data.rows, detailed.data.totals, from, to);
+      }
+    } finally {
+      setPdfPending(false);
+    }
+  };
+
+  const handleExportExcel = async (exportAll: boolean) => {
+    setXlsxPending(true);
+    try {
+      if (exportAll) {
+        const { getAdminGstReportDetailed } = await import("@/services/api");
+        const data = await getAdminGstReportDetailed({ from, to, sort, page: 1, limit: 20000 });
+        await downloadExcel(data.rows, data.totals, from, to);
+      } else if (detailed.data) {
+        await downloadExcel(detailed.data.rows, detailed.data.totals, from, to);
+      }
+    } finally {
+      setXlsxPending(false);
     }
   };
 
@@ -153,25 +253,71 @@ export default function AdminReportsPage() {
                 <FontAwesomeIcon icon={faRotate} />
                 Refresh
               </button>
-              <button
-                type="button"
-                onClick={() => handleExportCsv(false)}
-                disabled={downloadCsv.isPending}
-                className="px-3 py-2 rounded-lg bg-[#819744] text-white text-sm hover:bg-[#6d8039] disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                <FontAwesomeIcon icon={faDownload} />
-                CSV (Page)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleExportCsv(true)}
-                disabled={downloadCsv.isPending}
-                className="px-3 py-2 rounded-lg bg-[#5B8D7C] text-white text-sm hover:bg-[#4a7466] disabled:opacity-50"
-              >
-                CSV (All)
-              </button>
             </div>
           </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="text-xs text-[#6f665b] self-center font-medium">CSV:</span>
+            <button
+              type="button"
+              onClick={() => handleExportCsv(false)}
+              disabled={downloadCsv.isPending}
+              className="px-3 py-1.5 rounded-lg bg-[#819744] text-white text-xs hover:bg-[#6d8039] disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faDownload} />
+              Page
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportCsv(true)}
+              disabled={downloadCsv.isPending}
+              className="px-3 py-1.5 rounded-lg bg-[#5B8D7C] text-white text-xs hover:bg-[#4a7466] disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faDownload} />
+              All
+            </button>
+
+            <span className="text-xs text-[#6f665b] self-center font-medium ml-2">PDF:</span>
+            <button
+              type="button"
+              onClick={() => handleExportPdf(false)}
+              disabled={pdfPending || !detailed.data}
+              className="px-3 py-1.5 rounded-lg bg-[#C0392B] text-white text-xs hover:bg-[#a93226] disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faFilePdf} />
+              Page
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportPdf(true)}
+              disabled={pdfPending}
+              className="px-3 py-1.5 rounded-lg bg-[#922B21] text-white text-xs hover:bg-[#7b241c] disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faFilePdf} />
+              All
+            </button>
+
+            <span className="text-xs text-[#6f665b] self-center font-medium ml-2">Excel:</span>
+            <button
+              type="button"
+              onClick={() => handleExportExcel(false)}
+              disabled={xlsxPending || !detailed.data}
+              className="px-3 py-1.5 rounded-lg bg-[#1E8449] text-white text-xs hover:bg-[#196f3d] disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faFileExcel} />
+              Page
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExportExcel(true)}
+              disabled={xlsxPending}
+              className="px-3 py-1.5 rounded-lg bg-[#196f3d] text-white text-xs hover:bg-[#145a32] disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <FontAwesomeIcon icon={faFileExcel} />
+              All
+            </button>
+          </div>
+
           {downloadCsv.isError ? (
             <p className="text-red-600 text-sm mt-3">
               {(downloadCsv.error as Error)?.message ?? "Failed to export CSV"}
@@ -251,6 +397,7 @@ export default function AdminReportsPage() {
               <tr>
                 <th className="text-left px-4 py-3">Invoice</th>
                 <th className="text-left px-4 py-3">Issued</th>
+                <th className="text-left px-4 py-3">Customer</th>
                 <th className="text-left px-4 py-3">State</th>
                 <th className="text-left px-4 py-3">Taxable</th>
                 <th className="text-left px-4 py-3">GST Rate</th>
@@ -262,11 +409,11 @@ export default function AdminReportsPage() {
             <tbody>
               {detailed.isLoading ? (
                 <tr>
-                  <td className="px-4 py-4" colSpan={8}>Loading rows...</td>
+                  <td className="px-4 py-4" colSpan={9}>Loading rows...</td>
                 </tr>
               ) : detailed.isError ? (
                 <tr>
-                  <td className="px-4 py-4 text-red-600" colSpan={8}>
+                  <td className="px-4 py-4 text-red-600" colSpan={9}>
                     {(detailed.error as Error)?.message ?? "Failed to load rows"}
                   </td>
                 </tr>
@@ -275,6 +422,7 @@ export default function AdminReportsPage() {
                   <tr key={`${row.invoiceNumber}-${row.issuedAt}`} className="border-t border-gray-100">
                     <td className="px-4 py-3">{row.invoiceNumber}</td>
                     <td className="px-4 py-3">{new Date(row.issuedAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">{row.customerName || "-"}</td>
                     <td className="px-4 py-3">{row.customerState || "-"}</td>
                     <td className="px-4 py-3">{asCurrency(row.taxableValue)}</td>
                     <td className="px-4 py-3">{row.gstRate}%</td>
@@ -285,7 +433,7 @@ export default function AdminReportsPage() {
                 ))
               ) : (
                 <tr>
-                  <td className="px-4 py-4" colSpan={8}>No GST records found for this range.</td>
+                  <td className="px-4 py-4" colSpan={9}>No GST records found for this range.</td>
                 </tr>
               )}
             </tbody>
