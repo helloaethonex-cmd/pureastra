@@ -29,6 +29,10 @@ import {
   updateAdminOrderStatus,
   downloadSingleShippingLabel,
   downloadBulkShippingLabels,
+  listManualInvoices,
+  createManualInvoice,
+  updateManualInvoice,
+  type CreateManualInvoicePayload,
 } from "@/services/api";
 
 // ─── Admin check ──────────────────────────────────────────────────────────────
@@ -289,6 +293,33 @@ export function useDownloadAdminGstCsv() {
       sort?: "issuedAt:asc" | "issuedAt:desc";
       exportAll?: boolean;
     }) => downloadAdminGstReportCsv(params),
+  });
+}
+
+// ─── Manual Invoices ─────────────────────────────────────────────────────────
+
+export function useManualInvoices(params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: ["manualInvoices", params],
+    queryFn: () => listManualInvoices(params),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useCreateManualInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateManualInvoicePayload) => createManualInvoice(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["manualInvoices"] }),
+  });
+}
+
+export function useUpdateManualInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: CreateManualInvoicePayload }) =>
+      updateManualInvoice(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["manualInvoices"] }),
   });
 }
 

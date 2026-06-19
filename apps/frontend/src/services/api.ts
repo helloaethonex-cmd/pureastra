@@ -1341,6 +1341,76 @@ export const downloadAdminGstReportCsv = async (params: {
   return res.blob();
 };
 
+// ─── Manual Invoices ────────────────────────────────────────────────────────
+
+export interface ManualInvoiceItem {
+  id: string;
+  productName: string;
+  totalPrice: string;
+  gstRate: string;
+  taxableValue: string;
+  taxAmount: string;
+}
+
+export interface ManualInvoice {
+  id: string;
+  invoiceNumber: string;
+  issuedAt: string;
+  status: "ACTIVE" | "CANCELLED";
+  customerName: string;
+  customerPhone: string | null;
+  customerState: string;
+  totalAmount: string;
+  taxAmount: string;
+  cgst: string | null;
+  sgst: string | null;
+  igst: string | null;
+  items: ManualInvoiceItem[];
+}
+
+export interface ManualInvoiceListResponse {
+  rows: ManualInvoice[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalRows: number;
+    totalPages: number;
+  };
+}
+
+export interface CreateManualInvoicePayload {
+  invoiceDate: string;
+  customerName: string;
+  customerPhone?: string;
+  customerState: string;
+  isInterstate: boolean;
+  items: { productName: string; totalPrice: number; gstRate: number }[];
+}
+
+export const listManualInvoices = (params?: { page?: number; limit?: number }) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  const suffix = q.toString();
+  return apiFetch<ManualInvoiceListResponse>(
+    `/admin/reports/manual-invoices${suffix ? `?${suffix}` : ""}`,
+  );
+};
+
+export const createManualInvoice = (body: CreateManualInvoicePayload) =>
+  apiFetch<{ id: string; invoiceNumber: string }>("/admin/reports/manual-invoices", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+export const updateManualInvoice = (id: string, body: CreateManualInvoicePayload) =>
+  apiFetch<{ id: string; invoiceNumber: string }>(`/admin/reports/manual-invoices/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
 // ─── Admin Influencers ──────────────────────────────────────────────────────
 
 export const listAdminInfluencers = (params?: {

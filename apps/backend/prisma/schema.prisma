@@ -822,6 +822,11 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+enum InvoiceSource {
+  PLATFORM
+  MANUAL
+}
+
 model InvoiceNumberSequence {
   year Int @id
 
@@ -836,15 +841,16 @@ model InvoiceNumberSequence {
 model Invoice {
   id BigInt @id @default(autoincrement())
 
-  orderId       BigInt        @unique @map("order_id")
+  orderId       BigInt?        @unique @map("order_id")
   invoiceNumber String        @unique @map("invoice_number") @db.VarChar(30)
   status        InvoiceStatus @default(ACTIVE)
+  source        InvoiceSource @default(PLATFORM)
   issuedAt      DateTime      @map("issued_at")
 
   // Customer snapshot (frozen at invoice time)
-  customerName    String @map("customer_name") @db.VarChar(200)
-  customerPhone   String @map("customer_phone") @db.VarChar(20)
-  customerAddress Json   @map("customer_address")
+  customerName    String  @map("customer_name") @db.VarChar(200)
+  customerPhone   String? @map("customer_phone") @db.VarChar(20)
+  customerAddress Json    @map("customer_address")
 
   // Seller snapshot (from env at time of generation)
   sellerName    String @map("seller_name") @db.VarChar(200)
@@ -872,7 +878,7 @@ model Invoice {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  order Order          @relation(fields: [orderId], references: [id])
+  order Order?         @relation(fields: [orderId], references: [id])
   items InvoiceItem[]
 
   @@index([orderId])

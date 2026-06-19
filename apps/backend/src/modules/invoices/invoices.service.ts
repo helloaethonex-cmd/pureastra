@@ -409,7 +409,7 @@ export const getInvoiceByOrderId = async (orderId: bigint) => {
 
   return {
     id: invoice.id.toString(),
-    orderId: invoice.orderId.toString(),
+    orderId: invoice.orderId?.toString() ?? null,
     invoiceNumber: invoice.invoiceNumber,
     status: invoice.status,
     pdfStatus: invoice.pdfStatus,
