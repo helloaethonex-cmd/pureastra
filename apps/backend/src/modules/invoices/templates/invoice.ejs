@@ -162,13 +162,33 @@
     <div class="party">
       <div class="party-label">Bill To</div>
       <div class="party-name"><%= invoice.customerName %></div>
-      <div class="party-detail"><%= invoice.customerAddress.line1 %></div>
+      <% if (invoice.customerAddress.line1) { %>
+        <div class="party-detail"><%= invoice.customerAddress.line1 %></div>
+      <% } %>
       <% if (invoice.customerAddress.line2) { %>
         <div class="party-detail"><%= invoice.customerAddress.line2 %></div>
       <% } %>
-      <div class="party-detail"><%= invoice.customerAddress.city %>, <%= invoice.customerAddress.state %> — <%= invoice.customerAddress.postalCode %></div>
-      <div class="party-detail"><%= invoice.customerAddress.country %></div>
-      <div class="party-detail"><strong>Phone:</strong> <%= invoice.customerPhone %></div>
+      <%
+        const cityLine = [
+          invoice.customerAddress.city,
+          invoice.customerAddress.state,
+        ].filter(Boolean).join(', ');
+        const cityLineWithPin = invoice.customerAddress.postalCode
+          ? cityLine + ' — ' + invoice.customerAddress.postalCode
+          : cityLine;
+      %>
+      <% if (cityLineWithPin) { %>
+        <div class="party-detail"><%= cityLineWithPin %></div>
+      <% } %>
+      <% if (invoice.customerAddress.country) { %>
+        <div class="party-detail"><%= invoice.customerAddress.country %></div>
+      <% } %>
+      <% if (invoice.customerGstin) { %>
+        <div class="party-detail"><strong>GSTIN:</strong> <%= invoice.customerGstin %></div>
+      <% } %>
+      <% if (invoice.customerPhone) { %>
+        <div class="party-detail"><strong>Phone:</strong> <%= invoice.customerPhone %></div>
+      <% } %>
     </div>
   </div>
 

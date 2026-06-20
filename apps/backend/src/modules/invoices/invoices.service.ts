@@ -289,6 +289,7 @@ export const generateInvoicePdf = async (
         issuedAt: invoice.issuedAt,
         customerName: invoice.customerName,
         customerPhone: invoice.customerPhone,
+        customerGstin: invoice.customerGstin,
         customerAddress: invoice.customerAddress as Record<string, string>,
         sellerName: invoice.sellerName,
         sellerAddress: invoice.sellerAddress,

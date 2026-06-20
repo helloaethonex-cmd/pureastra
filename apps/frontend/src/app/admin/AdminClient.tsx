@@ -13,6 +13,7 @@ import {
   faLock,
   faChartLine,
   faUsers,
+  faStore,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function AdminPage() {
@@ -85,6 +86,14 @@ export default function AdminPage() {
       href: "/admin/influencers",
       bg: "bg-[#EEF0F8]",
       accent: "#6C79A8",
+    },
+    {
+      icon: faStore,
+      title: "Vendors & Wholesale",
+      desc: "Manage retailers, create wholesale orders and GST filing reports",
+      href: "/admin/vendors",
+      bg: "bg-[#E8F0EC]",
+      accent: "#5B8D7C",
     },
   ];
 

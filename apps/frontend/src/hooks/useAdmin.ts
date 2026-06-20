@@ -33,6 +33,15 @@ import {
   createManualInvoice,
   updateManualInvoice,
   type CreateManualInvoicePayload,
+  listVendors,
+  createVendor,
+  updateVendor,
+  createWholesaleInvoice,
+  listWholesaleInvoices,
+  regenerateWholesaleInvoicePdf,
+  getWholesaleReport,
+  type VendorPayload,
+  type CreateWholesaleInvoicePayload,
 } from "@/services/api";
 
 // ─── Admin check ──────────────────────────────────────────────────────────────
@@ -320,6 +329,74 @@ export function useUpdateManualInvoice() {
     mutationFn: ({ id, body }: { id: string; body: CreateManualInvoicePayload }) =>
       updateManualInvoice(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["manualInvoices"] }),
+  });
+}
+
+// ─── Vendors (Wholesale) ───────────────────────────────────────────────────
+
+export function useVendors(params?: {
+  page?: number;
+  limit?: number;
+  status?: "ACTIVE" | "INACTIVE";
+}) {
+  return useQuery({
+    queryKey: ["vendors", params],
+    queryFn: () => listVendors(params),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useCreateVendor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: VendorPayload) => createVendor(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vendors"] }),
+  });
+}
+
+export function useUpdateVendor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: VendorPayload }) => updateVendor(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vendors"] }),
+  });
+}
+
+export function useCreateWholesaleInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ vendorId, body }: { vendorId: string; body: CreateWholesaleInvoicePayload }) =>
+      createWholesaleInvoice(vendorId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wholesaleInvoices"] }),
+  });
+}
+
+export function useWholesaleInvoices(params?: {
+  page?: number;
+  limit?: number;
+  vendorId?: string;
+}) {
+  return useQuery({
+    queryKey: ["wholesaleInvoices", params],
+    queryFn: () => listWholesaleInvoices(params),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useRegenerateWholesaleInvoicePdf() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invoiceId: string) => regenerateWholesaleInvoicePdf(invoiceId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wholesaleInvoices"] }),
+  });
+}
+
+export function useWholesaleReport(params: { from: string; to: string }, enabled = true) {
+  return useQuery({
+    queryKey: ["wholesaleReport", params],
+    queryFn: () => getWholesaleReport(params),
+    enabled: enabled && Boolean(params.from && params.to),
+    staleTime: 1000 * 30,
   });
 }
 

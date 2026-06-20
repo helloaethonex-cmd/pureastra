@@ -1411,6 +1411,174 @@ export const updateManualInvoice = (id: string, body: CreateManualInvoicePayload
     body: JSON.stringify(body),
   });
 
+// ─── Vendors (Wholesale) ────────────────────────────────────────────────────
+
+export interface Vendor {
+  id: string;
+  storeName: string;
+  contactName: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  gstin: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string;
+  postalCode: string | null;
+  country: string;
+  status: "ACTIVE" | "INACTIVE";
+  createdAt: string;
+}
+
+export interface VendorListResponse {
+  rows: Vendor[];
+  pagination: { page: number; limit: number; totalRows: number; totalPages: number };
+}
+
+export interface VendorPayload {
+  storeName: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  gstin?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state: string;
+  postalCode?: string;
+  country: string;
+  status?: "ACTIVE" | "INACTIVE";
+}
+
+export interface WholesaleInvoice {
+  id: string;
+  invoiceNumber: string;
+  issuedAt: string;
+  vendorId: string | null;
+  vendorName: string;
+  vendorState: string;
+  gstin: string | null;
+  taxableValue: string;
+  taxAmount: string;
+  totalAmount: string;
+  cgst: string | null;
+  sgst: string | null;
+  igst: string | null;
+  isInterstate: boolean;
+  pdfUrl: string | null;
+  pdfStatus: number;
+  items: { productName: string; quantity: number; totalPrice: string; gstRate: string }[];
+}
+
+export interface WholesaleInvoiceListResponse {
+  rows: WholesaleInvoice[];
+  pagination: { page: number; limit: number; totalRows: number; totalPages: number };
+}
+
+export interface CreateWholesaleInvoicePayload {
+  invoiceDate: string;
+  items: { productName: string; quantity: number; unitPrice: number; gstRate: number }[];
+}
+
+export interface WholesaleReportRow {
+  invoiceNumber: string;
+  issuedAt: string;
+  vendorName: string;
+  vendorState: string;
+  gstin: string;
+  taxableValue: string;
+  cgst: string;
+  sgst: string;
+  igst: string;
+  totalAmount: string;
+}
+
+export interface WholesaleReportResponse {
+  from: string;
+  to: string;
+  rows: WholesaleReportRow[];
+  totals: {
+    invoices: number;
+    taxableValue: string;
+    cgst: string;
+    sgst: string;
+    igst: string;
+    totalSales: string;
+  };
+}
+
+export const listVendors = (params?: {
+  page?: number;
+  limit?: number;
+  status?: "ACTIVE" | "INACTIVE";
+}) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.status) q.set("status", params.status);
+  const suffix = q.toString();
+  return apiFetch<VendorListResponse>(`/admin/vendors${suffix ? `?${suffix}` : ""}`);
+};
+
+export const createVendor = (body: VendorPayload) =>
+  apiFetch<Vendor>("/admin/vendors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+export const updateVendor = (id: string, body: VendorPayload) =>
+  apiFetch<Vendor>(`/admin/vendors/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+export const createWholesaleInvoice = (vendorId: string, body: CreateWholesaleInvoicePayload) =>
+  apiFetch<{ id: string; invoiceNumber: string }>(`/admin/vendors/${vendorId}/invoices`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+export const listWholesaleInvoices = (params?: {
+  page?: number;
+  limit?: number;
+  vendorId?: string;
+}) => {
+  const q = new URLSearchParams();
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.vendorId) q.set("vendorId", params.vendorId);
+  const suffix = q.toString();
+  return apiFetch<WholesaleInvoiceListResponse>(
+    `/admin/vendors/invoices${suffix ? `?${suffix}` : ""}`,
+  );
+};
+
+export const regenerateWholesaleInvoicePdf = (invoiceId: string) =>
+  apiFetch<{ message: string; invoiceNumber: string }>(
+    `/admin/vendors/invoices/${invoiceId}/regenerate-pdf`,
+    { method: "POST" },
+  );
+
+export const getWholesaleReport = (params: { from: string; to: string }) => {
+  const q = new URLSearchParams({ from: params.from, to: params.to });
+  return apiFetch<WholesaleReportResponse>(`/admin/vendors/report?${q.toString()}`);
+};
+
+export const downloadWholesaleReportCsv = async (params: { from: string; to: string }) => {
+  const q = new URLSearchParams({ from: params.from, to: params.to });
+  const res = await fetch(`${BASE}/admin/vendors/report/export?${q.toString()}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error ?? `API error ${res.status}`);
+  }
+  return res.blob();
+};
+
 // ─── Admin Influencers ──────────────────────────────────────────────────────
 
 export const listAdminInfluencers = (params?: {

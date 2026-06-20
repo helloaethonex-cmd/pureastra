@@ -131,9 +131,17 @@ function ManualInvoiceForm({
   const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
   const [customerPhone, setCustomerPhone] = useState(initial?.customerPhone ?? "");
   const [customerState, setCustomerState] = useState(initial?.customerState ?? "");
-  const [isInterstate, setIsInterstate] = useState(
-    initial ? !!initial.igst && Number(initial.igst) > 0 : false,
-  );
+
+  const isKerala = customerState.trim().toLowerCase() === "kerala";
+  // Derived — no manual override allowed
+  const isInterstate = customerState.trim() !== "" && !isKerala;
+  const stateTypeLabel =
+    customerState.trim() === ""
+      ? null
+      : isKerala
+        ? "Intrastate — CGST + SGST (Kerala)"
+        : "Interstate — IGST (outside Kerala)";
+
   const [items, setItems] = useState<LineItem[]>(
     initial?.items.length
       ? initial.items.map((i) => ({
@@ -204,38 +212,15 @@ function ManualInvoiceForm({
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           {/* Invoice date */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-[#6f665b] mb-1">Invoice Date</label>
-              <input
-                type="date"
-                required
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-[#6f665b] mb-1">Transaction Type</label>
-              <div className="flex gap-3 mt-2">
-                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={!isInterstate}
-                    onChange={() => setIsInterstate(false)}
-                  />
-                  Intrastate (CGST+SGST)
-                </label>
-                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={isInterstate}
-                    onChange={() => setIsInterstate(true)}
-                  />
-                  Interstate (IGST)
-                </label>
-              </div>
-            </div>
+          <div>
+            <label className="block text-xs text-[#6f665b] mb-1">Invoice Date</label>
+            <input
+              type="date"
+              required
+              value={invoiceDate}
+              onChange={(e) => setInvoiceDate(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
           </div>
 
           {/* Customer */}
@@ -271,8 +256,19 @@ function ManualInvoiceForm({
               placeholder="e.g. Kerala"
               value={customerState}
               onChange={(e) => setCustomerState(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              className={`w-full border rounded-lg px-3 py-2 text-sm ${
+                customerState.trim() !== "" ? "border-gray-200" : "border-gray-200"
+              }`}
             />
+            {stateTypeLabel && (
+              <p className={`mt-1.5 text-xs font-medium inline-flex items-center gap-1.5 px-2 py-1 rounded-full ${
+                isKerala
+                  ? "bg-green-50 text-green-700"
+                  : "bg-blue-50 text-blue-700"
+              }`}>
+                {stateTypeLabel}
+              </p>
+            )}
           </div>
 
           {/* Line items */}

@@ -21,6 +21,7 @@ import {
   invoiceAdminRouter,
 } from "./modules/invoices/invoices.route";
 import reportsAdminRoute from "./modules/reports/reports.route";
+import vendorsAdminRoute from "./modules/vendors/vendors.admin.route";
 import { shippingAdminRouter } from "./modules/shipping/shipping.route";
 import { env } from "./config/env";
 
@@ -77,6 +78,7 @@ router.use("/admin/orders", shippingAdminRouter);
 router.use("/admin/reviews", reviewsAdminRoute);
 router.use("/admin/influencers", influencersAdminRoute);
 router.use("/admin/reports", reportsAdminRoute);
+router.use("/admin/vendors", vendorsAdminRoute);
 
 // Influencer public routes
 router.use("/influencers", influencersRoute);

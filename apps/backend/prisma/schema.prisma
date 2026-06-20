@@ -825,6 +825,42 @@ enum InvoiceStatus {
 enum InvoiceSource {
   PLATFORM
   MANUAL
+  WHOLESALE
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Vendor {
+  id BigInt @id @default(autoincrement())
+
+  storeName    String @map("store_name") @db.VarChar(200)
+  contactName  String? @map("contact_name") @db.VarChar(200)
+  contactPhone String? @map("contact_phone") @db.VarChar(20)
+  contactEmail String? @map("contact_email") @db.VarChar(255)
+
+  gstin String? @db.VarChar(20)
+
+  // Address snapshot fields
+  addressLine1 String? @map("address_line1") @db.VarChar(255)
+  addressLine2 String? @map("address_line2") @db.VarChar(255)
+  city         String? @db.VarChar(120)
+  state        String  @db.VarChar(120)
+  postalCode   String? @map("postal_code") @db.VarChar(20)
+  country      String  @default("India") @db.VarChar(120)
+
+  status VendorStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  invoices Invoice[]
+
+  @@index([status])
+  @@index([storeName])
+  @@map("vendors")
 }
 
 model InvoiceNumberSequence {
@@ -842,6 +878,7 @@ model Invoice {
   id BigInt @id @default(autoincrement())
 
   orderId       BigInt?        @unique @map("order_id")
+  vendorId      BigInt?        @map("vendor_id")
   invoiceNumber String        @unique @map("invoice_number") @db.VarChar(30)
   status        InvoiceStatus @default(ACTIVE)
   source        InvoiceSource @default(PLATFORM)
@@ -850,6 +887,7 @@ model Invoice {
   // Customer snapshot (frozen at invoice time)
   customerName    String  @map("customer_name") @db.VarChar(200)
   customerPhone   String? @map("customer_phone") @db.VarChar(20)
+  customerGstin   String? @map("customer_gstin") @db.VarChar(20)
   customerAddress Json    @map("customer_address")
 
   // Seller snapshot (from env at time of generation)
@@ -878,10 +916,13 @@ model Invoice {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  order Order?         @relation(fields: [orderId], references: [id])
-  items InvoiceItem[]
+  order  Order?        @relation(fields: [orderId], references: [id])
+  vendor Vendor?       @relation(fields: [vendorId], references: [id])
+  items  InvoiceItem[]
 
   @@index([orderId])
+  @@index([vendorId])
+  @@index([source])
   @@index([createdAt])
   @@index([issuedAt])
   @@map("invoices")
