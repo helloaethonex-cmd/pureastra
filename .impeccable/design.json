@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-22T15:02:00Z",
+  "title": "Design System: PureAstra",
+  "extensions": {
+    "colorMeta": {
+      "deep-ember":     { "role": "primary",   "displayName": "Deep Ember",     "canonical": "#5E2B15", "tonalRamp": ["#1a0b06","#2e1409","#42200e","#562b12","#6a3616","#8a5239","#ab7159","#cc9b82","#e8c9b8","#f7ece5"] },
+      "forest-sage":    { "role": "secondary",  "displayName": "Forest Sage",    "canonical": "#819744", "tonalRamp": ["#1f2510","#303a1a","#425025","#536530","#657a3b","#819744","#9aaf61","#b3c882","#ccdda8","#e7f1d0"] },
+      "warm-copper":    { "role": "tertiary",   "displayName": "Warm Copper",    "canonical": "#8B543E", "tonalRamp": ["#22120b","#3a2015","#52301f","#6a4029","#825033","#8b543e","#a5725b","#bf9380","#d9b8aa","#f0ddd6"] },
+      "dark-olive":     { "role": "secondary",  "displayName": "Dark Olive",     "canonical": "#6F8438", "tonalRamp": ["#1b210e","#2c3617","#3d4b20","#4e602a","#5f7533","#6f8438","#899e55","#a5ba76","#c1d39c","#dcebbb"] },
+      "cream-bg":       { "role": "neutral",    "displayName": "Cream Background","canonical": "#FFFAED","tonalRamp": ["#3d3a31","#5e5948","#7f7a61","#9e9a7c","#bdb99a","#d8d3b8","#e8e4d0","#f2ede0","#f9f6ee","#fffaed"] },
+      "taupe-surface":  { "role": "neutral",    "displayName": "Taupe Surface",  "canonical": "#E9E2D8", "tonalRamp": ["#2e2b27","#4a4641","#68625b","#867e76","#a29a92","#bdb6af","#cec8c2","#ddd8d3","#ece9e4","#f7f5f2"] },
+      "warm-cream":     { "role": "neutral",    "displayName": "Warm Cream",     "canonical": "#FAF3E2", "tonalRamp": ["#3a3729","#5b5640","#7c7758","#9c9671","#bab28d","#d4ceac","#e2ddc2","#ece9d4","#f4f1e5","#faf3e2"] },
+      "sand-border":    { "role": "neutral",    "displayName": "Sand Border",    "canonical": "#E6D5C3", "tonalRamp": ["#2e2721","#4a4036","#68594c","#867264","#a48d7c","#c3aa97","#d0bcac","#ddd0c3","#ebe2d9","#f5efe9"] },
+      "ink":            { "role": "neutral",    "displayName": "Ink",            "canonical": "#171717", "tonalRamp": ["#000000","#0a0a0a","#111111","#171717","#282828","#3d3d3d","#555555","#7a7a7a","#a8a8a8","#d4d4d4"] },
+      "ink-secondary":  { "role": "neutral",    "displayName": "Ink Secondary",  "canonical": "#333333", "tonalRamp": ["#0a0a0a","#171717","#222222","#2e2e2e","#3d3d3d","#4f4f4f","#666666","#888888","#b0b0b0","#d9d9d9"] },
+      "ink-muted":      { "role": "neutral",    "displayName": "Ink Muted",      "canonical": "#555555", "tonalRamp": ["#111111","#222222","#333333","#444444","#555555","#6b6b6b","#878787","#a3a3a3","#c4c4c4","#e2e2e2"] }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",  "purpose": "Hero headlines and primary section anchors. DM Serif Display at its most authoritative." },
+      "headline": { "displayName": "Headline", "purpose": "Section headings that carry brand philosophy — About, Promise, Routine. Amaranth italic is the brand's voice." },
+      "title":    { "displayName": "Title",    "purpose": "Product names in cards and product detail pages. Roboto Serif reinforces craft." },
+      "body":     { "displayName": "Body",     "purpose": "All prose. Max 65–75ch line length." },
+      "label":    { "displayName": "Label",    "purpose": "Navigation items, button labels, form labels, tags. Poppins 500 only." }
+    },
+    "shadows": [
+      { "name": "dropdown",    "value": "0 4px 24px rgba(0,0,0,0.10)", "purpose": "Dropdown menus and popover panels. Diffuse ambient lift." },
+      { "name": "fab",         "value": "0 4px 16px rgba(0,0,0,0.20)", "purpose": "WhatsApp FAB and primary floating action buttons." },
+      { "name": "icon-hover",  "value": "0 2px  8px rgba(0,0,0,0.12)", "purpose": "Icon button hover state — minimal tactile feedback." },
+      { "name": "mobile-menu-active", "value": "0 4px 12px rgba(0,0,0,0.20)", "purpose": "Active item in mobile nav drawer." }
+    ],
+    "motion": [
+      { "name": "ease-standard",    "value": "ease-in-out",                   "purpose": "Default state transitions (color, scale, transform)." },
+      { "name": "ease-reveal",      "value": "ease-in-out",                   "purpose": "Product card hover overlay rise and tag stagger." },
+      { "name": "ease-nav-underline","value": "ease-in-out",                  "purpose": "Nav underline slide-in from left." },
+      { "name": "duration-fast",    "value": "150ms",                         "purpose": "Instant feedback: badge, icon scale." },
+      { "name": "duration-default", "value": "300ms",                         "purpose": "Color shifts, underline, button hover." },
+      { "name": "duration-reveal",  "value": "400ms",                         "purpose": "Product card overlay height and tag entrance." },
+      { "name": "tag-stagger",      "value": "150ms per item",                "purpose": "Staggered card hover tag entrances: delay = index × 150ms." }
+    ],
+    "breakpoints": [
+      { "name": "sm",  "value": "640px"  },
+      { "name": "md",  "value": "768px"  },
+      { "name": "lg",  "value": "1024px" },
+      { "name": "xl",  "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary CTA Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main conversion action. Terracotta block with 4px radius — weight, not softness.",
+      "html": "<button class=\"ds-btn-primary\">Explore Collection</button>",
+      "css": ".ds-btn-primary { background: #5E2B15; color: #ffffff; padding: 12px 24px; border-radius: 4px; border: none; font-family: Poppins, sans-serif; font-size: 0.9375rem; font-weight: 500; cursor: pointer; transition: background 300ms ease-in-out, transform 300ms ease-in-out; } .ds-btn-primary:hover { background: #819744; transform: translateY(-2px); } .ds-btn-primary:focus-visible { outline: 2px solid #819744; outline-offset: 3px; } .ds-btn-primary:active { transform: translateY(0); }"
+    },
+    {
+      "name": "Cart Button",
+      "kind": "button",
+      "refersTo": "button-cart",
+      "description": "Circular icon button for cart. Forest Sage fill — the secondary anchor in icon form.",
+      "html": "<button class=\"ds-btn-cart\" title=\"View cart\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 576 512\" fill=\"currentColor\"><path d=\"M0 24C0 10.7 10.7 0 24 0H69.5c22 0 41.5 12.8 50.6 32h411c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3H170.7l5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5H488c13.3 0 24 10.7 24 24s-10.7 24-24 24H199.7c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5H24C10.7 48 0 37.3 0 24zm128 368a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z\"/></svg></button>",
+      "css": ".ds-btn-cart { background: #819744; color: #ffffff; width: 40px; height: 40px; border-radius: 9999px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 300ms ease-in-out; position: relative; } .ds-btn-cart:hover { background: #6F8438; } .ds-btn-cart:focus-visible { outline: 2px solid #5E2B15; outline-offset: 3px; }"
+    },
+    {
+      "name": "Icon Button (Wishlist / User)",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Ghost circular icon button for secondary nav actions. Sand border at rest; warm fill on hover.",
+      "html": "<button class=\"ds-btn-icon\" title=\"Wishlist\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" viewBox=\"0 0 512 512\" fill=\"currentColor\"><path d=\"M225.8 468.2l-2.5-2.3L48.1 303.2C17.4 274.7 0 234.7 0 192.8l0-3.3c0-70.4 50-130.8 119.2-144C158.6 37.9 198.9 47 231 69.6c9 6.4 17.4 13.8 25 22.3c4.2-4.8 8.7-9.2 13.5-13.3c3.7-3.2 7.5-6.2 11.5-9c0 0 0 0 0 0C313.1 47 353.4 37.9 392.8 45.4C462 58.6 512 119.1 512 189.5l0 3.3c0 41.9-17.4 81.9-48.1 110.4L288.7 465.9l-2.5 2.3c-8.2 7.6-19 11.9-30.2 11.9s-22-4.2-30.2-11.9z\"/></svg></button>",
+      "css": ".ds-btn-icon { background: transparent; color: #8B543E; width: 40px; height: 40px; border-radius: 9999px; border: 1px solid #E6D5C3; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 300ms ease-in-out, transform 300ms ease-in-out, box-shadow 300ms ease-in-out; } .ds-btn-icon:hover { background: #F5EFE9; transform: scale(1.05); box-shadow: 0 2px 8px rgba(0,0,0,0.12); } .ds-btn-icon:focus-visible { outline: 2px solid #819744; outline-offset: 3px; }"
+    },
+    {
+      "name": "Desktop Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Text navigation link with sliding underline on hover. Deep Ember at rest, Forest Sage on hover.",
+      "html": "<a class=\"ds-nav-link\" href=\"#\"><span class=\"ds-nav-link__text\">Face Care</span></a>",
+      "css": ".ds-nav-link { display: inline-flex; align-items: center; gap: 8px; color: #5E2B15; font-family: Poppins, sans-serif; font-size: 1.125rem; font-weight: 500; text-decoration: none; transition: color 300ms ease-in-out, transform 300ms ease-in-out; } .ds-nav-link:hover { color: #819744; transform: translateY(-2px); } .ds-nav-link__text { position: relative; } .ds-nav-link__text::after { content: ''; position: absolute; left: 0; bottom: -4px; width: 0; height: 2px; background: #819744; transition: width 300ms ease-in-out; } .ds-nav-link:hover .ds-nav-link__text::after { width: 100%; }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "description": "Image-forward card with glassmorphic hover reveal. The system's signature component.",
+      "html": "<div class=\"ds-product-card\"><div class=\"ds-product-card__img-wrap\"><img src=\"/img/facewash.webp\" alt=\"Product\" class=\"ds-product-card__img\" /></div><div class=\"ds-product-card__bar\"><span class=\"ds-product-card__name\">Nourishing Face Wash</span><span class=\"ds-product-card__price\">₹299.00</span></div><div class=\"ds-product-card__reveal\"><h4 class=\"ds-product-card__reveal-name\">Nourishing Face Wash</h4><span class=\"ds-product-card__tag\">Made Safe Certified</span><span class=\"ds-product-card__tag\">Dermatologically Tested</span></div></div>",
+      "css": ".ds-product-card { position: relative; border-radius: 25px; overflow: hidden; background: #D9D9D9; aspect-ratio: 3/4; cursor: pointer; } .ds-product-card__img-wrap { position: absolute; inset: 0; } .ds-product-card__img { width: 100%; height: 100%; object-fit: cover; } .ds-product-card__bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 18px; background: rgba(0,0,0,0.15); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-top: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: flex-end; color: #fff; transition: opacity 300ms ease-in-out; } .ds-product-card__name { font-family: 'Roboto Serif', Georgia, serif; font-size: 1.125rem; font-weight: 600; } .ds-product-card__price { font-family: Poppins, sans-serif; font-size: 0.875rem; } .ds-product-card__reveal { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 30px; background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.20)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: #D9D9D9; opacity: 0; transition: opacity 400ms ease-in-out; } .ds-product-card:hover .ds-product-card__bar { opacity: 0; } .ds-product-card:hover .ds-product-card__reveal { opacity: 1; } .ds-product-card__reveal-name { font-family: Poppins, sans-serif; font-size: 1.625rem; font-weight: 600; color: #fff; margin-bottom: 18px; } .ds-product-card__tag { display: inline-block; background: rgba(255,255,255,0.25); border-radius: 20px; padding: 8px 16px; font-size: 0.875rem; margin-bottom: 12px; width: fit-content; } @media (prefers-reduced-motion: reduce) { .ds-product-card__reveal, .ds-product-card__bar { transition: none; } }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "description": "Underline-only search field. Poppins body, no border chrome — the input is the line.",
+      "html": "<div class=\"ds-search\"><input class=\"ds-search__input\" type=\"text\" placeholder=\"Search...\" /><svg class=\"ds-search__icon\" xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 512 512\" fill=\"currentColor\"><path d=\"M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z\"/></svg></div>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 8px; } .ds-search__input { border: none; border-bottom: 2px solid #171717; background: transparent; outline: none; font-family: Poppins, sans-serif; font-size: 0.875rem; padding: 4px 0; width: 220px; color: #171717; transition: border-color 300ms ease-in-out; } .ds-search__input::placeholder { color: #555; } .ds-search__input:focus { border-bottom-color: #5E2B15; } .ds-search__icon { color: #171717; flex-shrink: 0; }"
+    },
+    {
+      "name": "Hover Attribute Tag",
+      "kind": "chip",
+      "description": "Glassmorphic attribute pill inside product card hover reveal. Staggered entrance.",
+      "html": "<span class=\"ds-attr-tag\">Made Safe Certified</span>",
+      "css": ".ds-attr-tag { display: inline-block; background: rgba(255,255,255,0.25); border-radius: 20px; padding: 8px 16px; font-family: Poppins, sans-serif; font-size: 0.875rem; color: #D9D9D9; width: fit-content; }"
+    },
+    {
+      "name": "Mobile Nav Item",
+      "kind": "nav",
+      "description": "Full-width pill nav item in the mobile glassmorphic drawer.",
+      "html": "<a class=\"ds-mobile-nav-item ds-mobile-nav-item--active\" href=\"#\">Home</a>",
+      "css": ".ds-mobile-nav-item { display: flex; align-items: center; justify-content: center; height: 56px; width: 100%; max-width: 320px; border-radius: 9999px; font-family: Poppins, sans-serif; font-size: 0.9375rem; font-weight: 500; text-decoration: none; transition: background 300ms ease-in-out; } .ds-mobile-nav-item { background: rgba(255,255,255,0.20); color: #5E2B15; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); } .ds-mobile-nav-item--active { background: #5E2B15; color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.20); } .ds-mobile-nav-item:hover:not(.ds-mobile-nav-item--active) { background: rgba(255,255,255,0.45); }"
+    },
+    {
+      "name": "Footer",
+      "kind": "custom",
+      "description": "Warm Copper enclosure. The brand's closing note — grounded, social, contact-forward.",
+      "html": "<footer class=\"ds-footer\"><div class=\"ds-footer__inner\"><h2 class=\"ds-footer__brand\">Pureastra</h2><p class=\"ds-footer__tagline\">Gentle, effective skincare inspired by nature and backed by care.</p></div></footer>",
+      "css": ".ds-footer { background: #8B543E; color: #ffffff; padding: 40px 20px; font-family: Poppins, sans-serif; } .ds-footer__inner { max-width: 1200px; margin: 0 auto; } .ds-footer__brand { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; } .ds-footer__tagline { font-size: 0.875rem; line-height: 1.6; color: rgba(255,255,255,0.85); max-width: 360px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Botanist's Shelf",
+    "overview": "The PureAstra visual system is organized like a curated botanist's shelf: everything in its place, every ingredient with a purpose, nothing decorative. Warmth comes from materials, not embellishment. The palette anchors in terracotta and olive — colors that are botanical without being rustic, warm without being nostalgic, earthy without being generic.\n\nDepth is achieved through transparency: glassmorphic layers of backdrop-blur and semitransparent backgrounds reveal surfaces in layers, the way light filters through a greenhouse. This is the system's signature treatment, appearing on product cards, the mobile drawer, and hover overlays. Drop shadows are used sparingly and only for floating UI.\n\nThe system explicitly rejects four failure modes: the loud D2C brand (urgency mechanics, cluttered discount grids); the cold luxury brand (intimidating distance); the generic Ayurvedic aesthetic (rustic earthy-brown overload, temple imagery); and corporate wellness sterility (soul-free whitespace, generic sans-serif uniformity).",
+    "keyCharacteristics": [
+      "Two botanical anchors: Deep Ember terracotta + Forest Sage olive. One leads per screen.",
+      "Glassmorphic surface treatment for depth — backdrop-blur + semitransparency, not drop shadows.",
+      "Four-font system with clear role assignments: display, brand voice, product names, UI utility.",
+      "Tactile and assured components: buttons have weight, states give immediate feedback.",
+      "Flat surfaces at rest. Transparency + blur = depth in motion."
+    ],
+    "rules": [
+      { "name": "The Two-Anchor Rule", "body": "Each screen is anchored in either Deep Ember or Forest Sage. The other appears as an accent at ≤30% of the surface. A screen that splits them 50/50 has no voice.", "section": "colors" },
+      { "name": "The Warmth Carrier Rule", "body": "Brand warmth is expressed by Deep Ember and Warm Copper, not by the Cream Background. Do not reach for a warm tinted neutral as a shortcut to make a screen feel botanical.", "section": "colors" },
+      { "name": "The Voice Rule", "body": "Amaranth italic is the brand's written voice. It appears in philosophy, narrative, and founder copy — not in UI labels, navigation, or form elements. Poppins is the utility voice. They should not compete.", "section": "typography" },
+      { "name": "The Display Ceiling", "body": "Display headings are capped at 3.5rem (56px). Above that, the page shouts rather than invites. PureAstra does not shout.", "section": "typography" },
+      { "name": "The Botanical Glass Rule", "body": "Depth on interactive surfaces comes from transparency and blur, not drop shadows. Hover reveals and mobile overlays use backdrop-blur-md + semitransparent backgrounds. Do not add box-shadow to these elements.", "section": "elevation" },
+      { "name": "The Shadow Ceiling Rule", "body": "Drop shadows max out at 0 4px 24px. Nothing uses a box-shadow blur radius above 24px at rest.", "section": "elevation" }
+    ],
+    "dos": [
+      "Use Deep Ember (#5E2B15) as the default CTA color on every primary action.",
+      "Use backdrop-blur + semitransparent backgrounds for depth on interactive surfaces.",
+      "Use Amaranth italic for brand-voice copy and Poppins for all UI labels and navigation.",
+      "Verify Ink Muted (#555555) achieves 4.5:1 contrast against its background before use.",
+      "Keep product card hover reveals as the primary product detail mechanism.",
+      "Apply text-wrap: balance to Display and Headline text.",
+      "Include prefers-reduced-motion alternatives for all animations.",
+      "Cap body prose at 65–75ch line length."
+    ],
+    "donts": [
+      "Don't use urgency banners, neon sale badges, or cluttered bestseller labels.",
+      "Don't use cold luxury styling: excessive whitespace that creates distance.",
+      "Don't use the generic Ayurvedic aesthetic: rustic textures, temple imagery, ancient wisdom framing.",
+      "Don't add a fifth font family to the system.",
+      "Don't pair a border stroke with a large box-shadow (blur ≥16px) on the same element.",
+      "Don't use border-radius above 25px on cards or sections.",
+      "Don't put box-shadow on product cards — the glassmorphic hover is the depth system.",
+      "Don't use the Cream Background (#FFFAED) as a shortcut for warmth.",
+      "Don't use gradient text (background-clip: text + gradient).",
+      "Don't use a side-stripe border (border-left or border-right >1px) as a card or callout accent."
+    ]
+  }
+}
