@@ -320,6 +320,21 @@ const releaseExpiredReservationsInTx = async (
 
   await decrementVariantStockReservedSafeBulk(tx, decrementByVariant);
 
+  // Cancel any PLACED orders whose reservations all expired in this batch.
+  // Uses `none` filter so orders with still-active reservations (multi-item,
+  // staggered TTLs) are left alone until their remaining reservations expire.
+  const uniqueOrderIds = [
+    ...new Set(reservations.map((r) => r.orderId).filter((id): id is bigint => id !== null)),
+  ];
+  await tx.order.updateMany({
+    where: {
+      id: { in: uniqueOrderIds },
+      orderStatus: ORDER_STATUS.PLACED,
+      inventoryReservations: { none: { status: INVENTORY_RESERVATION_STATUS.ACTIVE } },
+    },
+    data: { orderStatus: ORDER_STATUS.CANCELLED },
+  });
+
   return expiredRows.length;
 };
 

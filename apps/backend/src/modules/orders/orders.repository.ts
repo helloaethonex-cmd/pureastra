@@ -244,6 +244,7 @@ export const findExpiredReservationsBatch = (
     take: batchSize,
     select: {
       id: true,
+      orderId: true,
       productVariantId: true,
       quantity: true,
     },
