@@ -305,6 +305,19 @@ export const adminRecordPayout = async (
     const influencerIdBigInt = BigInt(influencerId);
     const payoutAmount = new Prisma.Decimal(input.amount.toFixed(2));
 
+    // Prevent two concurrent INITIATED payouts for the same influencer.
+    const pendingPayout = await tx.influencerPayout.findFirst({
+      where: { influencerId: influencerIdBigInt, status: "INITIATED" },
+      select: { id: true },
+    });
+    if (pendingPayout) {
+      throw new AppError(
+        409,
+        "An initiated payout already exists for this influencer",
+        "PAYOUT_ALREADY_INITIATED",
+      );
+    }
+
     const [approvedSales, completedPayouts] = await Promise.all([
       tx.influencerSale.aggregate({
         where: {
@@ -408,14 +421,16 @@ export const adminUpdatePayoutStatus = async (
     });
 
     if (input.status === "COMPLETED") {
+      // Only mark sales that were already APPROVED when this payout was created.
+      // Sales approved after payout initiation are not covered by this payout amount
+      // and must be included in the next payout cycle.
       await tx.influencerSale.updateMany({
         where: {
           influencerId: payout.influencerId,
           status: "APPROVED",
+          createdAt: { lte: payout.createdAt },
         },
-        data: {
-          status: "PAID",
-        },
+        data: { status: "PAID" },
       });
     }
 
