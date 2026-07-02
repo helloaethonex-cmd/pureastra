@@ -39,6 +39,10 @@ import {
   BuyNowPreviewInput,
 } from "./checkout.types";
 
+// Read-only TXs don't need Serializable — ReadCommitted (default) is sufficient
+// and avoids the serialization overhead and retry amplification it causes.
+const READ_TX_OPTIONS = {};
+
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   maxWait: 5000,
@@ -743,7 +747,7 @@ export const previewCheckoutFromCart = async (
       },
       buildPreparedLineItems(cart.items),
     );
-  }, TX_OPTIONS);
+  }, READ_TX_OPTIONS);
 };
 
 export const previewCheckoutBuyNow = async (
@@ -796,7 +800,7 @@ export const previewCheckoutBuyNow = async (
       },
       [buildBuyNowPreparedLineItem(variant, input.quantity)],
     );
-  }, TX_OPTIONS);
+  }, READ_TX_OPTIONS);
 };
 
 const confirmCheckoutByFlow = async (
@@ -896,7 +900,7 @@ const confirmCheckoutByFlow = async (
         referralCode: consumedPreview.request.referralCode ?? undefined,
       };
       return buildBuyNowHashSource(requestInput, variant);
-    }, TX_OPTIONS);
+    }, READ_TX_OPTIONS);
 
     const recomputedHash = hashPayload(hashPayloadSource);
     if (recomputedHash !== consumedPreview.payloadHash) {
