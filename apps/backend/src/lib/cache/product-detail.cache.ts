@@ -1,86 +1,39 @@
 import { logger } from "../logger";
+import { redisClient } from "../redis/client";
 
 const PRODUCT_CACHE_PREFIX = "product-detail";
-const PRODUCT_CACHE_TTL_SECONDS = 300;
-const PRODUCT_CACHE_MAX_ENTRIES = 1000;
 
-type CacheEntry = {
-  value: string;
-  expiresAt: number;
-};
+export const PRODUCT_DETAIL_CACHE_TTL_SECONDS = 300;
 
-const cacheStore = new Map<string, CacheEntry>();
-
-const safeJsonStringify = (value: unknown) => {
-  return JSON.stringify(value, (_key, raw) => (typeof raw === "bigint" ? raw.toString() : raw));
-};
-
-const now = () => Date.now();
-
-const isExpired = (entry: CacheEntry) => entry.expiresAt <= now();
-
-const pruneExpiredEntries = () => {
-  for (const [key, entry] of cacheStore.entries()) {
-    if (!isExpired(entry)) continue;
-    cacheStore.delete(key);
-  }
-};
-
-const enforceMaxSize = () => {
-  while (cacheStore.size > PRODUCT_CACHE_MAX_ENTRIES) {
-    const oldestKey = cacheStore.keys().next().value as string | undefined;
-    if (!oldestKey) break;
-    cacheStore.delete(oldestKey);
-  }
-};
-
-const touchEntry = (key: string, entry: CacheEntry) => {
-  cacheStore.delete(key);
-  cacheStore.set(key, entry);
-};
+const safeJsonStringify = (value: unknown) =>
+  JSON.stringify(value, (_key, raw) => (typeof raw === "bigint" ? raw.toString() : raw));
 
 export const buildProductDetailCacheKey = (identifier: string) =>
   `${PRODUCT_CACHE_PREFIX}:${identifier}`;
 
 export const getCachedJson = async <T>(key: string): Promise<T | null> => {
   try {
-    const entry = cacheStore.get(key);
-    if (!entry) return null;
-
-    if (isExpired(entry)) {
-      cacheStore.delete(key);
-      return null;
-    }
-
-    touchEntry(key, entry);
-    return JSON.parse(entry.value) as T;
+    const raw = await redisClient.get(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
   } catch (err) {
-    logger.warn({ err, key }, "Failed to read value from in-memory cache");
+    logger.warn({ err, key }, "Failed to read value from Redis cache");
     return null;
   }
 };
 
-export const setCachedJson = async (key: string, value: unknown, ttlSeconds = PRODUCT_CACHE_TTL_SECONDS) => {
+export const setCachedJson = async (key: string, value: unknown, ttlSeconds = PRODUCT_DETAIL_CACHE_TTL_SECONDS) => {
   try {
-    const expiresAt = now() + Math.max(ttlSeconds, 1) * 1000;
-    const entry: CacheEntry = {
-      value: safeJsonStringify(value),
-      expiresAt,
-    };
-
-    touchEntry(key, entry);
-    enforceMaxSize();
+    await redisClient.set(key, safeJsonStringify(value), "EX", Math.max(ttlSeconds, 1));
   } catch (err) {
-    logger.warn({ err, key }, "Failed to write value to in-memory cache");
+    logger.warn({ err, key }, "Failed to write value to Redis cache");
   }
 };
 
 export const deleteCachedKey = async (key: string) => {
   try {
-    cacheStore.delete(key);
+    await redisClient.del(key);
   } catch (err) {
-    logger.warn({ err, key }, "Failed to delete in-memory cache key");
+    logger.warn({ err, key }, "Failed to delete Redis cache key");
   }
 };
-
-setInterval(pruneExpiredEntries, 60_000).unref();
