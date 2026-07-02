@@ -79,14 +79,8 @@ export const moveWishlistItemToCart = async (userId: string, productVariantId: b
       quantity: 1,
     });
   } catch (err) {
-    if (typeof err === "object" && err !== null && "status" in err && "message" in err) {
-      throw new AppError(
-        Number((err as { status: unknown }).status),
-        String((err as { message: unknown }).message),
-        "MOVE_TO_CART_FAILED",
-      );
-    }
-    throw err;
+    if (err instanceof AppError) throw err;
+    throw new AppError(500, "Failed to move item to cart", "MOVE_TO_CART_FAILED");
   }
 
   await deleteWishlistItemByUserAndVariant(parsedUserId, productVariantId);

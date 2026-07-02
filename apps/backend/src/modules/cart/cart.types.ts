@@ -7,11 +7,11 @@ import { z } from "zod";
 
 export const addCartItemSchema = z.object({
   productVariantId: z.coerce.bigint(),
-  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1").max(100, "Quantity cannot exceed 100"),
 });
 
 export const updateCartItemSchema = z.object({
-  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1").max(100, "Quantity cannot exceed 100"),
 });
 
 export const cartItemParamsSchema = z.object({
