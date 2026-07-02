@@ -245,50 +245,47 @@ export const adminUpdateSaleStatus = async (
   saleId: string,
   input: UpdateSaleStatusInput,
 ) => {
-  const sale = await prisma.influencerSale.findUnique({
-    where: { id: BigInt(saleId) },
-    select: { id: true, status: true, influencerId: true, commissionAmount: true },
-  });
+  // Read + guard + update inside a Serializable TX to prevent concurrent
+  // status transitions from both passing the guard (TOCTOU race).
+  return prisma.$transaction(
+    async (tx) => {
+      const sale = await tx.influencerSale.findUnique({
+        where: { id: BigInt(saleId) },
+        select: { id: true, status: true, influencerId: true, commissionAmount: true },
+      });
 
-  if (!sale) {
-    throw new AppError(404, "Influencer sale not found", "SALE_NOT_FOUND");
-  }
+      if (!sale) {
+        throw new AppError(404, "Influencer sale not found", "SALE_NOT_FOUND");
+      }
 
-  // Can only approve PENDING or cancel PENDING/APPROVED
-  const canApprove = input.status === "APPROVED" && sale.status === "PENDING";
-  const canCancel =
-    input.status === "CANCELLED" &&
-    (sale.status === "PENDING" || sale.status === "APPROVED");
+      const canApprove = input.status === "APPROVED" && sale.status === "PENDING";
+      const canCancel =
+        input.status === "CANCELLED" &&
+        (sale.status === "PENDING" || sale.status === "APPROVED");
 
-  if (!canApprove && !canCancel) {
-    throw new AppError(
-      400,
-      `Cannot transition sale from ${sale.status} to ${input.status}`,
-      "INVALID_SALE_STATUS_TRANSITION",
-    );
-  }
+      if (!canApprove && !canCancel) {
+        throw new AppError(
+          400,
+          `Cannot transition sale from ${sale.status} to ${input.status}`,
+          "INVALID_SALE_STATUS_TRANSITION",
+        );
+      }
 
-  return prisma.$transaction(async (tx) => {
-    const updated = await updateInfluencerSaleStatus(
-      tx,
-      sale.id,
-      input.status as any,
-    );
+      const updated = await updateInfluencerSaleStatus(tx, sale.id, input.status as any);
 
-    // If cancelling an active sale, decrement total_earnings
-    if (input.status === "CANCELLED") {
-      await decrementInfluencerEarningsSafe(
-        tx,
-        sale.influencerId,
-        sale.commissionAmount,
-      );
-    }
+      // Only decrement earnings if cancelling a previously APPROVED sale.
+      // PENDING sales never had their earnings incremented, so no decrement needed.
+      if (input.status === "CANCELLED" && sale.status === "APPROVED") {
+        await decrementInfluencerEarningsSafe(tx, sale.influencerId, sale.commissionAmount);
+      }
 
-    return {
-      id: updated.id.toString(),
-      status: updated.status,
-    };
-  });
+      return {
+        id: updated.id.toString(),
+        status: updated.status,
+      };
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
