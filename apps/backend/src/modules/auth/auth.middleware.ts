@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { auth } from "./better-auth";
 import { prisma } from "../../lib/prisma";
 
+const ROLE_CACHE_TTL_MS = 60_000;
+const roleCache = new Map<string, { roleName: string; expiresAt: number }>();
+
 export const requireAuth = async (
   req: Request,
   res: Response,
@@ -50,9 +53,23 @@ export const requireRole = (roleName: string) => {
       return;
     }
 
+    const cached = roleCache.get(user.id);
+    if (cached && cached.expiresAt > Date.now()) {
+      if (cached.roleName !== roleName) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      return next();
+    }
+
     const dbUser = await prisma.user.findUnique({
       where: { id: BigInt(user.id) },
       include: { role: true },
+    });
+
+    roleCache.set(user.id, {
+      roleName: dbUser?.role?.name ?? "",
+      expiresAt: Date.now() + ROLE_CACHE_TTL_MS,
     });
 
     if (dbUser?.role?.name !== roleName) {
