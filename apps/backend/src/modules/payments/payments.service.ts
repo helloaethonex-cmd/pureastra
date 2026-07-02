@@ -27,7 +27,12 @@ import {
   verifyRazorpayCheckoutSignature,
   verifyRazorpayWebhookSignature,
 } from "./gateways/razorpay.gateway";
-import { ORDER_STATUS, PAYMENT_STATUS } from "../orders/orders.types";
+import { ORDER_STATUS, PAYMENT_STATUS, INVENTORY_RESERVATION_STATUS } from "../orders/orders.types";
+import {
+  findInventoryReservationsByOrderId,
+  reReserveVariantStockConditional,
+  updateInventoryReservationStatus,
+} from "../orders/orders.repository";
 import {
   createInfluencerSale,
   incrementInfluencerEarnings,
@@ -419,6 +424,40 @@ export const confirmPaymentAttempt = async (
     });
 
     await confirmReservationsByOrder(tx, payment.orderId);
+
+    // Handle late webhooks: reservations may have expired during the TTL window.
+    // confirmReservationsByOrder only touches ACTIVE reservations, so EXPIRED ones
+    // need to be re-reserved. If stock was resold, flag for manual review.
+    const allReservations = await findInventoryReservationsByOrderId(tx, payment.orderId);
+    const expiredReservations = allReservations.filter(
+      (r) => r.status === INVENTORY_RESERVATION_STATUS.EXPIRED,
+    );
+    if (expiredReservations.length > 0) {
+      const oversoldVariantIds: bigint[] = [];
+      for (const res of expiredReservations) {
+        const reReserved = await reReserveVariantStockConditional(tx, res.productVariantId, res.quantity);
+        if (reReserved.length > 0) {
+          await updateInventoryReservationStatus(tx, res.id, INVENTORY_RESERVATION_STATUS.CONFIRMED);
+        } else {
+          oversoldVariantIds.push(res.productVariantId);
+        }
+      }
+      if (oversoldVariantIds.length > 0) {
+        logger.warn(
+          {
+            orderId: payment.orderId.toString(),
+            variantIds: oversoldVariantIds.map((id) => id.toString()),
+          },
+          "[payments] Late webhook: stock no longer available for expired reservations — manual review required",
+        );
+        await createOrderStatusHistory(tx, {
+          order: { connect: { id: payment.orderId } },
+          oldStatus: ORDER_STATUS.PLACED,
+          newStatus: ORDER_STATUS.CONFIRMED,
+          note: `Late payment: stock unavailable for ${oversoldVariantIds.length} variant(s) — manual review required`,
+        });
+      }
+    }
 
     if (payment.order.orderStatus === ORDER_STATUS.PLACED) {
       await createOrderStatusHistory(tx, {

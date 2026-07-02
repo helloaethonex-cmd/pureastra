@@ -214,6 +214,25 @@ export const updateInventoryReservationStatus = (
   });
 };
 
+// Atomically re-reserve stock for a variant only if enough is still available.
+// Returns the updated row if successful, empty array if stock is insufficient.
+export const reReserveVariantStockConditional = (
+  tx: TxClient,
+  productVariantId: bigint,
+  quantity: number,
+) =>
+  tx.$queryRaw<{ id: bigint }[]>(Prisma.sql`
+    UPDATE "product_variants"
+    SET "stock_reserved" = "stock_reserved" + ${quantity},
+        "updated_at" = NOW()
+    WHERE "id" = ${productVariantId}
+      AND (
+        "stock_quantity" IS NULL
+        OR "stock_quantity" - "stock_reserved" >= ${quantity}
+      )
+    RETURNING "id"
+  `);
+
 export const updateInventoryReservationStatusByOrder = (
   tx: TxClient,
   orderId: bigint,
