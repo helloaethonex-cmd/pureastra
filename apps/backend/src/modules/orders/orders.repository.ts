@@ -156,6 +156,7 @@ export const findOrderByOrderNumber = (tx: TxClient, orderNumber: string) => {
         },
       },
       statusHistory: true,
+      user: { select: { email: true } },
     },
   });
 };

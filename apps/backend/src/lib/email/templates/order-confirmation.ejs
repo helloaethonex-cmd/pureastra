@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmed</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:4px;overflow:hidden;max-width:600px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:#1a1a1a;padding:32px 40px;">
+              <p style="margin:0;font-size:20px;font-weight:700;letter-spacing:4px;color:#ffffff;text-transform:uppercase;">PUREASTRA</p>
+            </td>
+          </tr>
+
+          <!-- Hero -->
+          <tr>
+            <td style="padding:40px 40px 24px;">
+              <p style="margin:0 0 8px;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#999;font-weight:600;">Order Confirmed</p>
+              <h1 style="margin:0 0 16px;font-size:26px;font-weight:700;color:#1a1a1a;line-height:1.2;">Thank you, <%= customerName.split(' ')[0] %>.</h1>
+              <p style="margin:0;font-size:14px;color:#666;line-height:1.7;">We've received your order and it's being processed. You'll get a shipping notification once it's on the way.</p>
+            </td>
+          </tr>
+
+          <!-- Order Meta -->
+          <tr>
+            <td style="padding:0 40px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;border-radius:4px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aaa;font-weight:600;">Order Number</p>
+                    <p style="margin:0;font-size:16px;font-weight:700;color:#1a1a1a;"><%= orderNumber %></p>
+                  </td>
+                  <td style="padding:16px 20px;text-align:right;">
+                    <p style="margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aaa;font-weight:600;">Date</p>
+                    <p style="margin:0;font-size:13px;color:#444;"><%= placedAt %></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Items -->
+          <tr>
+            <td style="padding:0 40px 8px;">
+              <p style="margin:0 0 14px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aaa;font-weight:600;">Items Ordered</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <% items.forEach(function(item) { %>
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top;">
+                    <p style="margin:0;font-size:13px;font-weight:600;color:#1a1a1a;"><%= item.productName %></p>
+                    <% if (item.variantName) { %>
+                    <p style="margin:3px 0 0;font-size:11px;color:#888;"><%= item.variantName %></p>
+                    <% } %>
+                    <p style="margin:3px 0 0;font-size:11px;color:#aaa;">Qty: <%= item.quantity %></p>
+                  </td>
+                  <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;text-align:right;vertical-align:top;white-space:nowrap;">
+                    <p style="margin:0;font-size:13px;color:#1a1a1a;font-variant-numeric:tabular-nums;">₹ <%= parseFloat(item.lineTotal).toFixed(2) %></p>
+                  </td>
+                </tr>
+                <% }); %>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Totals -->
+          <tr>
+            <td style="padding:16px 40px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:4px 0;font-size:12px;color:#888;">Subtotal</td>
+                  <td style="padding:4px 0;font-size:12px;color:#888;text-align:right;font-variant-numeric:tabular-nums;">₹ <%= parseFloat(productTotal).toFixed(2) %></td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;font-size:12px;color:#888;">Shipping</td>
+                  <td style="padding:4px 0;font-size:12px;color:#888;text-align:right;font-variant-numeric:tabular-nums;">₹ <%= parseFloat(shippingAmount).toFixed(2) %></td>
+                </tr>
+                <tr>
+                  <td style="padding:4px 0;font-size:12px;color:#888;">Tax</td>
+                  <td style="padding:4px 0;font-size:12px;color:#888;text-align:right;font-variant-numeric:tabular-nums;">₹ <%= parseFloat(taxAmount).toFixed(2) %></td>
+                </tr>
+                <% if (parseFloat(discountAmount) > 0) { %>
+                <tr>
+                  <td style="padding:4px 0;font-size:12px;color:#888;">Discount</td>
+                  <td style="padding:4px 0;font-size:12px;color:#888;text-align:right;font-variant-numeric:tabular-nums;">− ₹ <%= parseFloat(discountAmount).toFixed(2) %></td>
+                </tr>
+                <% } %>
+                <tr>
+                  <td colspan="2" style="padding:0;"><div style="height:1px;background:#1a1a1a;margin:10px 0 0;"></div></td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 0 0;font-size:15px;font-weight:700;color:#1a1a1a;">Total Paid</td>
+                  <td style="padding:12px 0 0;font-size:15px;font-weight:700;color:#1a1a1a;text-align:right;font-variant-numeric:tabular-nums;">₹ <%= parseFloat(totalAmount).toFixed(2) %></td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 40px;border-top:1px solid #f0f0f0;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#bbb;line-height:1.6;">This is a transactional email from PureAstra. Please do not reply.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -36,6 +36,8 @@ import {
   createInvoiceInTx,
   generateInvoicePdf,
 } from "../invoices/invoices.service";
+import { enqueueEmail } from "../../jobs/email/email.queue";
+import { renderEmailTemplate } from "../../lib/email/render";
 
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -568,6 +570,47 @@ export const confirmPaymentAttempt = async (
             "[invoice] creation failed — payment still succeeds",
           );
         }
+      }
+
+      // Order-confirmation email — fire & forget, post-TX.
+      const confirmationTo = payment.order.user?.email ?? null;
+      if (confirmationTo) {
+        setImmediate(() => {
+          void (async () => {
+            const html = await renderEmailTemplate("order-confirmation", {
+              customerName: payment.order.shippingName,
+              orderNumber: payment.order.orderNumber,
+              placedAt: now.toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              }),
+              items: orderItems.map((i) => ({
+                productName: i.productName,
+                variantName: i.variantName ?? null,
+                quantity: i.quantity,
+                unitPrice: i.priceAtPurchase.toString(),
+                lineTotal: i.lineTotal.toString(),
+              })),
+              productTotal: payment.order.productTotal.toString(),
+              shippingAmount: payment.order.shippingAmount.toString(),
+              taxAmount: payment.order.taxAmount.toString(),
+              discountAmount: payment.order.discountAmount.toString(),
+              totalAmount: centsToDecimal(nextTotalPaid).toString(),
+            });
+            await enqueueEmail({
+              to: confirmationTo,
+              subject: `Order ${payment.order.orderNumber} confirmed – PureAstra`,
+              html,
+              meta: { template: "order-confirmation", source: "payments.service" },
+            });
+          })().catch((err) =>
+            logger.error(
+              { orderId: payment.orderId.toString(), err },
+              "[email] order-confirmation enqueue failed",
+            ),
+          );
+        });
       }
     }
 

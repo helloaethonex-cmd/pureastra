@@ -43,6 +43,8 @@ import {
   decrementInfluencerEarningsSafe,
 } from "../influencers/influencers.repository";
 import { INFLUENCER_SALE_STATUS } from "../influencers/influencers.types";
+import { enqueueEmail } from "../../jobs/email/email.queue";
+import { renderEmailTemplate } from "../../lib/email/render";
 
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -511,7 +513,7 @@ export const updateOrderStatusByOrderNumber = async (
   adminUserId: string,
   input: { newStatus: number; note?: string },
 ) => {
-  return prisma.$transaction(
+  const updatedOrder = await prisma.$transaction(
     async (tx) =>
       updateOrderStatusInTx(
         tx,
@@ -522,6 +524,56 @@ export const updateOrderStatusByOrderNumber = async (
       ),
     TX_OPTIONS,
   );
+
+  const recipientEmail = updatedOrder?.user?.email ?? null;
+
+  if (recipientEmail && input.newStatus === ORDER_STATUS.SHIPPED) {
+    const order = updatedOrder!;
+    setImmediate(() => {
+      void (async () => {
+        const html = await renderEmailTemplate("order-shipped", {
+          customerName: order.shippingName,
+          orderNumber: order.orderNumber,
+          shippedAt: new Date().toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          }),
+          shippingAddress: {
+            name: order.shippingName,
+            line1: order.shippingLine1,
+            line2: order.shippingLine2 ?? null,
+            city: order.shippingCity,
+            state: order.shippingState,
+            postalCode: order.shippingPostalCode,
+            country: order.shippingCountry,
+          },
+          items: order.items.map((i) => ({
+            productName: i.productName,
+            variantName: i.variantName ?? null,
+            quantity: i.quantity,
+          })),
+          trackingUrl: null,
+        });
+        await enqueueEmail({
+          to: recipientEmail,
+          subject: `Your PureAstra order ${order.orderNumber} has shipped`,
+          html,
+          meta: { template: "order-shipped", source: "orders.service" },
+        });
+      })().catch((err) =>
+        logger.error({ orderNumber, err }, "[email] order-shipped enqueue failed"),
+      );
+    });
+  }
+
+  if (input.newStatus === ORDER_STATUS.DELIVERED) {
+    // TODO: enqueue feedback-request email once the Feedback module lands.
+    // Create a Feedback row (with signed token) in updateOrderStatusInTx when
+    // newStatus === DELIVERED, then pass feedbackUrl to renderEmailTemplate here.
+  }
+
+  return updatedOrder;
 };
 
 export const listOrdersForAdmin = async (input: {

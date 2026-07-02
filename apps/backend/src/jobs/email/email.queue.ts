@@ -18,7 +18,7 @@ export const emailQueue = new Queue<
       delay: 1000,
     },
     removeOnComplete: 1000,
-    removeOnFail: 5050,
+    removeOnFail: 1000,
   },
 });
 

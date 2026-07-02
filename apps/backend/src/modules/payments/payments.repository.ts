@@ -31,7 +31,13 @@ export const createPaymentAttempt = (tx: TxClient, data: Prisma.PaymentCreateInp
 export const findPaymentByIdWithOrder = (tx: TxClient, paymentId: bigint) => {
   return tx.payment.findUnique({
     where: { id: paymentId },
-    include: { order: true },
+    include: {
+      order: {
+        include: {
+          user: { select: { email: true } },
+        },
+      },
+    },
   });
 };
 

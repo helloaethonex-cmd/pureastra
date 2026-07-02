@@ -119,6 +119,11 @@ export const envSchema = z
     R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     R2_BUCKET_NAME: z.string().min(1).default("pureastra-media"),
     R2_PUBLIC_URL: z.string().min(1).default("https://pub-dummy.r2.dev"),
+
+    // Frontend URL (used in transactional email CTAs)
+    FRONTEND_URL: z.url(),
+    // Admin alert email for low-stock notifications; falls back to SMTP_FROM at use-site
+    ADMIN_ALERT_EMAIL: z.string().email().optional(),
   })
   .superRefine((value, ctx) => {
     if (!value.REDIS_URL && (!value.REDIS_HOST || !value.REDIS_PORT)) {
