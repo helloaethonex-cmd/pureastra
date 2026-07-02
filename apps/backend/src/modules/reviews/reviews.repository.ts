@@ -158,6 +158,25 @@ export const hasUserPurchasedProduct = async (
 export const getReviewSummary = (productId: bigint) =>
   prisma.productReviewSummary.findUnique({ where: { productId } });
 
+// Version-guarded upsert: only writes if the row's updated_at is before startedAt.
+// Prevents a slower concurrent refresh from overwriting fresher data.
+export const conditionalUpsertReviewSummary = (
+  productId: bigint,
+  data: { totalReviews: number; avgRating: number; metricAverages: Record<string, number> },
+  startedAt: Date,
+) =>
+  prisma.$executeRaw`
+    INSERT INTO "product_review_summaries" ("product_id", "total_reviews", "avg_rating", "metric_averages", "updated_at")
+    VALUES (${productId}, ${data.totalReviews}, ${data.avgRating}, ${JSON.stringify(data.metricAverages)}::jsonb, NOW())
+    ON CONFLICT ("product_id")
+    DO UPDATE SET
+      "total_reviews" = EXCLUDED."total_reviews",
+      "avg_rating"    = EXCLUDED."avg_rating",
+      "metric_averages" = EXCLUDED."metric_averages",
+      "updated_at"    = NOW()
+    WHERE "product_review_summaries"."updated_at" < ${startedAt}
+  `;
+
 export const upsertReviewSummary = (
   productId: bigint,
   data: {

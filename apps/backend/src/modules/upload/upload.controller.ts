@@ -125,6 +125,21 @@ export const uploadImage = async (req: Request, res: Response) => {
   }
 };
 
+const REVIEW_IMAGE_MAX_SIZE = 1200;
+
+const processAndUploadReviewImage = async (
+  file: Express.Multer.File,
+): Promise<string> => {
+  const buffer = await sharp(file.buffer, { failOn: "none" })
+    .rotate()
+    .resize({ width: REVIEW_IMAGE_MAX_SIZE, height: REVIEW_IMAGE_MAX_SIZE, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 82, effort: 4 })
+    .toBuffer();
+
+  const key = `reviews/${uuidv4()}.webp`;
+  return uploadBufferToR2(key, buffer, "image/webp", { cacheControl: IMAGE_CACHE_CONTROL });
+};
+
 /**
  * POST /api/v1/upload/review-image
  * Accepts multipart/form-data with field "file"
@@ -138,7 +153,7 @@ export const uploadReviewImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
-    const url = await uploadRawImageToR2(file, "reviews");
+    const url = await processAndUploadReviewImage(file);
     res.status(200).json({ url });
   } catch (err: any) {
     console.error("[upload:review] R2 error:", err);

@@ -24,6 +24,7 @@ import {
   getReviewSummary,
   computeReviewAggregates,
   upsertReviewSummary,
+  conditionalUpsertReviewSummary,
 } from "./reviews.repository";
 import { Prisma } from "../../generated/prisma/client";
 
@@ -233,8 +234,9 @@ export const getReviewEligibilityService = async (userId: string, productId: str
 // ── Summary refresh ──────────────────────────────────────────────────────────
 
 const refreshSummary = async (productId: bigint) => {
+  const startedAt = new Date();
   const agg = await computeReviewAggregates(productId);
-  await upsertReviewSummary(productId, agg);
+  await conditionalUpsertReviewSummary(productId, agg, startedAt);
 };
 
 // ── Admin: metric management ─────────────────────────────────────────────────
