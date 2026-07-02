@@ -359,6 +359,17 @@ const savePreview = async (token: string, record: CheckoutPreviewRecord) => {
   await redisClient.set(previewKey(token), JSON.stringify(record), "PX", ttlMs);
 };
 
+const restorePreviewToken = async (token: string, record: CheckoutPreviewRecord) => {
+  const ttlMs = record.expiresAt - Date.now();
+  if (ttlMs <= 0) return; // already expired, nothing to restore
+  await redisClient.set(
+    previewKey(token),
+    JSON.stringify({ ...record, consumedAt: null }),
+    "PX",
+    ttlMs,
+  );
+};
+
 const consumePreviewAtomic = async (token: string) => {
   const now = Date.now();
   const result = await redisClient.eval(
@@ -911,16 +922,24 @@ const confirmCheckoutByFlow = async (
       );
     }
 
-    const createResult = await prisma.$transaction(
-      (tx) =>
-        createOrderAndPaymentInTx(
-          tx,
-          BigInt(userId),
-          flow,
-          consumedPreview.request,
-        ),
-      TX_OPTIONS,
-    );
+    // If the order TX fails (e.g. P2034 serialization conflict), restore the
+    // preview token so the client can retry without restarting from preview.
+    let createResult;
+    try {
+      createResult = await prisma.$transaction(
+        (tx) =>
+          createOrderAndPaymentInTx(
+            tx,
+            BigInt(userId),
+            flow,
+            consumedPreview.request,
+          ),
+        TX_OPTIONS,
+      );
+    } catch (err) {
+      await restorePreviewToken(input.previewToken, consumedPreview).catch(() => {});
+      throw err;
+    }
 
     const interimRecord: CheckoutIdempotencyRecord = {
       orderId: createResult.orderId.toString(),
