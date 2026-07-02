@@ -13,7 +13,7 @@ const PORT = env.PORT || 5050;
 let server: Server | null = null;
 let isShuttingDown = false;
 
-const shutdown = async (signal: string) => {
+const shutdown = async (signal: string, exitCode = 0) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
@@ -34,7 +34,7 @@ const shutdown = async (signal: string) => {
 
     await prisma.$disconnect();
     logger.info({ signal }, "Shutdown complete");
-    process.exit(0);
+    process.exit(exitCode);
   } catch (error) {
     logger.error({ err: error, signal }, "Shutdown failed");
     process.exit(1);
@@ -68,5 +68,5 @@ process.on("unhandledRejection", (reason) => {
 process.on("uncaughtException", (error) => {
   logger.error({ err: error }, "Uncaught exception");
   Sentry.captureException(error);
-  void shutdown("uncaughtException");
+  void shutdown("uncaughtException", 1);
 });

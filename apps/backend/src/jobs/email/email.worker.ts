@@ -1,3 +1,7 @@
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 import * as Sentry from "@sentry/node";
 import { QueueEvents, Worker } from "bullmq";
 import { env } from "../../config/env";

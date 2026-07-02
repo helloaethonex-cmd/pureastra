@@ -24,6 +24,6 @@ export async function sendMail(input: SendMailInput): Promise<void> {
       subject: input.subject,
       err: error,
     }, "Email send failed");
-    throw new Error("MAIL_SEND_FAILED");
+    throw new Error("MAIL_SEND_FAILED", { cause: error });
   }
 }
