@@ -280,7 +280,16 @@ export const confirmPaymentAttempt = async (
   paymentId: bigint,
   body: ConfirmPaymentBody,
 ) => {
-  return prisma.$transaction(async (tx) => {
+  // Declared outside so side effects run post-commit, never on rollback or retry.
+  // `as` cast prevents TypeScript narrowing the initial null literal across the closure boundary.
+  let invoiceId = null as bigint | null;
+  let emailCtx = null as {
+    to: string;
+    subject: string;
+    templateData: Record<string, unknown>;
+  } | null;
+
+  const result = await prisma.$transaction(async (tx) => {
     const payment = await findPaymentByIdWithOrder(tx, paymentId);
     if (!payment) {
       throw new AppError(404, "Payment not found", "PAYMENT_NOT_FOUND");
@@ -542,16 +551,7 @@ export const confirmPaymentAttempt = async (
           paidAt: now,
         });
 
-        // PDF generation runs AFTER TX commits — fire & forget.
-        // setImmediate defers execution until after the current TX callback returns.
-        setImmediate(() => {
-          generateInvoicePdf(invoice.id).catch((pdfErr) => {
-            logger.error(
-              { invoiceId: invoice.id.toString(), err: pdfErr },
-              "[invoice-pdf] async generation failed — will retry",
-            );
-          });
-        });
+        invoiceId = invoice.id;
       } catch (invoiceError) {
         if (
           invoiceError instanceof Prisma.PrismaClientKnownRequestError &&
@@ -572,50 +572,68 @@ export const confirmPaymentAttempt = async (
         }
       }
 
-      // Order-confirmation email — fire & forget, post-TX.
+      // Collect email context — rendered and enqueued after TX commits.
       const confirmationTo = payment.order.user?.email ?? null;
       if (confirmationTo) {
-        setImmediate(() => {
-          void (async () => {
-            const html = await renderEmailTemplate("order-confirmation", {
-              customerName: payment.order.shippingName,
-              orderNumber: payment.order.orderNumber,
-              placedAt: now.toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              }),
-              items: orderItems.map((i) => ({
-                productName: i.productName,
-                variantName: i.variantName ?? null,
-                quantity: i.quantity,
-                unitPrice: i.priceAtPurchase.toString(),
-                lineTotal: i.lineTotal.toString(),
-              })),
-              productTotal: payment.order.productTotal.toString(),
-              shippingAmount: payment.order.shippingAmount.toString(),
-              taxAmount: payment.order.taxAmount.toString(),
-              discountAmount: payment.order.discountAmount.toString(),
-              totalAmount: centsToDecimal(nextTotalPaid).toString(),
-            });
-            await enqueueEmail({
-              to: confirmationTo,
-              subject: `Order ${payment.order.orderNumber} confirmed – PureAstra`,
-              html,
-              meta: { template: "order-confirmation", source: "payments.service" },
-            });
-          })().catch((err) =>
-            logger.error(
-              { orderId: payment.orderId.toString(), err },
-              "[email] order-confirmation enqueue failed",
-            ),
-          );
-        });
+        emailCtx = {
+          to: confirmationTo,
+          subject: `Order ${payment.order.orderNumber} confirmed – PureAstra`,
+          templateData: {
+            customerName: payment.order.shippingName,
+            orderNumber: payment.order.orderNumber,
+            placedAt: now.toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            }),
+            items: orderItems.map((i) => ({
+              productName: i.productName,
+              variantName: i.variantName ?? null,
+              quantity: i.quantity,
+              unitPrice: i.priceAtPurchase.toString(),
+              lineTotal: i.lineTotal.toString(),
+            })),
+            productTotal: payment.order.productTotal.toString(),
+            shippingAmount: payment.order.shippingAmount.toString(),
+            taxAmount: payment.order.taxAmount.toString(),
+            discountAmount: payment.order.discountAmount.toString(),
+            totalAmount: centsToDecimal(nextTotalPaid).toString(),
+          },
+        };
       }
     }
 
     return updatedPayment;
   }, TX_OPTIONS);
+
+  // Side effects — TX has committed, no rollback risk, no duplicate on retry.
+  if (invoiceId) {
+    const id = invoiceId;
+    generateInvoicePdf(id).catch((pdfErr) =>
+      logger.error(
+        { invoiceId: id.toString(), err: pdfErr },
+        "[invoice-pdf] async generation failed — will retry",
+      ),
+    );
+  }
+
+  if (emailCtx) {
+    const ctx = emailCtx;
+    void renderEmailTemplate("order-confirmation", ctx.templateData)
+      .then((html) =>
+        enqueueEmail({
+          to: ctx.to,
+          subject: ctx.subject,
+          html,
+          meta: { template: "order-confirmation", source: "payments.service" },
+        }),
+      )
+      .catch((err) =>
+        logger.error({ err }, "[email] order-confirmation enqueue failed"),
+      );
+  }
+
+  return result;
 };
 
 export const verifyRazorpayPaymentAttempt = async (
