@@ -75,10 +75,42 @@ export const findAllProducts = async (query: ProductQuery) => {
       : {}),
   };
 
-  const orderBy =
-    sortBy === "price"
-      ? { variants: { _count: sortOrder } }
-      : { [sortBy]: sortOrder };
+  if (sortBy === "price") {
+    // Prisma can't orderBy relation field aggregates in findMany — sort in JS instead.
+    // Two lightweight fields per row; fine for catalog sizes in the hundreds.
+    const [total, allWithPrice] = await Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        select: { id: true, variants: { where: { deletedAt: null }, select: { price: true } } },
+      }),
+    ]);
+
+    const sorted = allWithPrice
+      .map((p) => ({
+        id: p.id,
+        minPrice:
+          p.variants.length > 0
+            ? Math.min(...p.variants.map((v) => Number(v.price)))
+            : sortOrder === "asc"
+              ? Infinity
+              : -Infinity,
+      }))
+      .sort((a, b) => (sortOrder === "asc" ? a.minPrice - b.minPrice : b.minPrice - a.minPrice));
+
+    const pageIds = sorted.slice(skip, skip + limit).map((p) => p.id);
+    const products = await prisma.product.findMany({
+      where: { id: { in: pageIds } },
+      include: productFullInclude,
+    });
+
+    const byId = new Map(products.map((p) => [p.id.toString(), p]));
+    const data = pageIds
+      .map((id) => byId.get(id.toString()))
+      .filter((p): p is (typeof products)[number] => p != null);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
 
   const [total, data] = await Promise.all([
     prisma.product.count({ where }),
@@ -86,7 +118,7 @@ export const findAllProducts = async (query: ProductQuery) => {
       where,
       skip,
       take: limit,
-      orderBy,
+      orderBy: { [sortBy]: sortOrder },
       include: productFullInclude,
     }),
   ]);
