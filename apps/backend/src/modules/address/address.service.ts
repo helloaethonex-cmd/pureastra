@@ -34,9 +34,9 @@ export const getUserAddresses = async (userId: string) => {
 
 export const getUserAddress = async (id: string, userId: string) => {
   const address = await findAddressById(BigInt(id));
-  if (!address) throw { status: 404, message: "Address not found" };
+  if (!address) throw new AppError(404, "Address not found", "ADDRESS_NOT_FOUND");
   if (address.userId !== BigInt(userId))
-    throw { status: 403, message: "Forbidden" };
+    throw new AppError(403, "Forbidden", "FORBIDDEN");
   return address;
 };
 

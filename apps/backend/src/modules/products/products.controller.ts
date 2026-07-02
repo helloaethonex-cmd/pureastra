@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { ZodError } from "zod";
 import {
   getAllProducts,
   getProductById,
@@ -46,6 +47,9 @@ import {
 const param = (req: Request, key: string): string => req.params[key] as string;
 
 const handleError = (req: Request, res: Response, err: any) => {
+  if (err instanceof ZodError) {
+    return res.status(400).json({ error: "Invalid request payload", code: "VALIDATION_ERROR", details: err.issues });
+  }
   if (err?.status) return res.status(err.status).json({ error: err.message });
   req.log.error({ err }, "Products controller error");
   return res.status(500).json({ error: "Internal server error" });
