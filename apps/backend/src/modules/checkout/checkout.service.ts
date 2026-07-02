@@ -84,6 +84,7 @@ type PreparedLineItem = {
   unitPrice: Prisma.Decimal;
   gstRate: Prisma.Decimal;
   lineTotal: Prisma.Decimal;
+  costPrice: Prisma.Decimal | null;
 };
 
 type CheckoutIdempotencyRecord = {
@@ -181,6 +182,7 @@ const buildPreparedLineItems = (
       variantName: string | null;
       sku: string | null;
       price: Prisma.Decimal | null;
+      costPrice: Prisma.Decimal | null;
       gstRate: Prisma.Decimal;
       stockQuantity: number | null;
       stockReserved: number;
@@ -225,6 +227,7 @@ const buildPreparedLineItems = (
       unitPrice: roundMoney(unitPrice),
       gstRate: roundMoney(variant.gstRate),
       lineTotal: roundMoney(unitPrice.mul(row.quantity)),
+      costPrice: variant.costPrice,
     });
   }
 
@@ -239,6 +242,7 @@ const buildBuyNowPreparedLineItem = (
     variantName: string | null;
     sku: string | null;
     price: Prisma.Decimal | null;
+    costPrice: Prisma.Decimal | null;
     gstRate: Prisma.Decimal;
     stockQuantity: number | null;
     stockReserved: number;
@@ -279,6 +283,7 @@ const buildBuyNowPreparedLineItem = (
     unitPrice: roundMoney(variant.price),
     gstRate: roundMoney(variant.gstRate),
     lineTotal: roundMoney(variant.price.mul(quantity)),
+    costPrice: variant.costPrice,
   };
 };
 
@@ -582,7 +587,7 @@ const createOrderAndPaymentInTx = async (
         basePrice: linePricing.unitBasePrice,
         taxAmount: linePricing.lineTaxAmount,
         gstRate: linePricing.gstRate,
-        costPriceAtPurchase: ZERO_DECIMAL,
+        costPriceAtPurchase: item.costPrice ?? ZERO_DECIMAL,
       };
     }),
   );
