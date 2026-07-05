@@ -45,8 +45,12 @@ import {
   CreateProductContentSectionInput,
   UpdateProductContentSectionInput,
 } from "./products.types";
+import { AppError } from "../../lib/errors/app-error";
+import { deleteObjectFromR2 } from "../../lib/r2";
+import { env } from "../../config/env";
+import { logger } from "../../lib/logger";
 
-const PRODUCT_DETAIL_CACHE_TTL_SECONDS = 300;
+const PRODUCT_DETAIL_CACHE_TTL_SECONDS = 60;
 
 const cacheKeyById = (id: string) => buildProductDetailCacheKey(`id:${id}`);
 const cacheKeyBySlug = (slug: string) => buildProductDetailCacheKey(`slug:${slug}`);
@@ -67,7 +71,7 @@ export const getProductById = async (id: string) => {
   if (cached) return cached;
 
   const product = await findProductById(BigInt(id));
-  if (!product) throw { status: 404, message: "Product not found" };
+  if (!product) throw new AppError(404, "Product not found", "PRODUCT_NOT_FOUND");
 
   await Promise.all([
     setCachedJson(cacheKeyById(id), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
@@ -84,7 +88,7 @@ export const getProductBySlug = async (slug: string) => {
   if (cached) return cached;
 
   const product = await findProductBySlug(slug);
-  if (!product) throw { status: 404, message: "Product not found" };
+  if (!product) throw new AppError(404, "Product not found", "PRODUCT_NOT_FOUND");
 
   await Promise.all([
     setCachedJson(cacheKeyBySlug(slug), product, PRODUCT_DETAIL_CACHE_TTL_SECONDS),
@@ -137,14 +141,14 @@ export const removeCategory = async (productId: string, categoryId: string) => {
 
 export const getVariantById = async (id: string) => {
   const variant = await findVariantById(BigInt(id));
-  if (!variant) throw { status: 404, message: "Variant not found" };
+  if (!variant) throw new AppError(404, "Variant not found", "VARIANT_NOT_FOUND");
   return variant;
 };
 
 const getScopedVariantById = async (productId: string, variantId: string) => {
   const variant = await getVariantById(variantId);
   if (variant.productId.toString() !== productId) {
-    throw { status: 404, message: "Variant not found" };
+    throw new AppError(404, "Variant not found", "VARIANT_NOT_FOUND");
   }
   return variant;
 };
@@ -215,10 +219,7 @@ export const addProductContentSection = async (productId: string, data: CreatePr
     return created;
   } catch (err: any) {
     if (err?.code === "P2002") {
-      throw {
-        status: 409,
-        message: "Content section with this sectionType and position already exists for this product",
-      };
+      throw new AppError(409, "Content section with this sectionType and position already exists for this product", "CONTENT_SECTION_CONFLICT");
     }
     throw err;
   }
@@ -233,7 +234,7 @@ export const editProductContentSection = async (
   const section = await findProductContentSectionById(BigInt(sectionId));
 
   if (!section || section.productId.toString() !== productId) {
-    throw { status: 404, message: "Product content section not found" };
+    throw new AppError(404, "Product content section not found", "CONTENT_SECTION_NOT_FOUND");
   }
 
   try {
@@ -242,10 +243,7 @@ export const editProductContentSection = async (
     return updated;
   } catch (err: any) {
     if (err?.code === "P2002") {
-      throw {
-        status: 409,
-        message: "Content section with this sectionType and position already exists for this product",
-      };
+      throw new AppError(409, "Content section with this sectionType and position already exists for this product", "CONTENT_SECTION_CONFLICT");
     }
     throw err;
   }
@@ -256,7 +254,7 @@ export const removeProductContentSection = async (productId: string, sectionId: 
   const section = await findProductContentSectionById(BigInt(sectionId));
 
   if (!section || section.productId.toString() !== productId) {
-    throw { status: 404, message: "Product content section not found" };
+    throw new AppError(404, "Product content section not found", "CONTENT_SECTION_NOT_FOUND");
   }
 
   const deactivated = await deactivateProductContentSection(BigInt(sectionId));
@@ -294,12 +292,23 @@ export const adjustScopedStock = async (
 export const removeScopedProductImage = async (productId: string, imageId: string) => {
   const image = await findProductImageById(BigInt(imageId));
   if (!image || image.productId?.toString() !== productId) {
-    throw { status: 404, message: "Image not found" };
+    throw new AppError(404, "Image not found", "IMAGE_NOT_FOUND");
   }
 
   const deleted = await deleteProductImage(BigInt(imageId));
   const product = await findProductById(BigInt(productId));
   await invalidateProductDetailCache(productId, product?.slug);
+
+  // Delete R2 objects — accept eventual consistency (log failures, don't roll back DB)
+  const urlsToDelete = [...new Set([image.imageUrl, image.heroImageUrl, image.thumbnailImageUrl].filter(Boolean))] as string[];
+  for (const url of urlsToDelete) {
+    if (url.startsWith(env.R2_PUBLIC_URL)) {
+      const key = url.slice(env.R2_PUBLIC_URL.length + 1);
+      deleteObjectFromR2(key).catch((err) =>
+        logger.warn({ err, key }, "[products] Failed to delete R2 object — orphaned"),
+      );
+    }
+  }
 
   return deleted;
 };
@@ -312,7 +321,7 @@ export const getAllCategories = async () => {
 
 export const getCategoryById = async (id: string) => {
   const category = await findCategoryById(BigInt(id));
-  if (!category) throw { status: 404, message: "Category not found" };
+  if (!category) throw new AppError(404, "Category not found", "CATEGORY_NOT_FOUND");
   return category;
 };
 

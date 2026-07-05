@@ -1,4 +1,5 @@
 import { Prisma } from "../../generated/prisma/client";
+import { INVENTORY_RESERVATION_STATUS } from "../orders/orders.types";
 
 export type TxClient = Prisma.TransactionClient;
 
@@ -90,8 +91,8 @@ export const updateOrderForPaymentSuccess = (
 
 export const confirmReservationsByOrder = (tx: TxClient, orderId: bigint) => {
   return tx.inventoryReservation.updateMany({
-    where: { orderId, status: 0 },
-    data: { status: 1 },
+    where: { orderId, status: INVENTORY_RESERVATION_STATUS.ACTIVE },
+    data: { status: INVENTORY_RESERVATION_STATUS.CONFIRMED },
   });
 };
 

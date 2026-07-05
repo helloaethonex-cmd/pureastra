@@ -104,68 +104,63 @@ export const findActiveCartBySessionId = async (sessionId: string) => {
 
 // ─── Cart Items ───────────────────────────────────────────────────────────────
 
-/** Adds an item to the cart. If the variant already exists, increments quantity. */
+const MAX_CART_ITEM_QUANTITY = 100;
+
+const cartItemInclude = {
+  productVariant: {
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          images: { take: 1, orderBy: { position: "asc" as const } },
+        },
+      },
+      images: { take: 1, orderBy: { position: "asc" as const } },
+    },
+  },
+} as const;
+
+/** Adds an item to the cart. If the variant already exists, increments quantity.
+ *  Runs in a Serializable transaction to prevent duplicate rows from concurrent adds. */
 export const upsertCartItem = async (
   cartId: bigint,
   data: AddCartItemInput,
 ) => {
-  const variant = await prisma.productVariant.findFirst({
-    where: { id: data.productVariantId, deletedAt: null },
-  });
-  if (!variant) {
-    throw new AppError(404, "Product variant not found", "PRODUCT_VARIANT_NOT_FOUND");
-  }
+  return prisma.$transaction(async (tx) => {
+    const variant = await tx.productVariant.findFirst({
+      where: { id: data.productVariantId, deletedAt: null },
+    });
+    if (!variant) {
+      throw new AppError(404, "Product variant not found", "PRODUCT_VARIANT_NOT_FOUND");
+    }
 
-  const existing = await prisma.cartItem.findFirst({
-    where: { cartId, productVariantId: data.productVariantId },
-  });
+    const existing = await tx.cartItem.findFirst({
+      where: { cartId, productVariantId: data.productVariantId },
+    });
 
-  if (existing) {
-    return prisma.cartItem.update({
-      where: { id: existing.id },
+    if (existing) {
+      return tx.cartItem.update({
+        where: { id: existing.id },
+        data: {
+          quantity: Math.min(existing.quantity + data.quantity, MAX_CART_ITEM_QUANTITY),
+          priceSnapshot: variant.price,
+        },
+        include: cartItemInclude,
+      });
+    }
+
+    return tx.cartItem.create({
       data: {
-        quantity: existing.quantity + data.quantity,
+        cartId,
+        productVariantId: data.productVariantId,
+        quantity: data.quantity,
         priceSnapshot: variant.price,
       },
-      include: {
-        productVariant: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                images: { take: 1, orderBy: { position: "asc" as const } },
-              },
-            },
-          },
-        },
-      },
+      include: cartItemInclude,
     });
-  }
-
-  return prisma.cartItem.create({
-    data: {
-      cartId,
-      productVariantId: data.productVariantId,
-      quantity: data.quantity,
-      priceSnapshot: variant.price,
-    },
-    include: {
-      productVariant: {
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              images: { take: 1, orderBy: { position: "asc" as const } },
-            },
-          },
-        },
-      },
-    },
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 };
 
 export const updateCartItemQuantityForUser = async (
@@ -358,7 +353,7 @@ export const mergeGuestCart = async (userId: bigint, sessionId: string) => {
     if (rowsToIncrement.length > 0) {
       await tx.$executeRaw`
         UPDATE "cart_items" AS ci
-        SET "quantity" = ci."quantity" + data."quantity",
+        SET "quantity" = LEAST(ci."quantity" + data."quantity", ${MAX_CART_ITEM_QUANTITY}),
             "updated_at" = NOW()
         FROM (
           VALUES ${Prisma.join(

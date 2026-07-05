@@ -1,9 +1,35 @@
 import { Request, Response, NextFunction } from "express";
 import { auth } from "./better-auth";
 import { prisma } from "../../lib/prisma";
+import { redisClient } from "../../lib/redis/client";
+import { logger } from "../../lib/logger";
 
-const ROLE_CACHE_TTL_MS = 60_000;
-const roleCache = new Map<string, { roleName: string; expiresAt: number }>();
+const ROLE_CACHE_PREFIX = "role:";
+const ROLE_CACHE_TTL_SECONDS = 15;
+
+const getRoleFromCache = async (userId: string): Promise<string | null> => {
+  try {
+    return await redisClient.get(`${ROLE_CACHE_PREFIX}${userId}`);
+  } catch {
+    return null;
+  }
+};
+
+const setRoleInCache = async (userId: string, roleName: string): Promise<void> => {
+  try {
+    await redisClient.set(`${ROLE_CACHE_PREFIX}${userId}`, roleName, "EX", ROLE_CACHE_TTL_SECONDS);
+  } catch (err) {
+    logger.warn({ err, userId }, "Failed to write role to Redis cache");
+  }
+};
+
+export const invalidateRoleCache = async (userId: string): Promise<void> => {
+  try {
+    await redisClient.del(`${ROLE_CACHE_PREFIX}${userId}`);
+  } catch (err) {
+    logger.warn({ err, userId }, "Failed to delete role from Redis cache");
+  }
+};
 
 export const requireAuth = async (
   req: Request,
@@ -53,9 +79,9 @@ export const requireRole = (roleName: string) => {
       return;
     }
 
-    const cached = roleCache.get(user.id);
-    if (cached && cached.expiresAt > Date.now()) {
-      if (cached.roleName !== roleName) {
+    const cachedRole = await getRoleFromCache(user.id);
+    if (cachedRole !== null) {
+      if (cachedRole !== roleName) {
         res.status(403).json({ error: "Forbidden" });
         return;
       }
@@ -67,10 +93,7 @@ export const requireRole = (roleName: string) => {
       include: { role: true },
     });
 
-    roleCache.set(user.id, {
-      roleName: dbUser?.role?.name ?? "",
-      expiresAt: Date.now() + ROLE_CACHE_TTL_MS,
-    });
+    await setRoleInCache(user.id, dbUser?.role?.name ?? "");
 
     if (dbUser?.role?.name !== roleName) {
       res.status(403).json({ error: "Forbidden" });

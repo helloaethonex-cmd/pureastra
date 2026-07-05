@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "../config/env";
 
 /**
@@ -44,4 +44,13 @@ export const uploadBufferToR2 = async (
   );
 
   return `${R2_PUBLIC_URL}/${key}`;
+};
+
+export const deleteObjectFromR2 = async (key: string): Promise<void> => {
+  await r2Client.send(
+    new DeleteObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: key,
+    }),
+  );
 };

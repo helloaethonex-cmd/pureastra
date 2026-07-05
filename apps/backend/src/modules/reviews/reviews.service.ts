@@ -1,5 +1,6 @@
 import { AppError } from "../../lib/errors/app-error";
 import { logger } from "../../lib/logger";
+import { env } from "../../config/env";
 import {
   CreateReviewInput,
   ListReviewsInput,
@@ -47,6 +48,14 @@ export const submitReview = async (userId: string, input: CreateReviewInput) => 
       "Only customers who have purchased this product can add a review",
       "REVIEW_NOT_ALLOWED",
     );
+  }
+
+  // 2b. Validate image URLs originate from our R2 bucket
+  if (input.images && input.images.length > 0) {
+    const invalidUrl = input.images.find((url) => !url.startsWith(env.R2_PUBLIC_URL));
+    if (invalidUrl) {
+      throw new AppError(400, "Review images must be uploaded via the review-image upload endpoint", "INVALID_IMAGE_URL");
+    }
   }
 
   // 3. Validate metric responses against product-configured metrics

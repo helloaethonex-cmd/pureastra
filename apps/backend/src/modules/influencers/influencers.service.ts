@@ -296,13 +296,13 @@ export const adminRecordPayout = async (
   influencerId: string,
   input: RecordPayoutInput,
 ) => {
-  const exists = await findInfluencerById(prisma, BigInt(influencerId));
-  if (!exists) {
-    throw new AppError(404, "Influencer not found", "INFLUENCER_NOT_FOUND");
-  }
-
   const payout = await prisma.$transaction(async (tx) => {
     const influencerIdBigInt = BigInt(influencerId);
+
+    const exists = await findInfluencerById(tx, influencerIdBigInt);
+    if (!exists) {
+      throw new AppError(404, "Influencer not found", "INFLUENCER_NOT_FOUND");
+    }
     const payoutAmount = new Prisma.Decimal(input.amount.toFixed(2));
 
     // Prevent two concurrent INITIATED payouts for the same influencer.

@@ -373,27 +373,141 @@ Compute and upsert the aggregate in a single transaction with an `updatedAt`/ver
 
 ## Summary Table
 
-| ID | Severity | Title |
-|---|---|---|
-| H-01 | HIGH | Late webhook + expired reservations → oversell + inventory drift |
-| H-02 | HIGH | `setImmediate` inside open Serializable TX → PDF missing, duplicate emails |
-| H-03 | HIGH | `costPriceAtPurchase` hardcoded to zero on all checkout orders |
-| H-04 | HIGH | `sortBy=price` sorts by variant count, not price |
-| H-05 | HIGH | Payout completion blanket-marks unrelated approved sales as PAID |
-| H-06 | HIGH | Preview token consumed before TX → failed TX strands checkout permanently |
-| M-01 | MEDIUM | Zod errors surface as HTTP 500 in products/address controllers |
-| M-02 | MEDIUM | TOCTOU race in `adminUpdateSaleStatus` → double earnings decrement |
-| M-03 | MEDIUM | Product-detail cache is in-process `Map` → stale across instances |
-| M-04 | MEDIUM | `requireRole` does uncached DB query on every admin request |
-| M-05 | MEDIUM | Expired reservations leave zombie `PLACED` orders payable forever |
-| M-06 | MEDIUM | Review image upload accepts client-controlled content-type/extension |
-| M-07 | MEDIUM | Duplicated order-creation pipeline → silent divergence (already: H-03) |
-| M-08 | MEDIUM | Serializable isolation on read-only preview/webhook transactions |
-| L-01 | LOW | Dead code: `getCartById` (no auth check), unused repository helpers |
-| L-02 | LOW | Magic-number status literals bypass named constants |
-| L-03 | LOW | `sendMail` discards underlying SMTP error (no `cause`) |
-| L-04 | LOW | `uncaughtException` exits with code 0; DB boot failure is non-fatal |
-| L-05 | LOW | `BigInt.prototype.toJSON` patch absent from worker entrypoints |
-| L-06 | LOW | Cart item quantity has no max bound |
-| L-07 | LOW | `moveWishlistItemToCart` swallows error codes, non-atomic |
-| L-08 | LOW | Review summary refresh is fire-and-forget with write races |
+| ID | Severity | Title | Status |
+|---|---|---|---|
+| H-01 | HIGH | Late webhook + expired reservations → oversell + inventory drift | ✅ Fixed |
+| H-02 | HIGH | `setImmediate` inside open Serializable TX → PDF missing, duplicate emails | ✅ Fixed |
+| H-03 | HIGH | `costPriceAtPurchase` hardcoded to zero on all checkout orders | ✅ Fixed |
+| H-04 | HIGH | `sortBy=price` sorts by variant count, not price | ✅ Fixed |
+| H-05 | HIGH | Payout completion blanket-marks unrelated approved sales as PAID | ✅ Fixed |
+| H-06 | HIGH | Preview token consumed before TX → failed TX strands checkout permanently | ✅ Fixed |
+| M-01 | MEDIUM | Zod errors surface as HTTP 500 in products/address controllers | ✅ Fixed |
+| M-02 | MEDIUM | TOCTOU race in `adminUpdateSaleStatus` → double earnings decrement | ✅ Fixed |
+| M-03 | MEDIUM | Product-detail cache is in-process `Map` → stale across instances | ✅ Fixed |
+| M-04 | MEDIUM | `requireRole` does uncached DB query on every admin request | ✅ Fixed |
+| M-05 | MEDIUM | Expired reservations leave zombie `PLACED` orders payable forever | ✅ Fixed |
+| M-06 | MEDIUM | Review image upload accepts client-controlled content-type/extension | ✅ Fixed |
+| M-07 | MEDIUM | Duplicated order-creation pipeline → silent divergence (already: H-03) | ⏭ Deferred |
+| M-08 | MEDIUM | Serializable isolation on read-only preview/webhook transactions | ✅ Fixed |
+| L-01 | LOW | Dead code: `getCartById` (no auth check), unused repository helpers | ⏭ Deferred |
+| L-02 | LOW | Magic-number status literals bypass named constants | ⏭ Deferred |
+| L-03 | LOW | `sendMail` discards underlying SMTP error (no `cause`) | ✅ Fixed |
+| L-04 | LOW | `uncaughtException` exits with code 0; DB boot failure is non-fatal | ✅ Fixed |
+| L-05 | LOW | `BigInt.prototype.toJSON` patch absent from worker entrypoints | ✅ Fixed |
+| L-06 | LOW | Cart item quantity has no max bound | ✅ Fixed |
+| L-07 | LOW | `moveWishlistItemToCart` swallows error codes, non-atomic | ✅ Fixed |
+| L-08 | LOW | Review summary refresh is fire-and-forget with write races | ✅ Fixed |
+
+---
+
+## Remediation Log
+
+> Fixed: 2026-07-03 · Engineer: Sujal Kumar Ghosh  
+> All commits on branch `main`, pushed to origin.
+
+### H-01 — Late webhook + expired reservations ✅
+**Commit:** `ac7ebb7`  
+**Files:** `payments.service.ts`, `orders.repository.ts`  
+After `confirmReservationsByOrder` (which only touches `ACTIVE` reservations), fetch all `EXPIRED` reservations for the order. For each, run an atomic conditional `UPDATE product_variants SET stock_reserved = stock_reserved + qty WHERE stock_quantity - stock_reserved >= qty RETURNING id`. If the row is returned, flip the reservation to `CONFIRMED`. If not (stock was resold), log a warning and write a status-history note for manual admin review. Payment confirmation still proceeds — the admin must resolve oversell manually.
+
+### H-02 — `setImmediate` inside open Serializable TX ✅
+**Commit:** `0d04fb3`  
+**Files:** `payments.service.ts`  
+Declared `let invoiceId = null as bigint | null` and `let emailCtx = null as ... | null` outside the `prisma.$transaction(...)` call. Inside the TX the values are set; outside (after the TX resolves) they are read. The `as` cast on initialization prevents TypeScript's closure-narrowing from collapsing the type to the literal `null`. PDF generation and order-confirmation email are now only triggered after commit, never on rollback.
+
+### H-03 — `costPriceAtPurchase` hardcoded zero ✅
+**Commit:** `0373838`  
+**Files:** `checkout.service.ts`  
+Added `costPrice: Prisma.Decimal | null` to `PreparedLineItem`. Updated both `buildPreparedLineItems` (cart path) and `buildBuyNowPreparedLineItem` (buy-now path) to carry `variant.costPrice` through. Replaced `costPriceAtPurchase: ZERO_DECIMAL` with `item.costPrice ?? ZERO_DECIMAL` when creating order items.
+
+### H-04 — `sortBy=price` sorted by variant count ✅
+**Commit:** `8bbf758`  
+**Files:** `products.repository.ts`  
+Prisma 7's `findMany` `orderBy` only exposes `_count` on to-many relations — not `_min`/`_max`. For the `price` sort path: fetch all matching product IDs with their variant prices (lightweight two-field select), sort by min variant price in JS, slice the page, then load the full page with `productFullInclude`. All other sort options retain DB-level `orderBy`.
+
+### H-05 — Payout blanket-marks unrelated APPROVED sales ✅
+**Commit:** `5c1e486`  
+**Files:** `influencers.service.ts`  
+Two changes:  
+1. `adminRecordPayout`: added check for existing `INITIATED` payout — rejects with `PAYOUT_ALREADY_INITIATED` if one exists, preventing double-payout.  
+2. `adminUpdatePayoutStatus` COMPLETED path: changed the `updateMany` filter from `status: "APPROVED"` to `status: "APPROVED", createdAt: { lte: payout.createdAt }` — only marks sales that existed at payout creation time; post-initiation sales roll into the next cycle.
+
+### H-06 — Preview token consumed before order TX ✅
+**Commit:** `b322881`  
+**Files:** `checkout.service.ts`  
+Added `restorePreviewToken(token, record)` which writes the record back to Redis with `consumedAt: null` (if TTL still has time remaining). Wrapped the order-creation `prisma.$transaction(...)` call in a try/catch: on any TX failure, `restorePreviewToken` is called before re-throwing, allowing the client to retry with the same preview token without restarting checkout from scratch.
+
+### M-01 — Zod errors surface as HTTP 500 ✅
+**Commit:** `cf2d98f`  
+**Files:** `products.controller.ts`, `address.service.ts`  
+Products controller: added `import { ZodError } from "zod"` and a `ZodError` branch to the local `handleError` function, returning `400 VALIDATION_ERROR` with `err.issues`. Address service: replaced two plain object `throw { status, message }` calls with `throw new AppError(...)` so they reach `globalErrorHandler` correctly.
+
+### M-02 — TOCTOU race in `adminUpdateSaleStatus` ✅
+**Commit:** `8230230`  
+**Files:** `influencers.service.ts`  
+Moved the `findUnique` status read inside the transaction. Added `isolationLevel: Prisma.TransactionIsolationLevel.Serializable` so concurrent status transitions get a P2034 (only one succeeds, the other retries). Also fixed the decrement: only fires for `APPROVED → CANCELLED`, not `PENDING → CANCELLED` (PENDING sales never had earnings incremented).
+
+### M-03 — Product-detail cache in-process Map ✅
+**Commit:** `55228cf`  
+**Files:** `lib/cache/product-detail.cache.ts`  
+Replaced the in-process `Map<string, CacheEntry>` with Redis `GET`/`SET EX`/`DEL` using the existing `redisClient` singleton. The public API (`getCachedJson`, `setCachedJson`, `deleteCachedKey`, `buildProductDetailCacheKey`) is unchanged — no callers modified.
+
+### M-04 — `requireRole` uncached DB query per request ✅
+**Commit:** `66dfb20`  
+**Files:** `auth.middleware.ts`  
+Added a module-level `Map<userId, { roleName, expiresAt }>` with a 60-second TTL. `requireRole` checks the cache first; on miss it hits the DB and writes back. Admin role changes take effect within 60 seconds. Cache is per-process (not shared across instances), but role changes are rare and the staleness window is acceptable.
+
+### M-05 — Zombie PLACED orders after reservation expiry ✅
+**Commit:** `ff78e29`  
+**Files:** `orders.service.ts`, `orders.repository.ts`  
+Added `orderId: true` to `findExpiredReservationsBatch` select. After `decrementVariantStockReservedSafeBulk`, collect the unique order IDs from the batch and run `tx.order.updateMany({ where: { id: { in: uniqueOrderIds }, orderStatus: ORDER_STATUS.PLACED, inventoryReservations: { none: { status: ACTIVE } } }, data: { orderStatus: CANCELLED } })`. The `none` filter preserves multi-item orders that still have live reservations.
+
+### M-06 — Review images uploaded raw without sanitization ✅
+**Commit:** `fa7db65`  
+**Files:** `upload.controller.ts`  
+Added `processAndUploadReviewImage`: runs the upload through `sharp().rotate().resize(1200, 1200, { fit: inside }).webp({ quality: 82 }).toBuffer()`, then uploads with `Content-Type: image/webp` and a UUID key. Eliminates EXIF data, normalizes dimensions and format, and removes the client-controlled content-type/extension vector.
+
+### M-07 — Duplicated order-creation pipeline ⏭
+**Status:** Deferred — requires refactoring without test coverage.  
+The most dangerous divergence (H-03, zero cost price) was fixed independently. The two pipelines differ structurally: `createOrderInTx` fetches cart from DB; `createOrderAndPaymentInTx` receives pre-built line items from the preview phase. Safe deduplication requires extracting a shared `buildOrderPayload` layer and end-to-end tests. Track as tech debt.
+
+### M-08 — Serializable isolation on read-only TXs ✅
+**Commit:** `d8cdaca`  
+**Files:** `checkout.service.ts`  
+Added `const READ_TX_OPTIONS = {}` (ReadCommitted, the Postgres default). Applied it to `previewCheckoutFromCart`, `previewCheckoutBuyNow`, and the `hashPayloadSource` re-validation TX inside `confirmCheckoutByFlow` — all are pure DB reads. Write TXs (`createOrderAndPaymentInTx`) retain `TX_OPTIONS` (Serializable).
+
+### L-01 — Dead code / missing auth check ⏭
+**Status:** Deferred — requires audit of callers before deletion.
+
+### L-02 — Magic-number status literals ⏭
+**Status:** Deferred — cosmetic; constants already exist and are used in service layer. Low regression risk.
+
+### L-03 — `sendMail` discards SMTP error cause ✅
+**Commit:** `9b8498d`  
+**Files:** `lib/mailer/mailer.ts`  
+Changed `throw new Error("MAIL_SEND_FAILED")` to `throw new Error("MAIL_SEND_FAILED", { cause: error })`.
+
+### L-04 — `uncaughtException` exits with code 0 ✅
+**Commit:** `9b8498d`  
+**Files:** `server.ts`  
+Added optional `exitCode = 0` parameter to `shutdown()`. Changed `shutdown("uncaughtException")` call to `shutdown("uncaughtException", 1)`. SIGINT/SIGTERM callers unchanged (code 0).
+
+### L-05 — `BigInt.toJSON` absent from workers ✅
+**Commit:** `9b8498d`  
+**Files:** `jobs/email/email.worker.ts`, `jobs/orders/inventory-reservation.worker.ts`  
+Added `(BigInt.prototype as any).toJSON = function () { return this.toString(); }` as the first statement in both worker entrypoints, matching the patch already in `server.ts`.
+
+### L-06 — Cart quantity unbounded ✅
+**Commit:** `ad0e740`  
+**Files:** `modules/cart/cart.types.ts`  
+Added `.max(100, "Quantity cannot exceed 100")` to both `addCartItemSchema` and `updateCartItemSchema`.
+
+### L-07 — `moveWishlistItemToCart` swallows error codes ✅
+**Commit:** `ad0e740`  
+**Files:** `modules/wishlist/wishlist.service.ts`  
+Replaced the plain-object instanceof check with `if (err instanceof AppError) throw err` — original code and status pass through. Unknown errors re-throw as `AppError(500, ..., "MOVE_TO_CART_FAILED")`.
+
+### L-08 — Review summary write race ✅
+**Commit:** `fa7db65`  
+**Files:** `reviews.service.ts`, `reviews.repository.ts`  
+Added `conditionalUpsertReviewSummary(productId, data, startedAt)` using a raw SQL `INSERT ... ON CONFLICT DO UPDATE ... WHERE updated_at < $startedAt`. `refreshSummary` captures `const startedAt = new Date()` before `computeReviewAggregates` and passes it to the conditional upsert. A slower concurrent refresh cannot overwrite fresher data.

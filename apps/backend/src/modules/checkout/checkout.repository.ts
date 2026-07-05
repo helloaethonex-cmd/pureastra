@@ -1,10 +1,11 @@
 import { Prisma } from "../../generated/prisma/client";
+import { CART_STATUS } from "../orders/orders.types";
 
 export type TxClient = Prisma.TransactionClient;
 
 export const findActiveCartForCheckout = (tx: TxClient, userId: bigint) => {
   return tx.cart.findFirst({
-    where: { userId, status: 0 },
+    where: { userId, status: CART_STATUS.ACTIVE },
     include: {
       items: {
         include: {
@@ -90,7 +91,7 @@ export const incrementVariantStockReservedBulk = (
 export const markCartCheckedOut = (tx: TxClient, cartId: bigint) => {
   return tx.cart.update({
     where: { id: cartId },
-    data: { status: 1 },
+    data: { status: CART_STATUS.CHECKED_OUT },
   });
 };
 

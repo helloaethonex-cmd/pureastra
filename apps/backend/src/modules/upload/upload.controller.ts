@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
 import { uploadBufferToR2 } from "../../lib/r2";
+import { logger } from "../../lib/logger";
 
 const PRODUCT_HERO_SIZE = 1200;
 const PRODUCT_THUMB_SIZE = 240;
@@ -17,16 +18,24 @@ type UploadedProductImage = {
   placeholder: string;
 };
 
-const uploadRawImageToR2 = async (
-  file: Express.Multer.File,
-  keyPrefix: string,
-): Promise<string> => {
-  const ext = file.originalname.split(".").pop()?.toLowerCase() ?? "jpg";
-  const key = `${keyPrefix}/${uuidv4()}.${ext}`;
-
-  return uploadBufferToR2(key, file.buffer, file.mimetype, {
-    cacheControl: IMAGE_CACHE_CONTROL,
-  });
+// Validate image magic bytes — cannot be spoofed by client-supplied Content-Type
+const isValidImageBuffer = (buf: Buffer): boolean => {
+  if (buf.length < 12) return false;
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return true;
+  // PNG: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return true;
+  // GIF: 47 49 46
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return true;
+  // WebP: RIFF....WEBP
+  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+      buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return true;
+  // AVIF/HEIF: ftyp box at offset 4; check major brand at 8-11 to exclude MP4/MOV/M4A
+  if (buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70) {
+    const brand = buf.slice(8, 12).toString("ascii");
+    if (["avif", "avis", "heic", "heix", "mif1"].includes(brand)) return true;
+  }
+  return false;
 };
 
 const processAndUploadProductImage = async (
@@ -117,10 +126,14 @@ export const uploadImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
+    if (!isValidImageBuffer(file.buffer)) {
+      return res.status(400).json({ error: "Invalid image file" });
+    }
+
     const uploaded = await processAndUploadProductImage(file);
     res.status(200).json(uploaded);
   } catch (err: any) {
-    console.error("[upload] R2 error:", err);
+    logger.error({ err }, "[upload] R2 error");
     res.status(500).json({ error: "Upload failed" });
   }
 };
@@ -153,10 +166,14 @@ export const uploadReviewImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No file provided" });
     }
 
+    if (!isValidImageBuffer(file.buffer)) {
+      return res.status(400).json({ error: "Invalid image file" });
+    }
+
     const url = await processAndUploadReviewImage(file);
     res.status(200).json({ url });
   } catch (err: any) {
-    console.error("[upload:review] R2 error:", err);
+    logger.error({ err }, "[upload:review] R2 error");
     res.status(500).json({ error: "Upload failed" });
   }
 };

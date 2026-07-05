@@ -544,42 +544,41 @@ export const updateOrderStatusByOrderNumber = async (
 
   if (recipientEmail && input.newStatus === ORDER_STATUS.SHIPPED) {
     const order = updatedOrder!;
-    setImmediate(() => {
-      void (async () => {
-        const html = await renderEmailTemplate("order-shipped", {
-          customerName: order.shippingName,
-          orderNumber: order.orderNumber,
-          shippedAt: new Date().toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          }),
-          shippingAddress: {
-            name: order.shippingName,
-            line1: order.shippingLine1,
-            line2: order.shippingLine2 ?? null,
-            city: order.shippingCity,
-            state: order.shippingState,
-            postalCode: order.shippingPostalCode,
-            country: order.shippingCountry,
-          },
-          items: order.items.map((i) => ({
-            productName: i.productName,
-            variantName: i.variantName ?? null,
-            quantity: i.quantity,
-          })),
-          trackingUrl: null,
-        });
-        await enqueueEmail({
+    renderEmailTemplate("order-shipped", {
+      customerName: order.shippingName,
+      orderNumber: order.orderNumber,
+      shippedAt: new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+      shippingAddress: {
+        name: order.shippingName,
+        line1: order.shippingLine1,
+        line2: order.shippingLine2 ?? null,
+        city: order.shippingCity,
+        state: order.shippingState,
+        postalCode: order.shippingPostalCode,
+        country: order.shippingCountry,
+      },
+      items: order.items.map((i) => ({
+        productName: i.productName,
+        variantName: i.variantName ?? null,
+        quantity: i.quantity,
+      })),
+      trackingUrl: null,
+    })
+      .then((html) =>
+        enqueueEmail({
           to: recipientEmail,
           subject: `Your PureAstra order ${order.orderNumber} has shipped`,
           html,
           meta: { template: "order-shipped", source: "orders.service" },
-        });
-      })().catch((err) =>
+        }),
+      )
+      .catch((err) =>
         logger.error({ orderNumber, err }, "[email] order-shipped enqueue failed"),
       );
-    });
   }
 
   if (input.newStatus === ORDER_STATUS.DELIVERED) {

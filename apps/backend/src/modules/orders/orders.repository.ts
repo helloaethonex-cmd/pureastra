@@ -1,4 +1,5 @@
 import { Prisma } from "../../generated/prisma/client";
+import { CART_STATUS } from "./orders.types";
 
 export type TxClient = Prisma.TransactionClient;
 
@@ -8,22 +9,8 @@ const orderCreateInclude = {
 } as const;
 
 export const findActiveCartByUserId = (tx: TxClient, userId: bigint) => {
-  // return tx.cart.findFirst({
-  //   where: { userId, status: 0 },
-  //   include: {
-  //     items: {
-  //       include: {
-  //         productVariant: {
-  //           include: {
-  //             product: true,
-  //           },
-  //         },
-  //       },
-  //     },
-  //   },
-  // });
   return tx.cart.findFirst({
-  where: { userId, status: 0 },
+  where: { userId, status: CART_STATUS.ACTIVE },
   include: {
     items: {
       include: {
@@ -132,7 +119,7 @@ export const createOrderStatusHistory = (
 export const markCartCheckedOut = (tx: TxClient, cartId: bigint) => {
   return tx.cart.update({
     where: { id: cartId },
-    data: { status: 1 },
+    data: { status: CART_STATUS.CHECKED_OUT },
   });
 };
 

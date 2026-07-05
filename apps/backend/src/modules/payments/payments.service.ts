@@ -50,6 +50,9 @@ const TX_OPTIONS = {
   timeout: 10000,
 } as const;
 
+// Sentinel actor ID for system-initiated status changes (webhook, automation)
+const SYSTEM_ACTOR_ID = 0n;
+
 const centsToDecimal = (cents: number) =>
   new Prisma.Decimal((cents / 100).toFixed(2));
 
@@ -80,8 +83,28 @@ const triggerOverpaymentRefundWorkflow = async (input: {
       providerPaymentId: input.providerPaymentId,
       providerOrderId: input.providerOrderId,
     },
-    "[payments] overpayment detected — refund workflow stub invoked",
+    "[payments] overpayment detected — queuing admin alert for manual refund",
   );
+
+  const alertTo = env.ADMIN_ALERT_EMAIL ?? env.SMTP_FROM;
+  const subject = `[ACTION REQUIRED] Overpayment on Order ${input.orderId}`;
+  const html = `
+    <p>A duplicate payment capture was detected and requires manual refund.</p>
+    <ul>
+      <li><strong>Order ID:</strong> ${input.orderId}</li>
+      <li><strong>Payment ID (to refund):</strong> ${input.paymentId}</li>
+      <li><strong>Razorpay Payment ID:</strong> ${input.providerPaymentId ?? "N/A"}</li>
+      <li><strong>Razorpay Order ID:</strong> ${input.providerOrderId ?? "N/A"}</li>
+    </ul>
+    <p>Initiate a full refund for the above payment via the Razorpay dashboard immediately.</p>
+  `;
+
+  await enqueueEmail({
+    to: alertTo,
+    subject,
+    html,
+    meta: { template: "admin-alert", source: "payments.overpayment" },
+  });
 };
 
 const grandTotalCents = (order: {
@@ -293,6 +316,12 @@ export const confirmPaymentAttempt = async (
     subject: string;
     templateData: Record<string, unknown>;
   } | null;
+  let overpaymentCtx = null as {
+    orderId: bigint;
+    paymentId: bigint;
+    providerPaymentId?: string;
+    providerOrderId?: string;
+  } | null;
 
   const result = await prisma.$transaction(async (tx) => {
     const payment = await findPaymentByIdWithOrder(tx, paymentId);
@@ -348,12 +377,12 @@ export const confirmPaymentAttempt = async (
         gatewayTransactionId: body.gatewayTransactionId,
       });
 
-      await triggerOverpaymentRefundWorkflow({
+      overpaymentCtx = {
         orderId: payment.orderId,
         paymentId: payment.id,
         providerPaymentId: body.providerPaymentId ?? body.gatewayTransactionId,
         providerOrderId: body.providerOrderId,
-      });
+      };
 
       logger.error(
         {
@@ -454,6 +483,7 @@ export const confirmPaymentAttempt = async (
           order: { connect: { id: payment.orderId } },
           oldStatus: ORDER_STATUS.PLACED,
           newStatus: ORDER_STATUS.CONFIRMED,
+          changedBy: SYSTEM_ACTOR_ID,
           note: `Late payment: stock unavailable for ${oversoldVariantIds.length} variant(s) — manual review required`,
         });
       }
@@ -464,6 +494,7 @@ export const confirmPaymentAttempt = async (
         order: { connect: { id: payment.orderId } },
         oldStatus: ORDER_STATUS.PLACED,
         newStatus: ORDER_STATUS.CONFIRMED,
+        changedBy: SYSTEM_ACTOR_ID,
         note: "Payment confirmed",
       });
     }
@@ -646,12 +677,22 @@ export const confirmPaymentAttempt = async (
   }, TX_OPTIONS);
 
   // Side effects — TX has committed, no rollback risk, no duplicate on retry.
+  if (overpaymentCtx) {
+    const ctx = overpaymentCtx;
+    void triggerOverpaymentRefundWorkflow(ctx).catch((err) =>
+      logger.error(
+        { orderId: ctx.orderId.toString(), paymentId: ctx.paymentId.toString(), err },
+        "[payments] overpayment alert email failed — check manually",
+      ),
+    );
+  }
+
   if (invoiceId) {
     const id = invoiceId;
     generateInvoicePdf(id).catch((pdfErr) =>
       logger.error(
         { invoiceId: id.toString(), err: pdfErr },
-        "[invoice-pdf] async generation failed — will retry",
+        "[invoice-pdf] async generation failed — regenerate manually or via admin panel",
       ),
     );
   }
@@ -775,9 +816,12 @@ export const processRazorpayWebhookEvent = async (
     return { acknowledged: true, reason: "NO_PAYMENT_REFERENCE" as const };
   }
 
+  // When the header is absent, construct a key from payment+order IDs only (no event name).
+  // payment.captured and order.paid fire for the same payment — including the event name
+  // in the key would produce two distinct keys and allow both to pass deduplication.
   const providerEventId =
     providerEventIdHeader ??
-    `${event}:${providerPaymentId ?? "unknown"}:${providerOrderId ?? "unknown"}`;
+    `${providerPaymentId ?? "unknown"}:${providerOrderId ?? "unknown"}`;
 
   const existingByEvent = await prisma.$transaction(
     (tx) => findPaymentByProviderEventId(tx, providerEventId),
