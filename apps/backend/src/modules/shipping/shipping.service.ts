@@ -258,7 +258,7 @@ async function renderLabelsPdf(labels: ShippingLabelContext[]): Promise<Buffer> 
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    await page.setContent(html, { waitUntil: "load" });
     const pdfBuffer = await page.pdf({
       width: "105mm",
       height: "148mm",
