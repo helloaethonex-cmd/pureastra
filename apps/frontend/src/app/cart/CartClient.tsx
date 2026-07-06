@@ -40,8 +40,6 @@ export default function OrderPage() {
   const removeItem = useRemoveCartItem();
   const clearCart = useClearCart();
 
-  const [showCheckout, setShowCheckout] = useState(false);
-  void showCheckout; // kept for future use - checkout is now a page
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const resumeCheckoutAfterLoginRef = useRef(false);
 

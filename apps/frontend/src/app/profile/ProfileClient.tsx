@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faPenToSquare,
   faCheck,
@@ -47,7 +48,7 @@ function FieldRow({
   readOnly = false,
 }: {
   label: string;
-  icon: any;
+  icon: IconDefinition;
   value?: string | null;
   editing: boolean;
   editValue: string;
@@ -81,7 +82,7 @@ function FieldRow({
 
 // ─── Nav link ────────────────────────────────────────────────────────────────
 
-function NavItem({ href, icon, label }: { href: string; icon: any; label: string }) {
+function NavItem({ href, icon, label }: { href: string; icon: IconDefinition; label: string }) {
   return (
     <Link
       href={href}
@@ -120,6 +121,7 @@ export default function ProfilePage() {
   // Populate form when profile loads
   useEffect(() => {
     if (profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs edit form fields whenever profile data changes (e.g. after save)
       setForm({
         firstName: profile.firstName ?? "",
         lastName: profile.lastName ?? "",
@@ -145,8 +147,8 @@ export default function ProfilePage() {
       });
       setEditing(false);
       setToast({ type: "success", msg: "Profile updated!" });
-    } catch (err: any) {
-      setToast({ type: "error", msg: err.message ?? "Failed to update profile" });
+    } catch (err) {
+      setToast({ type: "error", msg: (err instanceof Error ? err.message : undefined) ?? "Failed to update profile" });
     }
   };
 

@@ -326,7 +326,7 @@ export default function Navbar() {
 {/* <div className="absolute top-[110px] left-0 w-full px-6 z-[40] flex flex-col gap-4 items-left"> */}
 <div className="absolute top-[110px] left-0 w-full px-6 z-[40] flex flex-col gap-6 items-start overflow-x-hidden">
           {[...staticMenuItems, ...(categories?.filter((c) => !c.parentId) || [])].map(
-            (item: any, index) => {
+            (item: { name: string; path?: string; slug?: string }, index) => {
               const name = item.name;
               const path = item.path || `/category/${item.slug}`;
               const isActive = index === 0;

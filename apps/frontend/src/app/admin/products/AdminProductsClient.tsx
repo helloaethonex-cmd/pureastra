@@ -225,8 +225,8 @@ function ImageManager({
       onToast({ type: "success", message: "Image uploaded!" });
       setFile(null);
       setShowUpload(false);
-    } catch (err: any) {
-      onToast({ type: "error", message: err.message ?? "Upload failed" });
+    } catch (err) {
+      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Upload failed" });
     } finally {
       setUploading(false);
     }
@@ -240,8 +240,8 @@ function ImageManager({
       await deleteImageMutation.mutateAsync({ productId, imageId: img.id });
       await onRefresh();
       onToast({ type: "success", message: "Image deleted." });
-    } catch (err: any) {
-      onToast({ type: "error", message: err.message ?? "Delete failed" });
+    } catch (err) {
+      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Delete failed" });
     } finally {
       setBusy(null);
     }
@@ -257,8 +257,8 @@ function ImageManager({
       await setProductImagePosition(productId, imgB, posA);
       await onRefresh();
       onToast({ type: "success", message: "Order updated." });
-    } catch (err: any) {
-      onToast({ type: "error", message: err.message ?? "Reorder failed" });
+    } catch (err) {
+      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Reorder failed" });
     } finally {
       setBusy(null);
     }
@@ -278,8 +278,8 @@ function ImageManager({
       }
       await onRefresh();
       onToast({ type: "success", message: "Cover image updated." });
-    } catch (err: any) {
-      onToast({ type: "error", message: err.message ?? "Failed to set cover" });
+    } catch (err) {
+      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Failed to set cover" });
     } finally {
       setBusy(null);
     }
@@ -550,8 +550,8 @@ export default function ProductsPage() {
       setVariants([{ variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" }]);
       setAutoSlug(true);
       setShowCreateForm(false);
-    } catch (err: any) {
-      showError(err.message ?? "Failed to create product");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to create product");
     }
   };
 
@@ -571,8 +571,8 @@ export default function ProductsPage() {
       });
       showSuccess("Product updated!");
       cancelEdit();
-    } catch (err: any) {
-      showError(err.message ?? "Failed to update product");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to update product");
     }
   };
 
@@ -582,8 +582,8 @@ export default function ProductsPage() {
     try {
       await deleteProduct.mutateAsync(id);
       showSuccess(`"${name}" deleted.`);
-    } catch (err: any) {
-      showError(err.message ?? "Failed to delete product");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to delete product");
     }
   };
 
@@ -594,8 +594,8 @@ export default function ProductsPage() {
       await assignProductCategories(productId, [categoryId]);
       await refreshProducts();
       showSuccess("Category assigned.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to assign category");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to assign category");
     }
   };
 
@@ -605,8 +605,8 @@ export default function ProductsPage() {
       await removeProductCategory(productId, categoryId);
       await refreshProducts();
       showSuccess("Category removed.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to remove category");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to remove category");
     }
   };
 
@@ -628,8 +628,8 @@ export default function ProductsPage() {
       });
       await refreshProducts();
       showSuccess("Variant added.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to add variant");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to add variant");
     }
   };
 
@@ -652,8 +652,8 @@ export default function ProductsPage() {
       });
       await refreshProducts();
       showSuccess("Variant updated.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to update variant");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to update variant");
     }
   };
 
@@ -664,8 +664,8 @@ export default function ProductsPage() {
       await deleteProductVariant(productId, variantId);
       await refreshProducts();
       showSuccess("Variant deleted.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to delete variant");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to delete variant");
     }
   };
 
@@ -681,8 +681,8 @@ export default function ProductsPage() {
       });
       await refreshProducts();
       showSuccess("Stock adjusted.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to adjust stock");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to adjust stock");
     }
   };
 
@@ -691,8 +691,8 @@ export default function ProductsPage() {
       setLoadingContentFor(productId);
       const sections = await listProductContentSectionsAdmin(productId);
       setContentSectionsByProduct((prev) => ({ ...prev, [productId]: sections }));
-    } catch (err: any) {
-      showError(err.message ?? "Failed to load content sections");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to load content sections");
     } finally {
       setLoadingContentFor(null);
     }
@@ -721,8 +721,8 @@ export default function ProductsPage() {
       });
       await handleLoadContentSections(productId);
       showSuccess("Content section created.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to create content section");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to create content section");
     }
   };
 
@@ -743,8 +743,8 @@ export default function ProductsPage() {
       });
       await handleLoadContentSections(productId);
       showSuccess("Content section updated.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to update content section");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to update content section");
     }
   };
 
@@ -756,8 +756,8 @@ export default function ProductsPage() {
       await deleteProductContentSection(productId, sectionId);
       await handleLoadContentSections(productId);
       showSuccess("Content section removed.");
-    } catch (err: any) {
-      showError(err.message ?? "Failed to remove content section");
+    } catch (err) {
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to remove content section");
     }
   };
 

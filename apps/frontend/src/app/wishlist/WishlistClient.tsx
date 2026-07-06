@@ -79,7 +79,7 @@ export default function WishlistPage() {
                 // Cover image: prefer product-level images (sorted by position in API),
                 // fall back to variant-level images, then placeholder.
                 const image =
-                  (item.productVariant.product as any).images?.[0]?.imageUrl ||
+                  item.productVariant.product.images?.[0]?.imageUrl ||
                   item.productVariant.images?.[0]?.imageUrl ||
                   "/img/facewash.webp";
                 const price = toNumber(item.productVariant.price);

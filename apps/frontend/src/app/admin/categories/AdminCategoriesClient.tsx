@@ -95,8 +95,8 @@ export default function AdminCategoriesPage() {
       });
       setMessage(`Category \"${created.name}\" created.`);
       resetForm();
-    } catch (err: any) {
-      setError(err.message ?? "Failed to create category");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to create category");
     }
   };
 
@@ -131,8 +131,8 @@ export default function AdminCategoriesPage() {
       });
       setMessage(`Category \"${updated.name}\" updated.`);
       resetForm();
-    } catch (err: any) {
-      setError(err.message ?? "Failed to update category");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to update category");
     }
   };
 
@@ -146,8 +146,8 @@ export default function AdminCategoriesPage() {
       await deleteCategory.mutateAsync(id);
       setMessage(`Category \"${name}\" deleted.`);
       if (editingId === id) resetForm();
-    } catch (err: any) {
-      setError(err.message ?? "Failed to delete category");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to delete category");
     }
   };
 

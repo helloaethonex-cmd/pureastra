@@ -11,6 +11,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faCartShopping,
   faStar,
@@ -117,7 +118,10 @@ export default function ProductClient({
   );
   const createReview = useCreateProductReview(product.id);
 
-  const reviewMetrics = reviewMetricsQuery.data ?? [];
+  const reviewMetrics = useMemo(
+    () => reviewMetricsQuery.data ?? [],
+    [reviewMetricsQuery.data],
+  );
 
   useEffect(() => {
     if (!reviewMetrics.length) return;
@@ -133,7 +137,10 @@ export default function ProductClient({
   }, [reviewMetrics]);
 
   const reviewSummary = reviewSummaryQuery.data;
-  const reviewList = reviewsQuery.data?.data ?? [];
+  const reviewList = useMemo(
+    () => reviewsQuery.data?.data ?? [],
+    [reviewsQuery.data],
+  );
   const allReviewImages = reviewList.flatMap((r) => r.images ?? []);
   const reviewEligibility = reviewEligibilityQuery.data;
 
@@ -142,7 +149,10 @@ export default function ProductClient({
     [reviewMetrics],
   );
 
-  const reviewSummaryMetrics = reviewSummary?.metrics ?? [];
+  const reviewSummaryMetrics = useMemo(
+    () => reviewSummary?.metrics ?? [],
+    [reviewSummary],
+  );
   const reviewMetricSummary = useMemo(() => {
     if (reviewSummaryMetrics.length > 0) {
       return reviewSummaryMetrics.map((metric) => {
@@ -258,16 +268,19 @@ export default function ProductClient({
       width: img.width ?? null,
       height: img.height ?? null,
     }));
-  const displayImages: ProductGalleryImage[] =
-    images.length > 0
-      ? images
-      : [
-          {
-            imageUrl: "/img/facewash.webp",
-            heroImageUrl: "/img/facewash.webp",
-            thumbnailImageUrl: "/img/facewash.webp",
-          },
-        ];
+  const displayImages: ProductGalleryImage[] = useMemo(
+    () =>
+      images.length > 0
+        ? images
+        : [
+            {
+              imageUrl: "/img/facewash.webp",
+              heroImageUrl: "/img/facewash.webp",
+              thumbnailImageUrl: "/img/facewash.webp",
+            },
+          ],
+    [images],
+  );
 
   const activeImage = displayImages[activeImg] ?? displayImages[0];
   const [heroLoaded, setHeroLoaded] = useState(false);
@@ -312,7 +325,9 @@ export default function ProductClient({
   const beforeAfterSection = getSection(sections, "BEFORE_AFTER");
   const faqSection = getSection(sections, "FAQ");
   const ingredientsSection = getSection(sections, "INGREDIENTS");
-  const ingredientsContent = ingredientsSection?.content as any;
+  const ingredientsContent = ingredientsSection?.content as
+    | { text?: string; list?: unknown[]; cardItems?: unknown[] }
+    | undefined;
   const hasIngredients =
     Boolean(ingredientsContent?.text) ||
     (ingredientsContent?.list?.length ?? 0) > 0 ||
@@ -320,7 +335,14 @@ export default function ProductClient({
   const [showIngredients, setShowIngredients] = useState(false);
 
   // Quick info badges — from HIGHLIGHTS or HIGHLIGHTS.badges
-  const highlightsContent = highlightsSection?.content as any;
+  const highlightsContent = highlightsSection?.content as
+    | {
+        badges?: { text: string; iconKey?: string }[];
+        unitsSold?: string;
+        rating?: string;
+        cta?: string;
+      }
+    | undefined;
   const quickBadges: { text: string; iconKey?: string }[] =
     highlightsContent?.badges ?? [
       { text: "Brightens", iconKey: "sun" },
@@ -329,7 +351,7 @@ export default function ProductClient({
       { text: "Non-Drying", iconKey: "check" },
       { text: "pH Balanced", iconKey: "leaf" },
     ];
-  const badgeIconMap: Record<string, any> = {
+  const badgeIconMap: Record<string, IconDefinition> = {
     sun: faSun,
     bolt: faBolt,
     droplet: faDroplet,
@@ -338,7 +360,9 @@ export default function ProductClient({
   };
 
   // Suitability tag for the "Best suited for:" line
-  const suitableContent = suitableSection?.content as any;
+  const suitableContent = suitableSection?.content as
+    | { skinType?: string }
+    | undefined;
   const bestSuitedFor = suitableContent?.skinType as string | undefined;
 
   const handleAddToCart = () => {
@@ -626,7 +650,7 @@ export default function ProductClient({
             <div className="space-y-2 mb-4">
               <p className="text-green-700 font-semibold text-[14px] flex items-center gap-2">
                 <FontAwesomeIcon icon={faShoppingBag} />
-                {(highlightsContent as any)?.unitsSold ??
+                {highlightsContent?.unitsSold ??
                   "1,000+ Units Sold in 7 Days"}
               </p>
               <p className="text-[14px] text-[#8B5E3C] flex items-center gap-2">
@@ -638,7 +662,7 @@ export default function ProductClient({
                   ? "..."
                   : reviewSummary != null
                     ? `${(reviewSummary.avgRating ?? 0).toFixed(1)}/5 Rating`
-                    : ((highlightsContent as any)?.rating ?? "")}
+                    : (highlightsContent?.rating ?? "")}
               </p>
 
               {/* Feature badges */}
@@ -662,7 +686,7 @@ export default function ProductClient({
                   icon={faCheckCircle}
                   className="text-green-600"
                 />
-                {(highlightsContent as any)?.cta ??
+                {highlightsContent?.cta ??
                   "Try It Once. You'll Reorder."}
               </p>
             </div>
@@ -1248,7 +1272,6 @@ export default function ProductClient({
                         Rate product metrics
                       </p>
                       {reviewMetrics.map((metric: ReviewMetric) => {
-                        const range = metric.maxValue - metric.minValue || 1;
                         const value =
                           metricRatings[metric.id] ?? metric.minValue;
                         return (

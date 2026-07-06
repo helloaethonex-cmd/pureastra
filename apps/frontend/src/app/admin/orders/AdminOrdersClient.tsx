@@ -138,19 +138,6 @@ export default function AdminOrdersPage() {
     };
   }, [search]);
 
-  if (adminLoading) {
-    return (
-      <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center">
-        Checking access...
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    router.replace("/");
-    return null;
-  }
-
   const totalPages = Math.max(1, Math.ceil(allOrders.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageStart = (safePage - 1) * PAGE_SIZE;
@@ -168,6 +155,19 @@ export default function AdminOrdersPage() {
     () => new Set(Array.from(selectedIds).filter((id) => validOrderIdSet.has(id))),
     [selectedIds, validOrderIdSet],
   );
+
+  if (adminLoading) {
+    return (
+      <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center">
+        Checking access...
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    router.replace("/");
+    return null;
+  }
 
   const eligibleOrders = filteredOrders.filter((order) => isLabelEligible(order.orderStatus));
   const allEligibleSelected =

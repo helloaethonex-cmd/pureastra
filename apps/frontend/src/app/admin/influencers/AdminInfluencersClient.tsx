@@ -71,6 +71,11 @@ export default function AdminInfluencersPage() {
 
   const payouts = useAdminInfluencerPayouts(selectedInfluencerId, { page: 1, limit: 20 });
 
+  const selectedInfluencer = useMemo(
+    () => influencers.data?.data.find((item) => item.id === selectedInfluencerId) ?? null,
+    [influencers.data, selectedInfluencerId],
+  );
+
   if (adminLoading) {
     return (
       <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center">
@@ -83,11 +88,6 @@ export default function AdminInfluencersPage() {
     router.replace("/");
     return null;
   }
-
-  const selectedInfluencer = useMemo(
-    () => influencers.data?.data.find((item) => item.id === selectedInfluencerId) ?? null,
-    [influencers.data, selectedInfluencerId],
-  );
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,8 +103,8 @@ export default function AdminInfluencersPage() {
       });
       setMessage(`Influencer \"${created.name}\" created.`);
       setCreateForm({ name: "", email: "", referralCode: "", commissionRate: "10" });
-    } catch (err: any) {
-      setError(err.message ?? "Failed to create influencer");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to create influencer");
     }
   };
 
@@ -118,8 +118,8 @@ export default function AdminInfluencersPage() {
     try {
       await updateStatus.mutateAsync({ influencerId, status });
       setMessage("Status updated.");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to update status");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to update status");
     }
   };
 
@@ -139,8 +139,8 @@ export default function AdminInfluencersPage() {
     try {
       await updateCommission.mutateAsync({ influencerId, commissionRate: value });
       setMessage("Commission rate updated.");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to update commission");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to update commission");
     }
   };
 
@@ -157,8 +157,8 @@ export default function AdminInfluencersPage() {
         canViewDashboard: !currentValue,
       });
       setMessage("Dashboard access updated.");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to update dashboard access");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to update dashboard access");
     }
   };
 
@@ -177,8 +177,8 @@ export default function AdminInfluencersPage() {
       });
       setMessage("Payout recorded.");
       setPayoutForm({ amount: "", referenceNote: "" });
-    } catch (err: any) {
-      setError(err.message ?? "Failed to record payout");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to record payout");
     }
   };
 
@@ -198,8 +198,8 @@ export default function AdminInfluencersPage() {
         status,
       });
       setMessage("Payout status updated.");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to update payout status");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to update payout status");
     }
   };
 
@@ -220,8 +220,8 @@ export default function AdminInfluencersPage() {
       const link = `${getAppOrigin()}/?ref=${encodeURIComponent(referralCode)}`;
       await copyToClipboard(link);
       setMessage("Link copied");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to copy link");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to copy link");
     }
   };
 
@@ -239,8 +239,8 @@ export default function AdminInfluencersPage() {
       const link = `${getAppOrigin()}/product/${encodeURIComponent(slug)}?ref=${encodeURIComponent(referralCode)}`;
       await copyToClipboard(link);
       setMessage("Link copied");
-    } catch (err: any) {
-      setError(err.message ?? "Failed to copy product link");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : undefined) ?? "Failed to copy product link");
     }
   };
 

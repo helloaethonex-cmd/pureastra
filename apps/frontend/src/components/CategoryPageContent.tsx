@@ -84,6 +84,7 @@ export default function CategoryPageContent({
     let cancelled = false;
 
     if (productIds.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears stale ratings when the visible product list becomes empty
       setRatingByProductId((prev) =>
         Object.keys(prev).length === 0 ? prev : {},
       );

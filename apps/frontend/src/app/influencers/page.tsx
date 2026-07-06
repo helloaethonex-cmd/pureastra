@@ -5,13 +5,8 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowLeftLong,
-  faChartLine,
-  faCoins,
   faCopy,
-  faMoneyBillTransfer,
   faSpinner,
-  faTicket,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "@/store/auth.store";
 import { useMyInfluencerDashboard } from "@/hooks/useInfluencers";

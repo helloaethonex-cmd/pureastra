@@ -424,18 +424,19 @@ export interface CheckoutConfirmResponse {
   };
 }
 
+export interface WishlistVariantImage {
+  id: string;
+  imageUrl?: string | null;
+  position?: number | null;
+}
+
 export interface WishlistProduct {
   id: string;
   uuid?: string;
   name: string;
   slug?: string | null;
   brand?: string | null;
-}
-
-export interface WishlistVariantImage {
-  id: string;
-  imageUrl?: string | null;
-  position?: number | null;
+  images?: WishlistVariantImage[];
 }
 
 export interface WishlistProductVariant {
@@ -1772,8 +1773,8 @@ export const mergeGuestCart = async () => {
 
     clearGuestCartSessionId();
     return merged;
-  } catch (err: any) {
-    const msg = String(err?.message ?? "");
+  } catch (err) {
+    const msg = String(err instanceof Error ? err.message : "");
     if (msg.includes("404")) {
       if (typeof window !== "undefined") {
         window.sessionStorage.setItem(CART_MERGE_ROUTE_UNAVAILABLE_KEY, "1");

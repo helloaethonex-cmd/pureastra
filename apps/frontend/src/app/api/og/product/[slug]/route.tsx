@@ -104,6 +104,7 @@ export async function GET(request: Request, context: RouteContext) {
           }}
         >
           {imageDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- next/og (satori) requires plain <img>, not next/image
             <img
               src={imageDataUrl}
               alt={title}

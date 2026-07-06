@@ -124,6 +124,7 @@ export function BuyNowPanel({
     if (selectedId !== null) return; // user already picked one
     const defaultAddr = addresses?.find((a) => a.isDefault);
     if (defaultAddr) setSelectedId(defaultAddr.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-runs when addresses load, not on every user selection
   }, [addresses]);
 
   const buyNow = useBuyNowCheckout();

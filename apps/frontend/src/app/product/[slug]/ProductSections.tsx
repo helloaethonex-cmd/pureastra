@@ -27,7 +27,9 @@ export function BenefitsSection({
 }: {
   section: ProductContentSection | undefined;
 }) {
-  const content = section?.content as any;
+  const content = section?.content as
+    | { items?: { title: string; desc: string }[] }
+    | undefined;
   const items: { title: string; desc: string }[] = content?.items ?? [
     {
       title: "Brightens and Evens Tone",
@@ -82,7 +84,13 @@ export function IngredientsGridSection({
 }: {
   section: ProductContentSection | undefined;
 }) {
-  const content = section?.content as any;
+  const content = section?.content as
+    | {
+        list?: string[];
+        text?: string;
+        cardItems?: { title: string; desc: string }[];
+      }
+    | undefined;
 
   const list: string[] = content?.list ?? [];
   const text: string = content?.text ?? "";
@@ -143,6 +151,7 @@ export function IngredientsGridSection({
                 bg-transparent
               "
               >
+                {/* eslint-disable-next-line @next/next/no-img-element -- fixed avatar layout with scale/blend transforms; converting to next/image risks visual regression */}
                 <img
                   src={
                     ingredientImages[item.title] ||
@@ -193,7 +202,7 @@ export function ResultsSection({
 }: {
   section: ProductContentSection | undefined;
 }) {
-  const content = section?.content as any;
+  const content = section?.content as { stats?: string[] } | undefined;
 
   const rawStats: string[] = content?.stats ?? [
     "Week 1: 60% feel hydrated & soft",
@@ -242,6 +251,7 @@ export function ResultsSection({
         >
           {/* IMAGE */}
           <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#819744] shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed avatar layout; converting to next/image risks visual regression */}
             <img
               src={item.image}
               alt={item.week}
@@ -302,7 +312,9 @@ export function HighlightsSection({
 }: {
   section: ProductContentSection | undefined;
 }) {
-  const content = section?.content as any;
+  const content = section?.content as
+    | { tagline?: string; title?: string; items?: { text: string }[] }
+    | undefined;
   const tagline: string =
     content?.tagline ??
     "Toxin-free | Fragrance-free | Paraben-free | Sulfate-free | SLS-free | pH balanced";
@@ -386,7 +398,9 @@ export function SuitableForSection({
 }: {
   section: ProductContentSection | undefined;
 }) {
-  const content = section?.content as any;
+  const content = section?.content as
+    | { fields?: { label: string; value: string }[] }
+    | undefined;
 
   const fields: { label: string; value: string }[] = content?.fields ?? [
     {
@@ -454,7 +468,7 @@ export function UsageInstructionSection({
 }: {
   section: ProductContentSection | undefined;
 }) {
-  const content = section?.content as any;
+  const content = section?.content as { steps?: string[] } | undefined;
 
   const steps: string[] = content?.steps ?? [
     "Wet your face with lukewarm water. Take a coin-sized amount of face wash.",
@@ -542,7 +556,15 @@ export function BeforeAfterSection({
   section: ProductContentSection | undefined;
   fallbackImage?: string;
 }) {
-  const content = section?.content as any;
+  const content = section?.content as
+    | {
+        beforeLabel?: string;
+        afterLabel?: string;
+        beforeImage?: string;
+        afterImage?: string;
+        caption?: string;
+      }
+    | undefined;
   const beforeLabel: string = content?.beforeLabel ?? "Dull Skin";
   const afterLabel: string = content?.afterLabel ?? "Radiant Skin";
   const beforeImg: string =
@@ -628,7 +650,9 @@ export function FaqSection({
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(0);
 
-  const content = section?.content as any;
+  const content = section?.content as
+    | { items?: { q: string; a: string }[] }
+    | undefined;
   const faqs: { q: string; a: string }[] = content?.items ?? [
     {
       q: "Is this product safe for sensitive skin?",

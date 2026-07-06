@@ -254,6 +254,7 @@ function PreviewStep({
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading/error state on re-fetch when addressId/referral change, not just on mount
     setIsLoading(true);
     setFetchError(null);
     previewCheckout({

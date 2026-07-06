@@ -531,7 +531,6 @@ export function useUpdateAdminInfluencerPayoutStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({
-      influencerId,
       payoutId,
       status,
       referenceNote,

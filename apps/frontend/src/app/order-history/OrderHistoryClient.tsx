@@ -163,7 +163,7 @@ function OrderConfirmationCard({ orderNumber }: { orderNumber: string }) {
         <div className="bg-white rounded-2xl border border-[#D6C9B6] p-5 shadow-sm">
           <h3 className="text-sm font-bold text-[#5E2B15] uppercase tracking-wide mb-4">Order Progress</h3>
           <div className="space-y-3">
-            {ORDER_STEPS.filter((s) => s.status !== 5).map((step, i) => {
+            {ORDER_STEPS.filter((s) => s.status !== 5).map((step) => {
               const isDone = currentStep > step.status || (currentStep === step.status && order.paymentStatus === 1);
               const isCurrent = currentStep === step.status;
               return (

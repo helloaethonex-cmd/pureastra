@@ -67,7 +67,7 @@ export default function TermsCondition() {
           <div>
             <h2 className="font-semibold text-lg">9. Limitations of Liability</h2>
             <p>
-              Pureastra is not responsible for indirect, incidental, or consequential damages arising from product use, website access, or third-party services. Our liability is limited to replacing verified damaged or defective products. Products purchased for resale or commercial purposes are entirely at the customer's risk.
+              Pureastra is not responsible for indirect, incidental, or consequential damages arising from product use, website access, or third-party services. Our liability is limited to replacing verified damaged or defective products. Products purchased for resale or commercial purposes are entirely at the customer&apos;s risk.
             </p>
           </div>
 

@@ -81,6 +81,7 @@ export default function GlowRoutine() {
             transition={{ delay: index * 0.1 }}
             className="relative rounded-xl overflow-hidden group"
           >
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed layout with hover-scale transform; converting to next/image risks visual regression */}
             <img
               src={step.img}
               alt={step.title}
@@ -106,7 +107,13 @@ export default function GlowRoutine() {
 }
 
 /* ================= CARD ================= */
-function Card({ step, index }: any) {
+function Card({
+  step,
+  index,
+}: {
+  step: { title: string; img: string };
+  index: number;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -114,6 +121,7 @@ function Card({ step, index }: any) {
       transition={{ delay: index * 0.1 }}
       className="relative rounded-xl overflow-hidden"
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- fixed layout; converting to next/image risks visual regression */}
       <img
         src={step.img}
         alt={step.title}

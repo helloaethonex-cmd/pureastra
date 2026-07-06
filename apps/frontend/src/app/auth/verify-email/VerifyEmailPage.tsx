@@ -23,6 +23,7 @@ export default function VerifyEmailPage() {
     const token = searchParams.get("token");
 
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to searchParams changing after mount, not just initial render
       setErrorMsg("Invalid verification link — no token found.");
       setStatus("error");
       return;

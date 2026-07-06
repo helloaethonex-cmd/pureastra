@@ -63,6 +63,7 @@ export default function OrderDetailClient({ orderNumber }: { orderNumber: string
   useEffect(() => {
     let cancelled = false;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets loading/error state on re-fetch when orderNumber changes, not just on mount
     setLoading(true);
     setIsError(false);
 
