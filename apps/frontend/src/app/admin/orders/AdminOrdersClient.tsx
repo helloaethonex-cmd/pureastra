@@ -4,12 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBoxOpen,
-  faSpinner,
-  faTag,
-  faTags,
-} from "@fortawesome/free-solid-svg-icons";
+import { faTag, faTags } from "@fortawesome/free-solid-svg-icons";
 import {
   useIsAdmin,
   useUpdateAdminOrderStatus,
@@ -22,6 +17,8 @@ import {
   regenerateAdminInvoicePdf,
   type OrderInvoiceResponse,
 } from "@/services/api";
+import { Badge, Button, PageHeader, TextInput } from "../_components";
+import type { BadgeRole } from "../_components";
 
 const ORDER_STATUS_LABEL: Record<number, string> = {
   0: "PLACED",
@@ -41,6 +38,19 @@ const PAYMENT_STATUS_LABEL: Record<number, string> = {
 
 const isLabelEligible = (orderStatus: number) => orderStatus <= 2;
 const PAGE_SIZE = 20;
+
+const orderStatusBadgeRole = (status: number): BadgeRole => {
+  if (status === 4) return "success";
+  if (status === 5) return "error";
+  return "warning";
+};
+
+const paymentStatusBadgeRole = (status: number): BadgeRole => {
+  if (status === 1) return "success";
+  if (status === 2) return "error";
+  if (status === 3) return "info";
+  return "warning";
+};
 
 const isFakeOrderTimestamp = (createdAt: string) => {
   const dt = new Date(createdAt);
@@ -255,73 +265,58 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-full bg-[#9E6E5B] flex items-center justify-center text-white">
-            <FontAwesomeIcon icon={faBoxOpen} />
-          </div>
-          <h1 className="text-2xl font-bold text-[#5E2B16] font-['Roboto',serif]">
-            Manage Orders
-          </h1>
-        </div>
+        <PageHeader title="Manage Orders" breadcrumb="Admin / Orders" />
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+          <TextInput
             value={search}
             onChange={(e) => {
               setPage(1);
               setSearch(e.target.value);
             }}
             placeholder="Search by order number"
-            className="w-full sm:w-80 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            className="w-full sm:w-80"
           />
 
           {effectiveSelectedIds.size > 0 ? (
-            <button
-              onClick={handleBulkLabel}
-              disabled={downloadBulk.isPending}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#5E2B16] text-white text-sm font-semibold hover:bg-[#4a2010] disabled:opacity-60 transition"
-            >
-              {downloadBulk.isPending ? (
-                <FontAwesomeIcon icon={faSpinner} spin />
-              ) : (
-                <FontAwesomeIcon icon={faTags} />
-              )}
+            <Button onClick={handleBulkLabel} disabled={downloadBulk.isPending} loading={downloadBulk.isPending}>
+              {!downloadBulk.isPending && <FontAwesomeIcon icon={faTags} />}
               Download Labels ({effectiveSelectedIds.size})
-            </button>
+            </Button>
           ) : null}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F2ECDF] text-[#5E2B16]">
+        <div className="overflow-x-auto rounded-[var(--admin-r-lg)] border border-[var(--admin-border)] bg-[var(--admin-card-bg)]">
+          <table className="w-full text-[length:var(--admin-text-sm)]">
+            <thead className="bg-[var(--admin-surface-alt)] text-[var(--admin-ink)]">
               <tr>
-                <th className="px-4 py-3 w-10">
+                <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
                     checked={allEligibleSelected}
                     onChange={toggleSelectAll}
                     disabled={eligibleOrders.length === 0}
                     title="Select all eligible orders"
-                    className="accent-[#819744]"
+                    className="accent-[var(--admin-accent)]"
                   />
                 </th>
-                <th className="text-left px-4 py-3">Order</th>
-                <th className="text-left px-4 py-3">User</th>
-                <th className="text-left px-4 py-3">Order Status</th>
-                <th className="text-left px-4 py-3">Payment</th>
-                <th className="text-left px-4 py-3">Total Paid</th>
-                <th className="text-left px-4 py-3">Created</th>
-                <th className="text-left px-4 py-3">Actions</th>
+                <th className="px-4 py-3 text-left">Order</th>
+                <th className="px-4 py-3 text-left">User</th>
+                <th className="px-4 py-3 text-left">Order Status</th>
+                <th className="px-4 py-3 text-left">Payment</th>
+                <th className="px-4 py-3 text-left">Total Paid</th>
+                <th className="px-4 py-3 text-left">Created</th>
+                <th className="px-4 py-3 text-left">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[var(--admin-border)]">
               {ordersLoading ? (
                 <tr>
                   <td className="px-4 py-4" colSpan={8}>Loading orders...</td>
                 </tr>
               ) : ordersError ? (
                 <tr>
-                  <td className="px-4 py-4 text-red-600" colSpan={8}>{ordersError}</td>
+                  <td className="px-4 py-4 text-[var(--admin-error-fg)]" colSpan={8}>{ordersError}</td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
@@ -334,7 +329,7 @@ export default function AdminOrdersPage() {
                     downloadLabel.isPending && downloadLabel.variables === order.id;
 
                   return (
-                    <tr key={order.id} className="border-t border-gray-100">
+                    <tr key={order.id}>
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
@@ -342,51 +337,55 @@ export default function AdminOrdersPage() {
                           onChange={() => toggleSelect(order.id)}
                           disabled={!eligible}
                           title={eligible ? "Select for bulk label" : "Not eligible for shipping label"}
-                          className="accent-[#819744] disabled:opacity-30"
+                          className="accent-[var(--admin-accent)] disabled:opacity-30"
                         />
                       </td>
                       <td className="px-4 py-3 font-mono">{order.orderNumber}</td>
                       <td className="px-4 py-3">{order.userId}</td>
-                      <td className="px-4 py-3">{ORDER_STATUS_LABEL[order.orderStatus] ?? order.orderStatus}</td>
-                      <td className="px-4 py-3">{PAYMENT_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}</td>
+                      <td className="px-4 py-3">
+                        <Badge role={orderStatusBadgeRole(order.orderStatus)}>
+                          {ORDER_STATUS_LABEL[order.orderStatus] ?? order.orderStatus}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge role={paymentStatusBadgeRole(order.paymentStatus)}>
+                          {PAYMENT_STATUS_LABEL[order.paymentStatus] ?? order.paymentStatus}
+                        </Badge>
+                      </td>
                       <td className="px-4 py-3">₹{order.totalPaid}</td>
                       <td className="px-4 py-3">{new Date(order.createdAt).toLocaleString()}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
                             onClick={() => handleAdvance(order.orderNumber, order.orderStatus)}
                             disabled={updateStatus.isPending || order.orderStatus >= 4 || order.orderStatus === 5}
-                            className="px-3 py-1 rounded bg-[#819744] text-white text-xs disabled:opacity-50"
                           >
                             Advance
-                          </button>
-                          <button
-                            onClick={() => handleViewInvoice(order.orderNumber)}
-                            className="px-3 py-1 rounded bg-[#5B8D7C] text-white text-xs"
-                          >
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => handleViewInvoice(order.orderNumber)}>
                             Invoice
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
                             onClick={() => handleRegenerateInvoicePdf(order.orderNumber)}
                             disabled={regeneratingOrder === order.orderNumber}
-                            className="px-3 py-1 rounded bg-[#9E6E5B] text-white text-xs disabled:opacity-50"
+                            loading={regeneratingOrder === order.orderNumber}
                           >
                             {regeneratingOrder === order.orderNumber ? "Regenerating..." : "Regen PDF"}
-                          </button>
+                          </Button>
                           {eligible ? (
-                            <button
+                            <Button
+                              size="sm"
                               onClick={() => handleSingleLabel(order.id)}
                               disabled={isSinglePending}
-                              className="px-3 py-1 rounded bg-[#5E2B16] text-white text-xs disabled:opacity-50 inline-flex items-center gap-1"
+                              loading={isSinglePending}
                               title="Download shipping label PDF"
                             >
-                              {isSinglePending ? (
-                                <FontAwesomeIcon icon={faSpinner} spin />
-                              ) : (
-                                <FontAwesomeIcon icon={faTag} />
-                              )}
+                              {!isSinglePending && <FontAwesomeIcon icon={faTag} />}
                               Label
-                            </button>
+                            </Button>
                           ) : null}
                         </div>
                       </td>
@@ -399,68 +398,61 @@ export default function AdminOrdersPage() {
         </div>
 
         {!ordersLoading && allOrders.length > 0 ? (
-          <div className="flex items-center justify-between mt-4 text-sm text-[#5E2B16]">
+          <div className="mt-4 flex items-center justify-between text-[length:var(--admin-text-sm)] text-[var(--admin-ink)]">
             <span>
               Page {safePage} of {totalPages} ({allOrders.length} total)
             </span>
             <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={safePage <= 1}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
+              <Button size="sm" variant="secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>
                 Prev
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={safePage >= totalPages}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages}>
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
 
         {(invoiceOrderNumber || invoiceError || selectedInvoice) ? (
-          <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-[#5E2B16]">
+          <div className="mt-6 rounded-[var(--admin-r-lg)] border border-[var(--admin-border)] bg-[var(--admin-card-bg)] p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-[length:var(--admin-text-lg)] font-semibold text-[var(--admin-ink)]">
                 Invoice: {invoiceOrderNumber ?? "-"}
               </h2>
               {invoiceOrderNumber ? (
-                <button
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => handleRegenerateInvoicePdf(invoiceOrderNumber, true)}
                   disabled={regeneratingOrder === invoiceOrderNumber}
-                  className="px-3 py-1 rounded bg-[#6C79A8] text-white disabled:opacity-50"
                 >
                   Force Regenerate
-                </button>
+                </Button>
               ) : null}
             </div>
 
-            {invoiceLoading ? <p className="text-sm">Loading invoice...</p> : null}
-            {invoiceError ? <p className="text-sm text-red-600">{invoiceError}</p> : null}
+            {invoiceLoading ? <p className="text-[length:var(--admin-text-sm)] text-[var(--admin-ink-muted)]">Loading invoice...</p> : null}
+            {invoiceError ? <p className="text-[length:var(--admin-text-sm)] text-[var(--admin-error-fg)]">{invoiceError}</p> : null}
 
             {selectedInvoice ? (
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div className="grid gap-4 text-[length:var(--admin-text-sm)] md:grid-cols-2">
                 <div>
-                  <p className="text-[#6f665b]">Invoice Number</p>
-                  <p className="font-medium text-[#5E2B16]">{selectedInvoice.invoiceNumber}</p>
+                  <p className="text-[var(--admin-ink-muted)]">Invoice Number</p>
+                  <p className="font-medium text-[var(--admin-ink)]">{selectedInvoice.invoiceNumber}</p>
                 </div>
                 <div>
-                  <p className="text-[#6f665b]">Issued At</p>
-                  <p className="font-medium text-[#5E2B16]">
+                  <p className="text-[var(--admin-ink-muted)]">Issued At</p>
+                  <p className="font-medium text-[var(--admin-ink)]">
                     {new Date(selectedInvoice.issuedAt).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[#6f665b]">Total</p>
-                  <p className="font-medium text-[#5E2B16]">₹{selectedInvoice.totalAmount}</p>
+                  <p className="text-[var(--admin-ink-muted)]">Total</p>
+                  <p className="font-medium text-[var(--admin-ink)]">₹{selectedInvoice.totalAmount}</p>
                 </div>
                 <div>
-                  <p className="text-[#6f665b]">PDF Status</p>
-                  <p className="font-medium text-[#5E2B16]">{selectedInvoice.pdfStatus}</p>
+                  <p className="text-[var(--admin-ink-muted)]">PDF Status</p>
+                  <p className="font-medium text-[var(--admin-ink)]">{selectedInvoice.pdfStatus}</p>
                 </div>
                 <div className="md:col-span-2">
                   {selectedInvoice.pdfUrl ? (
@@ -468,12 +460,12 @@ export default function AdminOrdersPage() {
                       href={selectedInvoice.pdfUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex px-3 py-1.5 rounded bg-[#819744] text-white"
+                      className="inline-flex rounded-[var(--admin-r-md)] bg-[var(--admin-accent)] px-3 py-1.5 text-white hover:bg-[var(--admin-accent-hover)]"
                     >
                       Open PDF
                     </a>
                   ) : (
-                    <p className="text-[#6f665b]">No PDF URL yet. Use regenerate action.</p>
+                    <p className="text-[var(--admin-ink-muted)]">No PDF URL yet. Use regenerate action.</p>
                   )}
                 </div>
               </div>
