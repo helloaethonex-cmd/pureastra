@@ -15,7 +15,6 @@ import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useProducts";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowLeft,
   faBoxOpen,
   faEdit,
   faTrash,
@@ -30,7 +29,6 @@ import {
   faCheckCircle,
   faExclamationCircle,
 } from "@fortawesome/free-solid-svg-icons";
-import Link from "next/link";
 import {
   addProductVariant,
   adjustProductVariantStock,
@@ -461,7 +459,7 @@ export default function ProductsPage() {
 
   if (adminLoading) {
     return (
-      <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center px-4">
+      <div className="flex min-h-[50vh] items-center justify-center px-4">
         <div className="text-[#5E2B16] animate-pulse text-sm">Checking access…</div>
       </div>
     );
@@ -768,16 +766,7 @@ export default function ProductsPage() {
       {/* Global toast — fixed, always on top */}
       <Toast toast={toast} onDismiss={dismissToast} />
 
-      <section className="min-h-screen bg-[#FAF3E2] px-4 sm:px-6 md:px-12 py-10 md:py-14">
-        <div className="max-w-5xl mx-auto">
-
-          {/* HEADER */}
-          <Link
-            href="/admin"
-            className="inline-flex items-center gap-2 text-[#819744] hover:text-[#5E2B16] mb-6 transition text-sm font-medium"
-          >
-            <FontAwesomeIcon icon={faArrowLeft} /> Back to Admin
-          </Link>
+      <div className="max-w-5xl mx-auto">
 
           <div className="flex items-center justify-between mb-6 gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -1281,7 +1270,6 @@ export default function ProductsPage() {
             to   { opacity: 1; transform: translateY(0); }
           }
         `}</style>
-      </section>
     </>
   );
 }

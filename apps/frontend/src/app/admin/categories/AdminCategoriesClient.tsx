@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowLeft,
   faLayerGroup,
   faPen,
   faTrash,
@@ -55,7 +53,7 @@ export default function AdminCategoriesPage() {
 
   if (adminLoading) {
     return (
-      <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-[#5E2B16] animate-pulse">Checking access...</div>
       </div>
     );
@@ -152,15 +150,7 @@ export default function AdminCategoriesPage() {
   };
 
   return (
-    <section className="min-h-screen bg-[#FAF3E2] px-6 md:px-12 py-14">
-      <div className="max-w-5xl mx-auto">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-2 text-[#819744] hover:text-[#5E2B16] mb-8 transition text-sm font-medium"
-        >
-          <FontAwesomeIcon icon={faArrowLeft} />
-          Back to Admin
-        </Link>
+    <div className="max-w-5xl mx-auto">
 
         <div className="flex items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
@@ -351,6 +341,5 @@ export default function AdminCategoriesPage() {
           </div>
         </div>
       </div>
-    </section>
   );
 }

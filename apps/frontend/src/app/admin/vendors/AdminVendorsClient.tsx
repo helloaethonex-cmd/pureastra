@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowLeft,
   faStore,
   faPlus,
   faTrash,
@@ -738,7 +736,7 @@ export default function AdminVendorsClient() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-[#5E2B16] animate-pulse">Checking access...</div>
       </div>
     );
@@ -756,13 +754,7 @@ export default function AdminVendorsClient() {
   ];
 
   return (
-    <section className="min-h-screen bg-[#FAF3E2] px-6 md:px-12 py-14">
-      <div className="max-w-7xl mx-auto">
-        <Link href="/admin"
-          className="inline-flex items-center gap-2 text-[#819744] hover:text-[#5E2B16] mb-8 transition text-sm font-medium">
-          <FontAwesomeIcon icon={faArrowLeft} />Back to Admin
-        </Link>
-
+    <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-full bg-[#5B8D7C] flex items-center justify-center text-white">
             <FontAwesomeIcon icon={faStore} />
@@ -787,6 +779,5 @@ export default function AdminVendorsClient() {
         {tab === "orders" && <WholesaleInvoicesTab />}
         {tab === "report" && <ReportTab />}
       </div>
-    </section>
   );
 }
