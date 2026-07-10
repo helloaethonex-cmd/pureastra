@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import {
   useIsAdmin,
   useCreateProduct,
@@ -25,9 +26,6 @@ import {
   faUpload,
   faChevronLeft,
   faChevronRight,
-  faCircleNotch,
-  faCheckCircle,
-  faExclamationCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   addProductVariant,
@@ -47,6 +45,18 @@ import {
   updateProductVariant,
 } from "@/services/api";
 import Image from "next/image";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  EmptyState,
+  Field,
+  PageHeader,
+  Select,
+  SkeletonCard,
+  Textarea,
+  TextInput,
+} from "../_components";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,71 +95,26 @@ const ALLOWED_PRODUCT_IMAGE_MIME_TYPES = new Set([
   "image/avif",
 ]);
 
-// ─── Toast System ─────────────────────────────────────────────────────────────
+// ─── Toast bridge ─────────────────────────────────────────────────────────────
+// Standardizes on the shared react-hot-toast (already used on Orders) — a loading
+// toast is replaced in place by the success/error toast via a shared id.
 
-type ToastState = {
-  type: "idle" | "updating" | "success" | "error";
-  message?: string;
-};
+function useToastBridge() {
+  const toastId = useRef<string | undefined>(undefined);
 
-function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void }) {
-  const visible = toast.type !== "idle";
+  const showUpdating = (message: string) => {
+    toastId.current = toast.loading(message);
+  };
+  const showSuccess = (message: string) => {
+    toast.success(message, { id: toastId.current });
+    toastId.current = undefined;
+  };
+  const showError = (message: string) => {
+    toast.error(message, { id: toastId.current });
+    toastId.current = undefined;
+  };
 
-  useEffect(() => {
-    if (toast.type === "success" || toast.type === "error") {
-      const t = setTimeout(onDismiss, 3500);
-      return () => clearTimeout(t);
-    }
-  }, [toast, onDismiss]);
-
-  if (!visible) return null;
-
-  const cfg = {
-    updating: {
-      bg: "bg-[#5E2B16]",
-      icon: faCircleNotch,
-      spin: true,
-      text: "text-white",
-    },
-    success: {
-      bg: "bg-[#4a7c43]",
-      icon: faCheckCircle,
-      spin: false,
-      text: "text-white",
-    },
-    error: {
-      bg: "bg-red-600",
-      icon: faExclamationCircle,
-      spin: false,
-      text: "text-white",
-    },
-    idle: { bg: "", icon: faCheckCircle, spin: false, text: "" },
-  }[toast.type];
-
-  return (
-    <div
-      className={`fixed bottom-5 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg ${cfg.bg} ${cfg.text}
-        text-sm font-medium max-w-xs sm:max-w-sm
-        animate-[slideUp_0.25s_ease-out]`}
-      style={{ animation: "slideUp 0.25s ease-out" }}
-    >
-      <FontAwesomeIcon
-        icon={cfg.icon}
-        className={cfg.spin ? "animate-spin" : ""}
-        size="sm"
-      />
-      <span className="flex-1">{toast.message ?? ""}</span>
-      {toast.type !== "updating" && (
-        <button
-          onClick={onDismiss}
-          className="opacity-70 hover:opacity-100 transition ml-1"
-          aria-label="Dismiss"
-        >
-          <FontAwesomeIcon icon={faTimes} size="xs" />
-        </button>
-      )}
-    </div>
-  );
+  return { showUpdating, showSuccess, showError };
 }
 
 // ─── Image Manager ────────────────────────────────────────────────────────────
@@ -165,12 +130,16 @@ function ImageManager({
   productId,
   images,
   onRefresh,
-  onToast,
+  showSuccess,
+  showError,
+  showUpdating,
 }: {
   productId: string;
   images: ProductImage[];
   onRefresh: () => Promise<void>;
-  onToast: (t: ToastState) => void;
+  showSuccess: (message: string) => void;
+  showError: (message: string) => void;
+  showUpdating: (message: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -190,19 +159,13 @@ function ImageManager({
     }
 
     if (!ALLOWED_PRODUCT_IMAGE_MIME_TYPES.has(candidate.type)) {
-      onToast({
-        type: "error",
-        message: "Only JPG, PNG, WEBP, and AVIF images are supported.",
-      });
+      showError("Only JPG, PNG, WEBP, and AVIF images are supported.");
       setFile(null);
       return;
     }
 
     if (candidate.size > MAX_PRODUCT_IMAGE_UPLOAD_BYTES) {
-      onToast({
-        type: "error",
-        message: "Image must be 8MB or smaller.",
-      });
+      showError("Image must be 8MB or smaller.");
       setFile(null);
       return;
     }
@@ -213,18 +176,18 @@ function ImageManager({
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
-    onToast({ type: "updating", message: "Uploading image…" });
+    showUpdating("Uploading image…");
     try {
       const nextPos =
         sorted.length > 0
           ? Math.max(...sorted.map((img) => Number(img.position ?? 0))) + 1
           : 0;
       await addImageMutation.mutateAsync({ file, position: nextPos });
-      onToast({ type: "success", message: "Image uploaded!" });
+      showSuccess("Image uploaded!");
       setFile(null);
       setShowUpload(false);
     } catch (err) {
-      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Upload failed" });
+      showError((err instanceof Error ? err.message : undefined) ?? "Upload failed");
     } finally {
       setUploading(false);
     }
@@ -233,13 +196,13 @@ function ImageManager({
   const handleDelete = async (img: ProductImage) => {
     if (!confirm("Delete this image?")) return;
     setBusy(img.id);
-    onToast({ type: "updating", message: "Deleting image…" });
+    showUpdating("Deleting image…");
     try {
       await deleteImageMutation.mutateAsync({ productId, imageId: img.id });
       await onRefresh();
-      onToast({ type: "success", message: "Image deleted." });
+      showSuccess("Image deleted.");
     } catch (err) {
-      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Delete failed" });
+      showError((err instanceof Error ? err.message : undefined) ?? "Delete failed");
     } finally {
       setBusy(null);
     }
@@ -247,16 +210,16 @@ function ImageManager({
 
   const handleSwap = async (imgA: ProductImage, imgB: ProductImage) => {
     setBusy(imgA.id);
-    onToast({ type: "updating", message: "Updating order…" });
+    showUpdating("Updating order…");
     try {
       const posA = Number(imgA.position ?? 0);
       const posB = Number(imgB.position ?? 0);
       await setProductImagePosition(productId, imgA, posB);
       await setProductImagePosition(productId, imgB, posA);
       await onRefresh();
-      onToast({ type: "success", message: "Order updated." });
+      showSuccess("Order updated.");
     } catch (err) {
-      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Reorder failed" });
+      showError((err instanceof Error ? err.message : undefined) ?? "Reorder failed");
     } finally {
       setBusy(null);
     }
@@ -264,7 +227,7 @@ function ImageManager({
 
   const handleSetCover = async (img: ProductImage) => {
     setBusy(img.id);
-    onToast({ type: "updating", message: "Setting cover image…" });
+    showUpdating("Setting cover image…");
     try {
       const currentCover = sorted.find((i) => Number(i.position ?? 0) === 0);
       if (currentCover && currentCover.id !== img.id) {
@@ -275,9 +238,9 @@ function ImageManager({
         await setProductCoverImage(productId, img);
       }
       await onRefresh();
-      onToast({ type: "success", message: "Cover image updated." });
+      showSuccess("Cover image updated.");
     } catch (err) {
-      onToast({ type: "error", message: (err instanceof Error ? err.message : undefined) ?? "Failed to set cover" });
+      showError((err instanceof Error ? err.message : undefined) ?? "Failed to set cover");
     } finally {
       setBusy(null);
     }
@@ -287,47 +250,41 @@ function ImageManager({
     <div className="mt-2">
       {/* Upload panel */}
       {showUpload ? (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-3">
-          <label className="flex-1 w-full">
-            <span className="block text-xs text-blue-700 font-medium mb-1">
+        <div className="mb-3 flex flex-col items-start gap-3 rounded-[var(--admin-r-md)] border border-[var(--admin-border)] bg-[var(--admin-surface-alt)] px-4 py-3 sm:flex-row sm:items-center">
+          <label className="w-full flex-1">
+            <span className="mb-1 block text-[length:var(--admin-text-2xs)] font-medium text-[var(--admin-ink-muted)]">
               Select image file
             </span>
             <input
               type="file"
               accept="image/*"
               onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
-              className="text-xs text-gray-700 w-full"
+              className="w-full text-[length:var(--admin-text-xs)] text-[var(--admin-ink-secondary)]"
             />
           </label>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button
-              onClick={handleUpload}
-              disabled={!file || uploading}
-              className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium disabled:opacity-50 flex items-center justify-center gap-1.5 transition"
-            >
-              <FontAwesomeIcon icon={uploading ? faCircleNotch : faUpload} className={uploading ? "animate-spin" : ""} />
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button size="sm" onClick={handleUpload} disabled={!file || uploading} loading={uploading}>
               {uploading ? "Uploading…" : "Upload"}
-            </button>
-            <button
-              onClick={() => { setShowUpload(false); setFile(null); }}
-              className="flex-1 sm:flex-none px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-medium transition"
-            >
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => { setShowUpload(false); setFile(null); }}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <button
+        <Button
+          size="sm"
+          variant="secondary"
           onClick={() => setShowUpload(true)}
-          className="mb-3 w-full sm:w-auto px-4 py-2.5 border border-dashed border-[#9E6E5B] text-[#9E6E5B] hover:bg-[#fdf6f0] rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition"
+          className="mb-3 w-full border border-dashed border-[var(--admin-primary)] bg-transparent text-[var(--admin-primary)] sm:w-auto"
         >
           <FontAwesomeIcon icon={faUpload} /> Upload Image
-        </button>
+        </Button>
       )}
 
       {/* Image strip — horizontally scrollable on mobile */}
       {sorted.length === 0 ? (
-        <p className="text-xs text-gray-400 italic">
+        <p className="text-[length:var(--admin-text-xs)] italic text-[var(--admin-ink-muted)]">
           No images yet — upload one above.
         </p>
       ) : (
@@ -440,22 +397,15 @@ export default function ProductsPage() {
   const [variants, setVariants] = useState<Variant[]>([
     { variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" },
   ]);
-  const [toast, setToast] = useState<ToastState>({ type: "idle" });
   const [contentSectionsByProduct, setContentSectionsByProduct] = useState<
     Record<string, ProductContentSection[]>
   >({});
   const [loadingContentFor, setLoadingContentFor] = useState<string | null>(null);
+  const { showSuccess, showError, showUpdating } = useToastBridge();
 
   const refreshProducts = async () => {
     await queryClient.invalidateQueries({ queryKey: ["products"] });
   };
-
-  const pushToast = (t: ToastState) => setToast(t);
-  const dismissToast = () => setToast({ type: "idle" });
-
-  const showSuccess = (msg: string) => pushToast({ type: "success", message: msg });
-  const showError = (msg: string) => pushToast({ type: "error", message: msg });
-  const showUpdating = (msg: string) => pushToast({ type: "updating", message: msg });
 
   if (adminLoading) {
     return (
@@ -762,127 +712,110 @@ export default function ProductsPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <>
-      {/* Global toast — fixed, always on top */}
-      <Toast toast={toast} onDismiss={dismissToast} />
-
-      <div className="max-w-5xl mx-auto">
-
-          <div className="flex items-center justify-between mb-6 gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 flex-none rounded-full bg-[#9E6E5B] flex items-center justify-center text-white">
-                <FontAwesomeIcon icon={faBoxOpen} />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-[#5E2B16] truncate">
-                Manage Products
-              </h1>
-            </div>
-            <button
-              onClick={() => {
-                setShowCreateForm(!showCreateForm);
-                setEditingId(null);
-                setForm({ name: "", slug: "", description: "", brand: "", discountEndsAt: "", isActive: true });
-                setSelectedCategoryIds([]);
-                setVariants([{ variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" }]);
-                setAutoSlug(true);
-              }}
-              className="flex-none px-3 sm:px-4 py-2 bg-[#9E6E5B] hover:bg-[#8a5e4e] text-white rounded-lg transition flex items-center gap-2 text-sm font-medium"
-            >
-              <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} />
-              <span className="hidden sm:inline">{showCreateForm ? "Cancel" : "New Product"}</span>
-            </button>
-          </div>
+    <div className="max-w-5xl mx-auto">
+      <PageHeader
+        title="Manage Products"
+        breadcrumb="Admin / Products"
+        actions={
+          <Button
+            size="sm"
+            variant={showCreateForm ? "secondary" : "primary"}
+            onClick={() => {
+              setShowCreateForm(!showCreateForm);
+              setEditingId(null);
+              setForm({ name: "", slug: "", description: "", brand: "", discountEndsAt: "", isActive: true });
+              setSelectedCategoryIds([]);
+              setVariants([{ variantName: "", sku: "", price: "", mrp: "", stockQuantity: "" }]);
+              setAutoSlug(true);
+            }}
+          >
+            <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} />
+            <span className="hidden sm:inline">{showCreateForm ? "Cancel" : "New Product"}</span>
+          </Button>
+        }
+      />
 
           {/* ─── CREATE FORM ─────────────────────────────────────────────── */}
           {showCreateForm && (
             <form
               onSubmit={handleCreate}
-              className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6"
+              className="mb-6 rounded-[var(--admin-r-lg)] border border-[var(--admin-border)] bg-[var(--admin-card-bg)] p-4 shadow-[var(--admin-elev-1)] sm:p-6"
             >
-              <h3 className="text-base sm:text-lg font-semibold text-[#5E2B16] mb-4">
+              <h3 className="mb-4 text-[length:var(--admin-text-lg)] font-semibold text-[var(--admin-ink)]">
                 Create New Product
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#5E2B16] mb-1">
-                    Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
+              <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Name" htmlFor="prod-name" required>
+                  <TextInput
+                    id="prod-name"
                     required
-                    type="text"
                     value={form.name}
                     onChange={(e) => handleNameChange(e.target.value)}
                     placeholder="e.g. Vitamin C Face Wash"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#9E6E5B]"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#5E2B16] mb-1">Slug</label>
-                  <input
-                    type="text"
+                </Field>
+                <Field label="Slug" htmlFor="prod-slug" help="Auto-generated from name unless edited">
+                  <TextInput
+                    id="prod-slug"
                     value={form.slug}
                     onChange={(e) => { setAutoSlug(false); setForm((p) => ({ ...p, slug: e.target.value })); }}
                     placeholder="auto-generated"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#9E6E5B] font-mono"
+                    className="font-mono"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#5E2B16] mb-1">Brand</label>
-                  <input
-                    type="text"
+                </Field>
+                <Field label="Brand" htmlFor="prod-brand">
+                  <TextInput
+                    id="prod-brand"
                     value={form.brand}
                     onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))}
                     placeholder="e.g. Pureastra"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#9E6E5B]"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#5E2B16] mb-1">Discount Ends At</label>
-                  <input
+                </Field>
+                <Field label="Discount Ends At" htmlFor="prod-discount">
+                  <TextInput
+                    id="prod-discount"
                     type="datetime-local"
                     value={form.discountEndsAt}
                     onChange={(e) => setForm((p) => ({ ...p, discountEndsAt: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#9E6E5B]"
                   />
-                </div>
+                </Field>
                 <div className="flex items-center gap-3 sm:pt-6">
-                  <input
+                  <Checkbox
                     id="isActive"
-                    type="checkbox"
+                    label="Active (visible on site)"
                     checked={form.isActive}
                     onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
-                    className="accent-[#9E6E5B] w-4 h-4"
                   />
-                  <label htmlFor="isActive" className="text-sm font-medium text-[#5E2B16]">
-                    Active (visible on site)
-                  </label>
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-[#5E2B16] mb-1">Description</label>
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="Product description"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#9E6E5B] resize-none"
-                />
+                <Field label="Description" htmlFor="prod-desc">
+                  <Textarea
+                    id="prod-desc"
+                    rows={2}
+                    value={form.description}
+                    onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                    placeholder="Product description"
+                  />
+                </Field>
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-[#5E2B16] mb-2">Categories</label>
+                <label className="mb-2 block text-[length:var(--admin-text-sm)] font-medium text-[var(--admin-ink-secondary)]">
+                  Categories
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {categories?.map((cat) => (
                     <button
                       type="button"
                       key={cat.id}
                       onClick={() => toggleCategory(cat.id)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                      className={`rounded-full px-3 py-1.5 text-[length:var(--admin-text-xs)] font-medium transition-colors duration-[var(--admin-duration-frequent)] ${
                         selectedCategoryIds.includes(cat.id)
-                          ? "bg-[#9E6E5B] text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          ? "bg-[var(--admin-primary)] text-white"
+                          : "bg-[var(--admin-surface-alt)] text-[var(--admin-ink-secondary)] hover:bg-[var(--admin-border)]"
                       }`}
                     >
                       {cat.name}
@@ -893,60 +826,59 @@ export default function ProductsPage() {
 
               {/* Variants — stack on mobile */}
               <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-[#5E2B16]">Variants (optional)</label>
-                  <button
-                    type="button"
-                    onClick={addVariant}
-                    className="text-xs text-[#9E6E5B] hover:text-[#7a5644] flex items-center gap-1 font-medium"
-                  >
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[length:var(--admin-text-sm)] font-medium text-[var(--admin-ink-secondary)]">
+                    Variants (optional)
+                  </label>
+                  <Button type="button" variant="ghost" size="sm" onClick={addVariant}>
                     <FontAwesomeIcon icon={faPlus} /> Add
-                  </button>
+                  </Button>
                 </div>
                 <div className="space-y-3">
                   {variants.map((v, i) => (
-                    <div key={i} className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
-                      <input
-                        type="text"
+                    <div
+                      key={i}
+                      className="grid grid-cols-2 gap-2 rounded-[var(--admin-r-md)] border border-[var(--admin-border)] bg-[var(--admin-surface-alt)] p-2 sm:grid-cols-4"
+                    >
+                      <TextInput
                         placeholder="Name (e.g. 100ml)"
                         value={v.variantName}
                         onChange={(e) => updateVariant(i, "variantName", e.target.value)}
-                        className="col-span-2 sm:col-span-1 border border-gray-200 rounded px-2.5 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] bg-white"
+                        className="col-span-2 h-8 bg-[var(--admin-card-bg)] text-[length:var(--admin-text-xs)] sm:col-span-1"
                       />
-                      <input
-                        type="text"
+                      <TextInput
                         placeholder="SKU"
                         value={v.sku}
                         onChange={(e) => updateVariant(i, "sku", e.target.value)}
-                        className="border border-gray-200 rounded px-2.5 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] font-mono bg-white"
+                        className="h-8 bg-[var(--admin-card-bg)] font-mono text-[length:var(--admin-text-xs)]"
                       />
-                      <input
+                      <TextInput
                         type="number"
                         placeholder="Price (₹)"
                         value={v.price}
                         onChange={(e) => updateVariant(i, "price", e.target.value)}
-                        className="border border-gray-200 rounded px-2.5 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] bg-white"
+                        className="h-8 bg-[var(--admin-card-bg)] text-[length:var(--admin-text-xs)]"
                       />
-                      <input
+                      <TextInput
                         type="number"
                         placeholder="MRP (₹)"
                         value={v.mrp}
                         onChange={(e) => updateVariant(i, "mrp", e.target.value)}
-                        className="border border-gray-200 rounded px-2.5 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] bg-white"
+                        className="h-8 bg-[var(--admin-card-bg)] text-[length:var(--admin-text-xs)]"
                       />
                       <div className="flex gap-2">
-                        <input
+                        <TextInput
                           type="number"
                           placeholder="Stock"
                           value={v.stockQuantity}
                           onChange={(e) => updateVariant(i, "stockQuantity", e.target.value)}
-                          className="flex-1 border border-gray-200 rounded px-2.5 py-2 text-xs focus:outline-none focus:border-[#9E6E5B] bg-white"
+                          className="h-8 flex-1 bg-[var(--admin-card-bg)] text-[length:var(--admin-text-xs)]"
                         />
                         {variants.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeVariant(i)}
-                            className="text-red-500 hover:text-red-700 px-1"
+                            className="px-1 text-[var(--admin-error-fg)] hover:brightness-90"
                           >
                             <FontAwesomeIcon icon={faTrash} size="xs" />
                           </button>
@@ -957,22 +889,13 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="submit"
-                  disabled={createProduct.isPending}
-                  className="px-4 py-2.5 bg-[#9E6E5B] hover:bg-[#8a5e4e] text-white rounded-lg transition disabled:opacity-60 text-sm font-medium flex items-center gap-2"
-                >
-                  {createProduct.isPending && <FontAwesomeIcon icon={faCircleNotch} className="animate-spin" size="sm" />}
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" disabled={createProduct.isPending} loading={createProduct.isPending}>
                   {createProduct.isPending ? "Creating…" : "Create Product"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition text-sm font-medium"
-                >
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setShowCreateForm(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -980,13 +903,16 @@ export default function ProductsPage() {
           {/* ─── PRODUCT LIST ────────────────────────────────────────────── */}
           <div className="grid gap-4 sm:gap-6">
             {productsLoading ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center text-gray-500 text-sm">
-                Loading products…
-              </div>
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
             ) : products.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center text-gray-500 text-sm">
-                No products yet. Create your first one!
-              </div>
+              <EmptyState
+                icon={faBoxOpen}
+                heading="No products yet"
+                message="Create your first product using the button above."
+              />
             ) : (
               products.map((product) => (
                 <div
@@ -999,121 +925,105 @@ export default function ProductsPage() {
                       {editingId === product.id ? (
                         /* ── Edit form ── */
                         <div className="space-y-3">
-                          <input
-                            type="text"
+                          <TextInput
                             value={form.name}
                             onChange={(e) => handleNameChange(e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-semibold"
+                            className="font-semibold"
                           />
-                          <input
-                            type="text"
+                          <TextInput
                             value={form.slug}
                             onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono"
+                            className="font-mono"
                           />
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <input
-                              type="text"
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <TextInput
                               value={form.brand || ""}
                               onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))}
                               placeholder="Brand"
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm"
                             />
-                            <input
+                            <TextInput
                               type="datetime-local"
                               value={form.discountEndsAt}
                               onChange={(e) => setForm((p) => ({ ...p, discountEndsAt: e.target.value }))}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm"
                             />
-                            <label className="flex items-center gap-2 sm:pt-0">
-                              <input
-                                type="checkbox"
-                                checked={form.isActive}
-                                onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
-                                className="accent-[#9E6E5B] w-4 h-4"
-                              />
-                              <span className="text-sm">Active</span>
-                            </label>
+                            <Checkbox
+                              id={`active-${product.id}`}
+                              label="Active"
+                              checked={form.isActive}
+                              onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
+                            />
                           </div>
-                          <textarea
+                          <Textarea
                             value={form.description || ""}
                             onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                             placeholder="Description"
                             rows={2}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm resize-none"
                           />
                           <div className="flex gap-2">
-                            <button
-                              onClick={handleUpdate}
-                              disabled={updateProduct.isPending}
-                              className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
-                            >
-                              {updateProduct.isPending
-                                ? <FontAwesomeIcon icon={faCircleNotch} className="animate-spin" size="sm" />
-                                : <FontAwesomeIcon icon={faSave} size="sm" />}
+                            <Button size="sm" onClick={handleUpdate} disabled={updateProduct.isPending} loading={updateProduct.isPending}>
+                              <FontAwesomeIcon icon={faSave} />
                               Save
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm"
-                            >
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={cancelEdit}>
                               Cancel
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ) : (
                         /* ── Display view ── */
                         <>
-                          <h3 className="text-base sm:text-lg font-semibold text-[#5E2B16] truncate">
+                          <h3 className="truncate text-[length:var(--admin-text-lg)] font-semibold text-[var(--admin-ink)]">
                             {product.name}
                           </h3>
-                          <p className="text-xs text-gray-500 font-mono truncate">{product.slug}</p>
+                          <p className="truncate font-mono text-[length:var(--admin-text-xs)] text-[var(--admin-ink-muted)]">
+                            {product.slug}
+                          </p>
                           {product.brand && (
-                            <p className="text-xs text-gray-500 mt-0.5">Brand: {product.brand}</p>
+                            <p className="mt-0.5 text-[length:var(--admin-text-xs)] text-[var(--admin-ink-muted)]">
+                              Brand: {product.brand}
+                            </p>
                           )}
                           {product.discountEndsAt && (
-                            <p className="text-xs text-gray-500 mt-0.5">
+                            <p className="mt-0.5 text-[length:var(--admin-text-xs)] text-[var(--admin-ink-muted)]">
                               Discount ends: {new Date(product.discountEndsAt).toLocaleString()}
                             </p>
                           )}
                           {product.description && (
-                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                            <p className="mt-1 line-clamp-2 text-[length:var(--admin-text-sm)] text-[var(--admin-ink-secondary)]">
                               {product.description}
                             </p>
                           )}
-                          <div className="flex flex-wrap items-center gap-2 mt-2">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              product.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                            }`}>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <Badge role={product.isActive ? "success" : "neutral"}>
                               {product.isActive ? "Active" : "Inactive"}
-                            </span>
+                            </Badge>
                             {product.categories?.map((pc) => (
                               <button
                                 key={pc.category.id}
                                 type="button"
                                 onClick={() => handleRemoveCategoryFromProduct(product.id, pc.category.id)}
-                                className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs hover:bg-blue-200 transition"
                                 title="Tap to remove"
+                                className="rounded-full bg-[var(--admin-info-bg)] px-2 py-0.5 text-[length:var(--admin-text-xs)] text-[var(--admin-info-fg)] transition-colors duration-[var(--admin-duration-frequent)] hover:brightness-95"
                               >
                                 {pc.category.name} ×
                               </button>
                             ))}
                           </div>
                           <div className="mt-2">
-                            <select
+                            <Select
                               defaultValue=""
                               onChange={(e) => {
                                 if (!e.target.value) return;
                                 void handleAssignCategoryToProduct(product.id, e.target.value);
                                 e.currentTarget.value = "";
                               }}
-                              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white w-full sm:w-48"
+                              className="h-8 w-full text-[length:var(--admin-text-xs)] sm:w-48"
                             >
                               <option value="">Assign category…</option>
                               {categories?.map((cat) => (
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                               ))}
-                            </select>
+                            </Select>
                           </div>
                         </>
                       )}
@@ -1243,33 +1153,26 @@ export default function ProductsPage() {
                   </div>
 
                   {/* ── Images ── */}
-                  <div className="border border-gray-100 rounded-xl p-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  <div className="rounded-[var(--admin-r-lg)] border border-[var(--admin-border)] p-3">
+                    <p className="mb-1 text-[length:var(--admin-text-2xs)] font-semibold uppercase tracking-wide text-[var(--admin-ink-muted)]">
                       Images
                     </p>
-                    <p className="text-[11px] text-gray-400 mb-2">
+                    <p className="mb-2 text-[length:var(--admin-text-2xs)] text-[var(--admin-ink-muted)]">
                       #1 = cover · tap ← → to reorder
                     </p>
                     <ImageManager
                       productId={product.id}
                       images={product.images ?? []}
                       onRefresh={refreshProducts}
-                      onToast={pushToast}
+                      showSuccess={showSuccess}
+                      showError={showError}
+                      showUpdating={showUpdating}
                     />
                   </div>
                 </div>
               ))
             )}
           </div>
-        </div>
-
-        {/* Keyframe for toast slide-up */}
-        <style>{`
-          @keyframes slideUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
-    </>
+    </div>
   );
 }
