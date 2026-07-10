@@ -3,14 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faLayerGroup,
-  faPen,
-  faTrash,
-  faPlus,
-  faTimes,
-  faSave,
-} from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faPen, faPlus, faSave, faTimes, faTrash } from "@fortawesome/free-solid-svg-icons";
 import {
   useCreateCategory,
   useDeleteCategory,
@@ -18,6 +11,9 @@ import {
   useUpdateCategory,
 } from "@/hooks/useAdmin";
 import { useCategories } from "@/hooks/useProducts";
+import type { Category } from "@/services/api";
+import type { DataTableColumn } from "../_components";
+import { Button, DataTable, Field, PageHeader, Select, Textarea, TextInput } from "../_components";
 
 function slugify(str: string) {
   return str
@@ -91,7 +87,7 @@ export default function AdminCategoriesPage() {
         description: form.description || undefined,
         parentId: form.parentId || undefined,
       });
-      setMessage(`Category \"${created.name}\" created.`);
+      setMessage(`Category "${created.name}" created.`);
       resetForm();
     } catch (err) {
       setError((err instanceof Error ? err.message : undefined) ?? "Failed to create category");
@@ -127,7 +123,7 @@ export default function AdminCategoriesPage() {
         description: form.description || undefined,
         parentId: form.parentId || undefined,
       });
-      setMessage(`Category \"${updated.name}\" updated.`);
+      setMessage(`Category "${updated.name}" updated.`);
       resetForm();
     } catch (err) {
       setError((err instanceof Error ? err.message : undefined) ?? "Failed to update category");
@@ -135,35 +131,43 @@ export default function AdminCategoriesPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete category \"${name}\"?`)) return;
+    if (!confirm(`Delete category "${name}"?`)) return;
 
     setError(null);
     setMessage(null);
 
     try {
       await deleteCategory.mutateAsync(id);
-      setMessage(`Category \"${name}\" deleted.`);
+      setMessage(`Category "${name}" deleted.`);
       if (editingId === id) resetForm();
     } catch (err) {
       setError((err instanceof Error ? err.message : undefined) ?? "Failed to delete category");
     }
   };
 
+  const columns: DataTableColumn<Category>[] = [
+    { key: "name", header: "Name", render: (row) => row.name, sortValue: (row) => row.name },
+    {
+      key: "slug",
+      header: "Slug",
+      render: (row) => <span className="font-mono text-[length:var(--admin-text-xs)]">{row.slug}</span>,
+    },
+    {
+      key: "parent",
+      header: "Parent",
+      render: (row) => categories?.find((c) => c.id === row.parentId)?.name ?? "-",
+    },
+  ];
+
   return (
     <div className="max-w-5xl mx-auto">
-
-        <div className="flex items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#819744] flex items-center justify-center text-white">
-              <FontAwesomeIcon icon={faLayerGroup} />
-            </div>
-            <h1 className="text-2xl font-bold text-[#5E2B16] font-['Roboto',serif]">
-              Manage Categories
-            </h1>
-          </div>
-
-          <button
-            type="button"
+      <PageHeader
+        title="Manage Categories"
+        breadcrumb="Admin / Categories"
+        actions={
+          <Button
+            size="sm"
+            variant={showCreateForm ? "secondary" : "primary"}
             onClick={() => {
               if (showCreateForm) {
                 resetForm();
@@ -174,82 +178,72 @@ export default function AdminCategoriesPage() {
               setForm({ name: "", slug: "", description: "", parentId: "" });
               setShowCreateForm(true);
             }}
-            className="px-4 py-2 bg-[#819744] hover:bg-[#6d8039] text-white rounded-lg transition inline-flex items-center gap-2 text-sm"
           >
             <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} />
             {showCreateForm ? "Cancel" : "New Category"}
-          </button>
+          </Button>
+        }
+      />
+
+      {error ? (
+        <div className="mb-4 rounded-[var(--admin-r-md)] bg-[var(--admin-error-bg)] px-4 py-3 text-[length:var(--admin-text-sm)] text-[var(--admin-error-fg)]">
+          {error}
         </div>
+      ) : null}
+      {message ? (
+        <div className="mb-4 rounded-[var(--admin-r-md)] bg-[var(--admin-success-bg)] px-4 py-3 text-[length:var(--admin-text-sm)] text-[var(--admin-success-fg)]">
+          {message}
+        </div>
+      ) : null}
 
-        {error ? (
-          <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-4 text-sm">
-            {error}
-          </div>
-        ) : null}
-        {message ? (
-          <div className="bg-[#EBF1DC] border border-[#819744] text-[#5C6936] rounded-lg px-4 py-3 mb-4 text-sm">
-            {message}
-          </div>
-        ) : null}
+      {(showCreateForm || editingId) && (
+        <form
+          onSubmit={editingId ? handleUpdate : handleCreate}
+          className="mb-6 rounded-[var(--admin-r-lg)] border border-[var(--admin-border)] bg-[var(--admin-card-bg)] p-6 shadow-[var(--admin-elev-1)]"
+        >
+          <h2 className="mb-4 text-[length:var(--admin-text-lg)] font-semibold text-[var(--admin-ink)]">
+            {editingId ? "Edit Category" : "Create Category"}
+          </h2>
 
-        {(showCreateForm || editingId) && (
-          <form
-            onSubmit={editingId ? handleUpdate : handleCreate}
-            className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6"
-          >
-            <h2 className="text-lg font-semibold text-[#5E2B16] mb-4">
-              {editingId ? "Edit Category" : "Create Category"}
-            </h2>
+          <div className="mb-4 grid gap-4 md:grid-cols-2">
+            <Field label="Name" htmlFor="cat-name" required>
+              <TextInput
+                id="cat-name"
+                required
+                value={form.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+              />
+            </Field>
 
-            <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-[#5E2B16] mb-1">
-                  Name
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm"
-                />
-              </div>
+            <Field label="Slug" htmlFor="cat-slug" help="Auto-generated from name unless edited">
+              <TextInput
+                id="cat-slug"
+                value={form.slug}
+                onChange={(e) => {
+                  setAutoSlug(false);
+                  setForm((prev) => ({ ...prev, slug: e.target.value }));
+                }}
+                className="font-mono"
+              />
+            </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-[#5E2B16] mb-1">
-                  Slug
-                </label>
-                <input
-                  type="text"
-                  value={form.slug}
-                  onChange={(e) => {
-                    setAutoSlug(false);
-                    setForm((prev) => ({ ...prev, slug: e.target.value }));
-                  }}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm font-mono"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#5E2B16] mb-1">
-                  Description
-                </label>
-                <textarea
+            <div className="md:col-span-2">
+              <Field label="Description" htmlFor="cat-desc">
+                <Textarea
+                  id="cat-desc"
                   rows={3}
                   value={form.description}
                   onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm resize-none"
                 />
-              </div>
+              </Field>
+            </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#5E2B16] mb-1">
-                  Parent Category
-                </label>
-                <select
+            <div className="md:col-span-2">
+              <Field label="Parent Category" htmlFor="cat-parent">
+                <Select
+                  id="cat-parent"
                   value={form.parentId}
                   onChange={(e) => setForm((prev) => ({ ...prev, parentId: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm bg-white"
                 >
                   <option value="">None (top-level)</option>
                   {categoryOptions.map((cat) => (
@@ -257,89 +251,44 @@ export default function AdminCategoriesPage() {
                       {cat.name}
                     </option>
                   ))}
-                </select>
-              </div>
+                </Select>
+              </Field>
             </div>
+          </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={createCategory.isPending || updateCategory.isPending}
-                className="px-4 py-2 bg-[#9E6E5B] hover:bg-[#8a5e4e] text-white rounded-lg transition inline-flex items-center gap-2 disabled:opacity-50"
-              >
-                <FontAwesomeIcon icon={faSave} />
-                {editingId ? "Save Changes" : "Create Category"}
-              </button>
+          <div className="flex items-center gap-2">
+            <Button type="submit" disabled={createCategory.isPending || updateCategory.isPending}>
+              <FontAwesomeIcon icon={faSave} />
+              {editingId ? "Save Changes" : "Create Category"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={resetForm}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
 
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+      <DataTable
+        columns={columns}
+        rows={categories ?? []}
+        rowKey={(row) => row.id}
+        loading={categoriesLoading}
+        emptyIcon={faLayerGroup}
+        emptyHeading="No categories yet"
+        emptyMessage="Create your first category to start organizing products."
+        rowActions={(row) => (
+          <div className="flex items-center justify-end gap-2">
+            <Button size="sm" variant="secondary" onClick={() => startEdit(row.id)}>
+              <FontAwesomeIcon icon={faPen} />
+              Edit
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => handleDelete(row.id, row.name)}>
+              <FontAwesomeIcon icon={faTrash} />
+              Delete
+            </Button>
+          </div>
         )}
-
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 text-sm text-[#6f665b]">
-            {categoriesLoading ? "Loading categories..." : `${categories?.length ?? 0} categories`}
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#F2ECDF] text-[#5E2B16]">
-                <tr>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Slug</th>
-                  <th className="text-left px-4 py-3">Parent</th>
-                  <th className="text-left px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(categories ?? []).length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-4" colSpan={4}>
-                      No categories found.
-                    </td>
-                  </tr>
-                ) : (
-                  (categories ?? []).map((cat) => {
-                    const parent = categories?.find((c) => c.id === cat.parentId);
-                    return (
-                      <tr key={cat.id} className="border-t border-gray-100">
-                        <td className="px-4 py-3">{cat.name}</td>
-                        <td className="px-4 py-3 font-mono text-xs">{cat.slug}</td>
-                        <td className="px-4 py-3">{parent?.name ?? "-"}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => startEdit(cat.id)}
-                              className="px-3 py-1 rounded bg-[#EDE3D2] text-[#5E2B16] hover:bg-[#e0d4bf] inline-flex items-center gap-1"
-                            >
-                              <FontAwesomeIcon icon={faPen} />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(cat.id, cat.name)}
-                              className="px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 inline-flex items-center gap-1"
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      />
+    </div>
   );
 }
