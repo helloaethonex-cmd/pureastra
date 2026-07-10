@@ -1,0 +1,88 @@
+/* Admin design tokens — scoped under .admin-root so the storefront is never affected.
+   Source of truth: ADMIN_PANEL_REDESIGN_PLAN.md §2. Reuses brand hex values; only
+   state/neutral gaps get new tokens. Do not import this file outside apps/frontend/src/app/admin/. */
+
+.admin-root {
+  /* §2.1 Typography — fixed rem scale, Poppins only */
+  --admin-text-2xs: 0.6875rem;
+  --admin-text-xs: 0.75rem;
+  --admin-text-sm: 0.875rem;
+  --admin-text-base: 1rem;
+  --admin-text-lg: 1.125rem;
+  --admin-text-xl: 1.375rem;
+  --admin-text-2xl: 1.75rem;
+
+  /* §2.2 Color roles */
+  --admin-primary: #5E2B15;
+  --admin-primary-hover: #4D2312;
+  --admin-accent: #819744;
+  --admin-accent-hover: #6F8438;
+  --admin-content-bg: #FFFAED;
+  --admin-panel-bg: #EBF1DC;
+  --admin-card-bg: #FFFFFF;
+  --admin-surface-alt: #FAF3E2;
+  --admin-border: #E6D5C3;
+  --admin-border-strong: #D8C4AE;
+  --admin-ink: #171717;
+  --admin-ink-secondary: #333333;
+  --admin-ink-muted: #5A5148;
+
+  /* Semantic state colors (fg/bg pairs, AA-safe) */
+  --admin-success-fg: #2E6B34;
+  --admin-success-bg: #E4EFD9;
+  --admin-warning-fg: #8A5A1C;
+  --admin-warning-bg: #F6E8CF;
+  --admin-error-fg: #A62A20;
+  --admin-error-bg: #F6DEDA;
+  --admin-info-fg: #3A5A8C;
+  --admin-info-bg: #DCE6F2;
+  --admin-disabled-fg: #9B9186;
+  --admin-disabled-bg: #EFE9DF;
+
+  /* §2.3 Spacing scale (px) */
+  --admin-space-1: 4px;
+  --admin-space-2: 8px;
+  --admin-space-3: 12px;
+  --admin-space-4: 16px;
+  --admin-space-6: 24px;
+  --admin-space-8: 32px;
+  --admin-space-12: 48px;
+
+  /* §2.4 Radius scale (hard cap 20px) */
+  --admin-r-sm: 6px;
+  --admin-r-md: 10px;
+  --admin-r-lg: 16px;
+  --admin-r-xl: 20px;
+
+  /* §2.5 Elevation */
+  --admin-elev-1: 0 1px 2px rgba(94, 43, 21, 0.06);
+  --admin-elev-2: 0 4px 12px rgba(94, 43, 21, 0.1);
+
+  /* §2.8 Motion tokens */
+  --admin-ease-out-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --admin-ease-in-out-premium: cubic-bezier(0.4, 0, 0.2, 1);
+  --admin-duration-frequent: 120ms;
+  --admin-duration-occasional: 200ms;
+  --admin-duration-rare: 300ms;
+
+  background-color: var(--admin-content-bg);
+  color: var(--admin-ink);
+  font-family: "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* A single shimmer keyframe, used only while a Skeleton is actually loading. */
+@keyframes admin-shimmer {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-root *,
+  .admin-root *::before,
+  .admin-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
