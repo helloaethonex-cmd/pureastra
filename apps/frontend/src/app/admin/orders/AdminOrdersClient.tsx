@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faArrowLeft,
   faBoxOpen,
   faSpinner,
   faTag,
@@ -157,11 +155,7 @@ export default function AdminOrdersPage() {
   );
 
   if (adminLoading) {
-    return (
-      <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center">
-        Checking access...
-      </div>
-    );
+    return <div className="flex min-h-[50vh] items-center justify-center">Checking access...</div>;
   }
 
   if (!isAdmin) {
@@ -260,16 +254,7 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <section className="min-h-screen bg-[#FAF3E2] px-6 md:px-12 py-14">
-      <div className="max-w-6xl mx-auto">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-2 text-[#819744] hover:text-[#5E2B16] mb-8 transition text-sm font-medium"
-        >
-          <FontAwesomeIcon icon={faArrowLeft} />
-          Back to Admin
-        </Link>
-
+    <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-full bg-[#9E6E5B] flex items-center justify-center text-white">
             <FontAwesomeIcon icon={faBoxOpen} />
@@ -496,6 +481,5 @@ export default function AdminOrdersPage() {
           </div>
         ) : null}
       </div>
-    </section>
   );
 }
