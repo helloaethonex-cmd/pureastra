@@ -1,25 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useIsAdmin } from "@/hooks/useAdmin";
+import { useIsAdmin, useAdminOverviewReport, useAdminInfluencerAnalytics } from "@/hooks/useAdmin";
 import { useAuthStore } from "@/store/auth.store";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faLayerGroup,
-  faBoxOpen,
-  faTruck,
-  faLock,
-  faChartLine,
-  faUsers,
-  faStore,
-} from "@fortawesome/free-solid-svg-icons";
+import { faLock } from "@fortawesome/free-solid-svg-icons";
+import { PageHeader, StatCard, DateInput, Field } from "./_components";
+import { staggerContainerVariants, staggerItemVariants } from "./_components/motion";
+import { motion, useReducedMotion } from "framer-motion";
+
+const isoDate = (date: Date) => date.toISOString().slice(0, 10);
 
 export default function AdminPage() {
   const { user } = useAuthStore();
   const router = useRouter();
   const { data: isAdmin, isLoading } = useIsAdmin();
+  const reduceMotion = useReducedMotion() ?? false;
+
+  const today = useMemo(() => new Date(), []);
+  const monthStart = useMemo(() => new Date(today.getFullYear(), today.getMonth(), 1), [today]);
+  const [from, setFrom] = useState(isoDate(monthStart));
+  const [to, setTo] = useState(isoDate(today));
+
+  const overview = useAdminOverviewReport({ from, to });
+  const influencerAnalytics = useAdminInfluencerAnalytics({ startDate: from, endDate: to });
 
   useEffect(() => {
     if (!isLoading && !isAdmin) {
@@ -29,110 +34,98 @@ export default function AdminPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FAF3E2] flex items-center justify-center">
-        <div className="text-[#5E2B16] text-lg font-semibold animate-pulse">
-          Verifying access…
-        </div>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="text-[#5E2B16] text-lg font-semibold animate-pulse">Verifying access…</div>
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[#FAF3E2] flex flex-col items-center justify-center gap-4">
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
         <FontAwesomeIcon icon={faLock} className="text-[#5E2B16] text-5xl" />
         <p className="text-[#5E2B16] text-xl font-semibold">Access Denied</p>
       </div>
     );
   }
 
-  const cards = [
-    {
-      icon: faLayerGroup,
-      title: "Manage Categories",
-      desc: "View, create, edit and delete product categories",
-      href: "/admin/categories",
-      bg: "bg-[#EBF1DC]",
-      accent: "#819744",
-    },
-    {
-      icon: faBoxOpen,
-      title: "Manage Products",
-      desc: "View, create, edit products with variants and images",
-      href: "/admin/products",
-      bg: "bg-[#EDE3D2]",
-      accent: "#9E6E5B",
-    },
-    {
-      icon: faTruck,
-      title: "Manage Orders",
-      desc: "Track placed orders and advance fulfillment statuses",
-      href: "/admin/orders",
-      bg: "bg-[#E8F0EC]",
-      accent: "#5B8D7C",
-    },
-    {
-      icon: faChartLine,
-      title: "Reports",
-      desc: "GST and overview financial reports with CSV export",
-      href: "/admin/reports",
-      bg: "bg-[#EAF2F0]",
-      accent: "#4A7466",
-    },
-    {
-      icon: faUsers,
-      title: "Influencers",
-      desc: "Manage influencer accounts, analytics and payouts",
-      href: "/admin/influencers",
-      bg: "bg-[#EEF0F8]",
-      accent: "#6C79A8",
-    },
-    {
-      icon: faStore,
-      title: "Vendors & Wholesale",
-      desc: "Manage retailers, create wholesale orders and GST filing reports",
-      href: "/admin/vendors",
-      bg: "bg-[#E8F0EC]",
-      accent: "#5B8D7C",
-    },
-  ];
+  const loading = overview.isLoading || influencerAnalytics.isLoading;
 
   return (
-    <section className="min-h-screen bg-[#FAF3E2] px-6 md:px-12 py-14">
-      {/* HEADER */}
-      <div className="max-w-4xl mx-auto mb-12 text-center">
-        <p className="text-sm text-[#819744] font-semibold uppercase tracking-widest mb-2">
-          Admin
-        </p>
-        <h1 className="text-[38px] font-bold text-[#5E2B16] font-['Roboto',serif]">
-          Admin Panel
-        </h1>
-        {user && (
-          <p className="text-gray-500 mt-2 text-sm">
-            Logged in as <span className="font-semibold">{user.email}</span>
-          </p>
-        )}
-      </div>
+    <div className="max-w-6xl mx-auto">
+      <PageHeader
+        title="Dashboard"
+        breadcrumb={user ? `Logged in as ${user.email}` : undefined}
+        actions={
+          <div className="flex items-end gap-3">
+            <Field label="From" htmlFor="dash-from">
+              <DateInput id="dash-from" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </Field>
+            <Field label="To" htmlFor="dash-to">
+              <DateInput id="dash-to" value={to} onChange={(e) => setTo(e.target.value)} />
+            </Field>
+          </div>
+        }
+      />
 
-      {/* CARDS */}
-      <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
-        {cards.map((card) => (
-          <Link
-            key={card.href}
-            href={card.href}
-            className={`group ${card.bg} rounded-2xl p-8 flex flex-col items-center text-center gap-4 shadow-sm border border-transparent hover:border-[#cfc7b8] hover:-translate-y-1 transition-all duration-300`}
-          >
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl shadow"
-              style={{ backgroundColor: card.accent }}
-            >
-              <FontAwesomeIcon icon={card.icon} />
-            </div>
-            <h2 className="font-bold text-[#5E2B16] text-lg">{card.title}</h2>
-            <p className="text-[#7A736A] text-sm leading-relaxed">{card.desc}</p>
-          </Link>
-        ))}
-      </div>
-    </section>
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainerVariants(reduceMotion)}
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        <motion.div variants={staggerItemVariants(reduceMotion)}>
+          <StatCard
+            label="Total Revenue"
+            value={loading ? 0 : Number(overview.data?.totalRevenue ?? 0)}
+            currency
+            loading={loading}
+          />
+        </motion.div>
+        <motion.div variants={staggerItemVariants(reduceMotion)}>
+          <StatCard
+            label="Profit"
+            value={loading ? 0 : Number(overview.data?.profit ?? 0)}
+            currency
+            loading={loading}
+          />
+        </motion.div>
+        <motion.div variants={staggerItemVariants(reduceMotion)}>
+          <StatCard
+            label="Influencer Commission"
+            value={loading ? 0 : Number(overview.data?.influencerCommission ?? 0)}
+            currency
+            loading={loading}
+          />
+        </motion.div>
+        <motion.div variants={staggerItemVariants(reduceMotion)}>
+          <StatCard
+            label="Influencers (active / paused)"
+            value={
+              loading
+                ? 0
+                : `${influencerAnalytics.data?.influencers.active ?? 0} / ${influencerAnalytics.data?.influencers.paused ?? 0}`
+            }
+            loading={loading}
+          />
+        </motion.div>
+        <motion.div variants={staggerItemVariants(reduceMotion)}>
+          <StatCard
+            label="Commission Issued"
+            value={loading ? 0 : Number(influencerAnalytics.data?.revenue.totalCommissionIssued ?? 0)}
+            currency
+            loading={loading}
+          />
+        </motion.div>
+        <motion.div variants={staggerItemVariants(reduceMotion)}>
+          <StatCard
+            label="Influenced Revenue"
+            value={loading ? 0 : Number(influencerAnalytics.data?.revenue.totalInfluencedOrderValue ?? 0)}
+            currency
+            loading={loading}
+          />
+        </motion.div>
+      </motion.div>
+    </div>
   );
 }
