@@ -22,6 +22,9 @@ import {
   useUpdateAdminInfluencerStatus,
 } from "@/hooks/useAdmin";
 import { useProducts } from "@/hooks/useProducts";
+import type { AdminInfluencer, AdminInfluencerPayout } from "@/services/api";
+import { Badge, Button, DataTable, Field, PageHeader, Select, StatCard, TextInput } from "../_components";
+import type { DataTableColumn } from "../_components";
 
 const asCurrency = (value: string | number) =>
   new Intl.NumberFormat("en-IN", {
@@ -242,86 +245,104 @@ export default function AdminInfluencersPage() {
     }
   };
 
+  const influencerColumns: DataTableColumn<AdminInfluencer>[] = [
+    {
+      key: "name",
+      header: "Name",
+      render: (item) => (
+        <div>
+          <p className="font-medium text-[var(--admin-ink)]">{item.name}</p>
+          <p className="text-[length:var(--admin-text-xs)] text-[var(--admin-ink-muted)]">{item.email}</p>
+        </div>
+      ),
+    },
+    {
+      key: "referral",
+      header: "Referral",
+      render: (item) => <span className="font-mono text-[length:var(--admin-text-xs)]">{item.referralCode}</span>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (item) => (
+        <Badge role={item.status === "ACTIVE" ? "success" : item.status === "PAUSED" ? "warning" : "error"}>
+          {item.status}
+        </Badge>
+      ),
+    },
+    { key: "commission", header: "Commission", render: (item) => `${Number(item.commissionRate).toFixed(2)}%` },
+    { key: "earnings", header: "Earnings", render: (item) => asCurrency(item.totalEarnings) },
+    { key: "dashboard", header: "Dashboard", render: (item) => (item.canViewDashboard ? "Enabled" : "Disabled") },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-full bg-[#7B8BB8] flex items-center justify-center text-white">
-            <FontAwesomeIcon icon={faUsers} />
-          </div>
-          <h1 className="text-2xl font-bold text-[#5E2B16] font-['Roboto',serif]">
-            Influencer Management
-          </h1>
-        </div>
+        <PageHeader title="Influencer Management" breadcrumb="Admin / Influencers" />
 
         {error ? (
-          <div className="bg-red-50 border border-red-200 text-red-600 rounded-lg px-4 py-3 mb-4 text-sm">
+          <div className="mb-4 rounded-[var(--admin-r-md)] bg-[var(--admin-error-bg)] px-4 py-3 text-[length:var(--admin-text-sm)] text-[var(--admin-error-fg)]">
             {error}
           </div>
         ) : null}
         {message ? (
-          <div className="bg-[#EBF1DC] border border-[#819744] text-[#5C6936] rounded-lg px-4 py-3 mb-4 text-sm">
+          <div className="mb-4 rounded-[var(--admin-r-md)] bg-[var(--admin-success-bg)] px-4 py-3 text-[length:var(--admin-text-sm)] text-[var(--admin-success-fg)]">
             {message}
           </div>
         ) : null}
 
-        <div className="grid md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <p className="text-xs text-[#6f665b] uppercase">Influencers</p>
-            <p className="text-xl font-semibold text-[#5E2B16] mt-1">
-              {analytics.data?.influencers.total ?? 0}
-            </p>
-            <p className="text-xs text-[#6f665b] mt-1">
-              Active {analytics.data?.influencers.active ?? 0} | Paused {analytics.data?.influencers.paused ?? 0}
-            </p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <p className="text-xs text-[#6f665b] uppercase">Commission Issued</p>
-            <p className="text-xl font-semibold text-[#5E2B16] mt-1">
-              {asCurrency(analytics.data?.revenue.totalCommissionIssued ?? 0)}
-            </p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <p className="text-xs text-[#6f665b] uppercase">Influenced Revenue</p>
-            <p className="text-xl font-semibold text-[#5E2B16] mt-1">
-              {asCurrency(analytics.data?.revenue.totalInfluencedOrderValue ?? 0)}
-            </p>
-          </div>
+        <div className="mb-6 grid gap-4 md:grid-cols-3">
+          <StatCard
+            label="Influencers"
+            value={analytics.data?.influencers.total ?? 0}
+            subLine={`Active ${analytics.data?.influencers.active ?? 0} | Paused ${analytics.data?.influencers.paused ?? 0}`}
+            loading={analytics.isLoading}
+          />
+          <StatCard
+            label="Commission Issued"
+            value={Number(analytics.data?.revenue.totalCommissionIssued ?? 0)}
+            currency
+            loading={analytics.isLoading}
+          />
+          <StatCard
+            label="Influenced Revenue"
+            value={Number(analytics.data?.revenue.totalInfluencedOrderValue ?? 0)}
+            currency
+            loading={analytics.isLoading}
+          />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
-          <h2 className="text-lg font-semibold text-[#5E2B16] mb-3">Create Influencer</h2>
-          <form onSubmit={handleCreate} className="grid md:grid-cols-5 gap-3 items-end">
-            <div className="md:col-span-1">
-              <label className="block text-xs text-[#6f665b] mb-1">Name</label>
-              <input
+        <div className="mb-6 rounded-[var(--admin-r-lg)] border border-[var(--admin-border)] bg-[var(--admin-card-bg)] p-5">
+          <h2 className="mb-3 text-[length:var(--admin-text-lg)] font-semibold text-[var(--admin-ink)]">Create Influencer</h2>
+          <form onSubmit={handleCreate} className="grid items-end gap-3 md:grid-cols-5">
+            <Field label="Name" htmlFor="inf-name">
+              <TextInput
+                id="inf-name"
                 required
                 value={createForm.name}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               />
-            </div>
-            <div className="md:col-span-1">
-              <label className="block text-xs text-[#6f665b] mb-1">Email</label>
-              <input
+            </Field>
+            <Field label="Email" htmlFor="inf-email">
+              <TextInput
+                id="inf-email"
                 required
                 type="email"
                 value={createForm.email}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, email: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               />
-            </div>
-            <div className="md:col-span-1">
-              <label className="block text-xs text-[#6f665b] mb-1">Referral Code</label>
-              <input
+            </Field>
+            <Field label="Referral Code" htmlFor="inf-code">
+              <TextInput
+                id="inf-code"
                 required
                 value={createForm.referralCode}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, referralCode: e.target.value.toUpperCase() }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+                className="font-mono"
               />
-            </div>
-            <div className="md:col-span-1">
-              <label className="block text-xs text-[#6f665b] mb-1">Commission %</label>
-              <input
+            </Field>
+            <Field label="Commission %" htmlFor="inf-commission">
+              <TextInput
+                id="inf-commission"
                 required
                 type="number"
                 min={0}
@@ -329,34 +350,29 @@ export default function AdminInfluencersPage() {
                 step="0.01"
                 value={createForm.commissionRate}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, commissionRate: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               />
-            </div>
-            <button
-              type="submit"
-              disabled={createInfluencer.isPending}
-              className="px-4 py-2 rounded-lg bg-[#7B8BB8] text-white hover:bg-[#6979a6] disabled:opacity-50 inline-flex items-center justify-center gap-2"
-            >
+            </Field>
+            <Button type="submit" disabled={createInfluencer.isPending} loading={createInfluencer.isPending}>
               <FontAwesomeIcon icon={faPlus} />
               Create
-            </button>
+            </Button>
           </form>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-[#5E2B16]">Influencers</h2>
-              <span className="text-xs text-[#6f665b]">
+              <h2 className="text-[length:var(--admin-text-lg)] font-semibold text-[var(--admin-ink)]">Influencers</h2>
+              <span className="text-[length:var(--admin-text-xs)] text-[var(--admin-ink-muted)]">
                 {influencers.data?.pagination.total ?? 0} total
               </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <select
+              <Select
                 value={selectedProductSlug}
                 onChange={(e) => setSelectedProductSlug(e.target.value)}
-                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-64"
+                className="h-9 w-64 text-[length:var(--admin-text-sm)]"
               >
                 <option value="">
                   {products.isLoading ? "Loading products..." : "Select product for product link"}
@@ -368,172 +384,79 @@ export default function AdminInfluencersPage() {
                       {product.name} ({product.slug})
                     </option>
                   ))}
-              </select>
-              <select
+              </Select>
+              <Select
                 value={statusFilter}
                 onChange={(e) => {
                   setPage(1);
                   setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "PAUSED" | "BANNED");
                 }}
-                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white"
+                className="h-9 text-[length:var(--admin-text-sm)]"
               >
                 <option value="ALL">All</option>
                 <option value="ACTIVE">Active</option>
                 <option value="PAUSED">Paused</option>
                 <option value="BANNED">Banned</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => influencers.refetch()}
-                className="px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm inline-flex items-center gap-2"
-              >
+              </Select>
+              <Button size="sm" variant="secondary" onClick={() => influencers.refetch()}>
                 <FontAwesomeIcon icon={faRotate} />
                 Refresh
-              </button>
+              </Button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[#F2ECDF] text-[#5E2B16]">
-                <tr>
-                  <th className="text-left px-4 py-3">Name</th>
-                  <th className="text-left px-4 py-3">Referral</th>
-                  <th className="text-left px-4 py-3">Status</th>
-                  <th className="text-left px-4 py-3">Commission</th>
-                  <th className="text-left px-4 py-3">Earnings</th>
-                  <th className="text-left px-4 py-3">Dashboard</th>
-                  <th className="text-left px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {influencers.isLoading ? (
-                  <tr>
-                    <td className="px-4 py-4" colSpan={7}>Loading influencers...</td>
-                  </tr>
-                ) : influencers.data?.data.length ? (
-                  influencers.data.data.map((item) => (
-                    <tr key={item.id} className="border-t border-gray-100">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-[#5E2B16]">{item.name}</p>
-                        <p className="text-xs text-[#6f665b]">{item.email}</p>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">{item.referralCode}</td>
-                      <td className="px-4 py-3">{item.status}</td>
-                      <td className="px-4 py-3">{Number(item.commissionRate).toFixed(2)}%</td>
-                      <td className="px-4 py-3">{asCurrency(item.totalEarnings)}</td>
-                      <td className="px-4 py-3">{item.canViewDashboard ? "Enabled" : "Disabled"}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleStatusUpdate(item.id, "ACTIVE")}
-                            className="px-2 py-1 rounded bg-[#DCE9D8] text-[#2E7D32] text-xs"
-                          >
-                            Activate
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusUpdate(item.id, "PAUSED")}
-                            className="px-2 py-1 rounded bg-[#FFF1D6] text-[#9A5F2D] text-xs"
-                          >
-                            Pause
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusUpdate(item.id, "BANNED")}
-                            className="px-2 py-1 rounded bg-[#FDE8E8] text-[#B42318] text-xs"
-                          >
-                            Ban
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCommissionUpdate(item.id)}
-                            className="px-2 py-1 rounded bg-[#E8F0FA] text-[#16589C] text-xs"
-                          >
-                            Edit %
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDashboardAccessToggle(item.id, item.canViewDashboard)
-                            }
-                            className="px-2 py-1 rounded bg-[#ECECEC] text-[#474747] text-xs"
-                          >
-                            Toggle Access
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedInfluencerId(item.id)}
-                            className="px-2 py-1 rounded bg-[#7B8BB8] text-white text-xs inline-flex items-center gap-1"
-                          >
-                            <FontAwesomeIcon icon={faMoneyBillTransfer} />
-                            Payouts
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyReferralLink(item.referralCode)}
-                            className="px-2 py-1 rounded bg-[#E8F0FA] text-[#16589C] text-xs"
-                          >
-                            Copy Referral Link
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyProductLink(item.referralCode)}
-                            className="px-2 py-1 rounded bg-[#E8F0FA] text-[#16589C] text-xs"
-                          >
-                            Copy Product Link
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td className="px-4 py-4" colSpan={7}>No influencers found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {influencers.data ? (
-            <div className="px-4 py-3 border-t border-gray-100 text-sm flex items-center justify-between">
-              <span>
-                Page {influencers.data.pagination.page} of {Math.max(influencers.data.pagination.totalPages, 1)}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={influencers.data.pagination.page <= 1}
-                  className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPage((p) =>
-                      Math.min(Math.max(influencers.data.pagination.totalPages, 1), p + 1),
-                    )
+          <DataTable
+            columns={influencerColumns}
+            rows={influencers.data?.data ?? []}
+            rowKey={(item) => item.id}
+            loading={influencers.isLoading}
+            emptyIcon={faUsers}
+            emptyHeading="No influencers found"
+            emptyMessage="Create an influencer above to get started."
+            pagination={
+              influencers.data
+                ? {
+                    page: influencers.data.pagination.page,
+                    pageCount: Math.max(influencers.data.pagination.totalPages, 1),
+                    onPageChange: setPage,
                   }
-                  disabled={
-                    influencers.data.pagination.totalPages === 0 ||
-                    influencers.data.pagination.page >= influencers.data.pagination.totalPages
-                  }
-                  className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                  Next
-                </button>
+                : undefined
+            }
+            rowActions={(item) => (
+              <div className="flex flex-wrap justify-end gap-1.5">
+                <Button size="sm" variant="secondary" onClick={() => handleStatusUpdate(item.id, "ACTIVE")}>
+                  Activate
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => handleStatusUpdate(item.id, "PAUSED")}>
+                  Pause
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => handleStatusUpdate(item.id, "BANNED")}>
+                  Ban
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => handleCommissionUpdate(item.id)}>
+                  Edit %
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => handleDashboardAccessToggle(item.id, item.canViewDashboard)}>
+                  Toggle Access
+                </Button>
+                <Button size="sm" onClick={() => setSelectedInfluencerId(item.id)}>
+                  <FontAwesomeIcon icon={faMoneyBillTransfer} />
+                  Payouts
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => handleCopyReferralLink(item.referralCode)}>
+                  Copy Referral Link
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => handleCopyProductLink(item.referralCode)}>
+                  Copy Product Link
+                </Button>
               </div>
-            </div>
-          ) : null}
+            )}
+          />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="text-lg font-semibold text-[#5E2B16] mb-1">Payout Workflows</h2>
-          <p className="text-sm text-[#6f665b] mb-4">
+        <div className="rounded-[var(--admin-r-lg)] border border-[var(--admin-border)] bg-[var(--admin-card-bg)] p-5">
+          <h2 className="mb-1 text-[length:var(--admin-text-lg)] font-semibold text-[var(--admin-ink)]">Payout Workflows</h2>
+          <p className="mb-4 text-[length:var(--admin-text-sm)] text-[var(--admin-ink-muted)]">
             {selectedInfluencer
               ? `Managing payouts for ${selectedInfluencer.name}`
               : "Select an influencer from the list to manage payouts."}
@@ -541,95 +464,74 @@ export default function AdminInfluencersPage() {
 
           {selectedInfluencer ? (
             <>
-              <form onSubmit={handleRecordPayout} className="grid md:grid-cols-4 gap-3 items-end mb-4">
-                <div>
-                  <label className="block text-xs text-[#6f665b] mb-1">Amount</label>
-                  <input
+              <form onSubmit={handleRecordPayout} className="mb-4 grid items-end gap-3 md:grid-cols-4">
+                <Field label="Amount" htmlFor="payout-amount">
+                  <TextInput
+                    id="payout-amount"
                     required
                     min={0.01}
                     step="0.01"
                     type="number"
                     value={payoutForm.amount}
                     onChange={(e) => setPayoutForm((prev) => ({ ...prev, amount: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
                   />
-                </div>
+                </Field>
                 <div className="md:col-span-2">
-                  <label className="block text-xs text-[#6f665b] mb-1">Reference Note</label>
-                  <input
-                    value={payoutForm.referenceNote}
-                    onChange={(e) =>
-                      setPayoutForm((prev) => ({ ...prev, referenceNote: e.target.value }))
-                    }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                  />
+                  <Field label="Reference Note" htmlFor="payout-ref">
+                    <TextInput
+                      id="payout-ref"
+                      value={payoutForm.referenceNote}
+                      onChange={(e) => setPayoutForm((prev) => ({ ...prev, referenceNote: e.target.value }))}
+                    />
+                  </Field>
                 </div>
-                <button
-                  type="submit"
-                  disabled={recordPayout.isPending}
-                  className="px-4 py-2 rounded-lg bg-[#5B8D7C] text-white hover:bg-[#4a7466] disabled:opacity-50"
-                >
+                <Button type="submit" disabled={recordPayout.isPending} loading={recordPayout.isPending}>
                   Record Payout
-                </button>
+                </Button>
               </form>
 
-              <div className="overflow-x-auto border border-gray-100 rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-[#F2ECDF] text-[#5E2B16]">
-                    <tr>
-                      <th className="text-left px-4 py-3">Amount</th>
-                      <th className="text-left px-4 py-3">Status</th>
-                      <th className="text-left px-4 py-3">Reference</th>
-                      <th className="text-left px-4 py-3">Created</th>
-                      <th className="text-left px-4 py-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payouts.isLoading ? (
-                      <tr>
-                        <td className="px-4 py-4" colSpan={5}>Loading payouts...</td>
-                      </tr>
-                    ) : payouts.data?.data.length ? (
-                      payouts.data.data.map((payout) => (
-                        <tr key={payout.id} className="border-t border-gray-100">
-                          <td className="px-4 py-3">{asCurrency(payout.amount)}</td>
-                          <td className="px-4 py-3">{payout.status}</td>
-                          <td className="px-4 py-3">{payout.referenceNote || "-"}</td>
-                          <td className="px-4 py-3">{new Date(payout.createdAt).toLocaleString()}</td>
-                          <td className="px-4 py-3">
-                            {payout.status === "INITIATED" ? (
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handlePayoutStatusUpdate(payout.id, "COMPLETED")
-                                  }
-                                  className="px-2 py-1 rounded bg-[#DCE9D8] text-[#2E7D32] text-xs"
-                                >
-                                  Complete
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handlePayoutStatusUpdate(payout.id, "FAILED")}
-                                  className="px-2 py-1 rounded bg-[#FDE8E8] text-[#B42318] text-xs"
-                                >
-                                  Fail
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-[#6f665b]">No actions</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td className="px-4 py-4" colSpan={5}>No payouts found.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={
+                  [
+                    { key: "amount", header: "Amount", render: (p: AdminInfluencerPayout) => asCurrency(p.amount) },
+                    {
+                      key: "status",
+                      header: "Status",
+                      render: (p: AdminInfluencerPayout) => (
+                        <Badge role={p.status === "COMPLETED" ? "success" : p.status === "FAILED" ? "error" : "warning"}>
+                          {p.status}
+                        </Badge>
+                      ),
+                    },
+                    { key: "reference", header: "Reference", render: (p: AdminInfluencerPayout) => p.referenceNote || "-" },
+                    {
+                      key: "created",
+                      header: "Created",
+                      render: (p: AdminInfluencerPayout) => new Date(p.createdAt).toLocaleString(),
+                    },
+                  ] satisfies DataTableColumn<AdminInfluencerPayout>[]
+                }
+                rows={payouts.data?.data ?? []}
+                rowKey={(p) => p.id}
+                loading={payouts.isLoading}
+                emptyIcon={faMoneyBillTransfer}
+                emptyHeading="No payouts found"
+                emptyMessage="Record a payout above to see it listed here."
+                rowActions={(payout) =>
+                  payout.status === "INITIATED" ? (
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => handlePayoutStatusUpdate(payout.id, "COMPLETED")}>
+                        Complete
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handlePayoutStatusUpdate(payout.id, "FAILED")}>
+                        Fail
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-[length:var(--admin-text-xs)] text-[var(--admin-ink-muted)]">No actions</span>
+                  )
+                }
+              />
             </>
           ) : null}
         </div>
